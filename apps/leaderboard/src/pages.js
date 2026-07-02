@@ -259,7 +259,7 @@ export const PAGES = {
 <div class="plan-row"><div><div class="plan-name" id="planName">Free</div><div class="hint" id="planMeta">Up to 10 players · YourRank badge on your page</div></div>
 <button class="btn btn--accent" id="goPro">Upgrade</button></div>
 <p class="hint" id="planHint">Pay with crypto (BTC, ETH, USDT and 100+ more). Activates automatically once the network confirms — usually a few minutes. <a href="/dashboard/billing">See all plans</a>.</p></div>
-<div class="savebar"><span class="status" id="status"></span><a class="btn btn--ghost" id="viewLive" href="#" target="_blank">View live page</a><button class="btn btn--accent" id="save">Save changes</button></div></div></div>
+<div class="savebar"><label class="hint chk" style="margin-right:auto"><input type="checkbox" id="pubToggle" checked /> Page published</label><span class="status" id="status"></span><a class="btn btn--ghost" id="viewLive" href="#" target="_blank">View live page</a><button class="btn btn--accent" id="save">Save changes</button></div></div></div>
 <script src="/assets/dashboard.js"></script></body></html>`,
 
 analytics: `<!DOCTYPE html><html lang="en"><head>
@@ -305,6 +305,11 @@ billing: `<!DOCTYPE html><html lang="en"><head>
 <div id="bl" hidden>
 <div class="card" id="currentCard"><h2>Current plan</h2><p class="card-sub"><span id="planLine">Free — up to 10 players, one leaderboard.</span></p>
 <p class="hint" id="expLine" hidden></p></div>
+<div class="card" id="trialCard" hidden><h2>Try Pro free for 7 days</h2><p class="card-sub">Experience all Pro features — unlimited players, custom domain, OBS overlay, notifications — with no commitment.</p>
+<button class="btn btn--accent" id="trialBtn" type="button">Start free trial</button>
+<p class="status" id="trialStatus"></p></div>
+<div class="card" id="trialStatusCard" hidden><h2>Trial active</h2><p class="card-sub" id="trialInfo">Your Pro trial is running.</p>
+<p class="hint">After the trial ends, your plan will revert to Free. Upgrade anytime to keep Pro features.</p></div>
 <div class="card" id="upgradeCard"><h2>Upgrade</h2><p class="card-sub" id="upgradeSub">Choose the plan that fits your needs.</p>
 <div id="planOptions"></div>
 <p class="hint">Pay with crypto (BTC, ETH, USDT and 100+ more). Activates automatically once the network confirms — usually a few minutes.</p>

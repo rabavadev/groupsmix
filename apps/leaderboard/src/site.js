@@ -29,31 +29,62 @@ export const DEFAULT_EXTRA = {
 // PERF-004 / PERF-107: avoid SELECT * to prevent 180KB+ transfers on every page.
 const SITE_COLUMNS = "id, user_id, slug, name, tagline, casino, code, cta_url, prize_pool, period, ends_at, reset_note, blurb, extra_json, published, theme_json, updated_at";
 
-// In-memory TTL cache for site configs (per-Worker isolate).
-const siteCache = new Map();
-const CACHE_TTL = 60_000; // 1 minute
+// Two-tier cache: L1 in-memory Map (per-isolate, instant) + L2 KV (cross-isolate, 30s TTL).
+// On Cloudflare Workers, each isolate has its own L1 Map. KV ensures that after
+// a dashboard save (which invalidates both layers), all isolates pick up the new
+// data within 30s. The L1 Map is a hot-path optimization — avoids a KV read for
+// the isolate that just wrote or recently read.
+const siteCache = new Map();       // L1 — per-isolate, no TTL enforcement beyond what's set below
+const L1_TTL = 60_000;             // L1 entries expire after 60s
+const L2_TTL = 30;                 // KV entries expire after 30s (seconds, for KV expirationTtl)
+const KV_PREFIX_SITE = "sitecache:";
 
-function getCached(key, fetcher) {
+async function getCached(env, key, dbFetcher) {
+  // L1 check (synchronous, per-isolate)
   const entry = siteCache.get(key);
   if (entry && entry.expires > Date.now()) return entry.data;
-  const data = fetcher();
-  siteCache.set(key, { data, expires: Date.now() + CACHE_TTL });
+
+  // L2 check (KV, cross-isolate)
+  try {
+    const kvRaw = await env.SESSIONS.get(KV_PREFIX_SITE + key, { type: "json" });
+    if (kvRaw !== null) {
+      siteCache.set(key, { data: kvRaw, expires: Date.now() + L1_TTL });
+      return kvRaw;
+    }
+  } catch { /* KV miss — fall through to DB */ }
+
+  // DB fetch
+  const data = await dbFetcher();
+  // Populate both layers
+  siteCache.set(key, { data, expires: Date.now() + L1_TTL });
+  try {
+    await env.SESSIONS.put(KV_PREFIX_SITE + key, JSON.stringify(data), { expirationTtl: L2_TTL });
+  } catch { /* non-critical */ }
   return data;
 }
 
 export function invalidateSiteCache(slugOrId) {
   siteCache.delete(slugOrId);
+  // Fire-and-forget KV delete — best-effort; 30s TTL handles stale entries anyway.
+  try { globalThis.__yr_env?.SESSIONS?.delete(KV_PREFIX_SITE + slugOrId).catch(() => {}); } catch {}
 }
 
 export function invalidateUserCache(uid) {
   siteCache.delete(uid);
   siteCache.delete(`user_boards:${uid}`);
+  try {
+    const sessions = globalThis.__yr_env?.SESSIONS;
+    if (sessions) {
+      sessions.delete(KV_PREFIX_SITE + uid).catch(() => {});
+      sessions.delete(KV_PREFIX_SITE + `user_boards:${uid}`).catch(() => {});
+    }
+  } catch {}
 }
 
-const getBySlug = (env, slug) => getCached(slug, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE slug=$1`, [slug]));
+const getBySlug = (env, slug) => getCached(env, slug, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE slug=$1`, [slug]));
 
 // Multi-board: returns the FIRST board for a user (legacy single-board compat).
-const getByUser = (env, uid) => getCached(uid, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE user_id=$1 ORDER BY id ASC LIMIT 1`, [uid]));
+const getByUser = (env, uid) => getCached(env, uid, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE user_id=$1 ORDER BY id ASC LIMIT 1`, [uid]));
 
 // Multi-board: returns ALL boards for a user.
 export async function getAllBoards(env, uid) {
@@ -91,15 +122,18 @@ function archiveShape(a) {
   return { label: a.label, at: a.created_at, top };
 }
 
+// Plan-aware archive limits
+export const ARCHIVE_LIMITS = { free: 6, starter: 6, pro: 24, agency: 999 };
+
 async function getArchives(env, siteId, limit = 6) {
-  const rows = await query(
-    `SELECT id, label, snapshot_json,
-            (EXTRACT(EPOCH FROM created_at) * 1000)::double precision AS created_at
-       FROM archives WHERE site_id=$1 ORDER BY created_at DESC LIMIT $2`,
-    [siteId, limit]
-  );
-  return rows || [];
-}
+    const rows = await query(
+      `SELECT id, label, snapshot_json,
+              (EXTRACT(EPOCH FROM created_at) * 1000)::double precision AS created_at
+         FROM archives WHERE site_id=$1 ORDER BY created_at DESC LIMIT $2`,
+      [siteId, limit]
+    );
+    return rows || [];
+  }
 
 export function publicShape(site, players, archives = [], hasLogo = false) {
   const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
@@ -121,29 +155,32 @@ export function publicShape(site, players, archives = [], hasLogo = false) {
 }
 
 export async function getPublicSite(env, slug) {
-  const site = await getBySlug(env, slug);
-  if (!site || !site.published) return null;
-  const [owner, players, archives, logoRow] = await Promise.all([
-    one(
-      "SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1",
-      [site.user_id]
-    ),
-    getPlayers(env, site.id),
-    getArchives(env, site.id),
-    one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
-  ]);
-  if (owner && owner.status === "suspended") return { suspended: true };
-  return { id: site.id, data: publicShape(site, players, archives, !!logoRow?.has_logo), plan: effectivePlan(owner) };
-}
+    const site = await getBySlug(env, slug);
+    if (!site || !site.published) return null;
+    const [owner, players, logoRow] = await Promise.all([
+      one(
+        "SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1",
+        [site.user_id]
+      ),
+      getPlayers(env, site.id),
+      one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
+    ]);
+    if (owner && owner.status === "suspended") return { suspended: true };
+    const plan = effectivePlan(owner);
+    const archiveLimit = ARCHIVE_LIMITS[plan] || 6;
+    const archives = await getArchives(env, site.id, archiveLimit);
+    return { id: site.id, data: publicShape(site, players, archives, !!logoRow?.has_logo), plan };
+  }
 
-export async function getUserSite(env, uid) {
-  const site = await getByUser(env, uid);
-  if (!site) return null;
-  const [archives, logoRow, extraRow] = await Promise.all([
-    getArchives(env, site.id, 24),
-    one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
-    one("SELECT extra_json FROM sites WHERE id=$1", [site.id]),
-  ]);
+export async function getUserSite(env, uid, plan) {
+    const site = await getByUser(env, uid);
+    if (!site) return null;
+    const archiveLimit = ARCHIVE_LIMITS[plan || "free"] || 6;
+    const [archives, logoRow, extraRow] = await Promise.all([
+      getArchives(env, site.id, archiveLimit),
+      one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
+      one("SELECT extra_json FROM sites WHERE id=$1", [site.id]),
+    ]);
   const extra = (extraRow?.extra_json && typeof extraRow.extra_json === "object") ? extraRow.extra_json : {};
   return {
       id: site.id, slug: site.slug, published: !!site.published,
@@ -175,11 +212,12 @@ export async function getUserBoardsList(env, uid) {
 }
 
 // Multi-board: get full site data for a specific board by siteId.
-export async function getUserSiteById(env, uid, siteId) {
-  const site = await getBoardById(env, uid, siteId);
-  if (!site) return null;
-  const [archives, logoRow, extraRow] = await Promise.all([
-    getArchives(env, site.id, 24),
+export async function getUserSiteById(env, uid, siteId, plan) {
+    const site = await getBoardById(env, uid, siteId);
+    if (!site) return null;
+    const archiveLimit = ARCHIVE_LIMITS[plan || "free"] || 6;
+    const [archives, logoRow, extraRow] = await Promise.all([
+      getArchives(env, site.id, archiveLimit),
     one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
     one("SELECT extra_json FROM sites WHERE id=$1", [site.id]),
   ]);
@@ -222,12 +260,15 @@ export async function createBoard(env, uid, { slug, name } = {}) {
 
 // Close out the current period: snapshot the board, then optionally reset it.
 export async function createArchive(env, uid, { label, clear, siteId } = {}) {
-  const site = siteId ? await getBoardById(env, uid, siteId) : await getByUser(env, uid);
-  if (!site) return { error: "no site" };
-  const players = await getPlayers(env, site.id);
-  if (!players.length) return { error: "Nothing to archive — the board is empty." };
-  const count = await one("SELECT COUNT(*) n FROM archives WHERE site_id=$1", [site.id]);
-  if ((Number(count?.n) || 0) >= 24) return { error: "Archive limit reached (24). Delete an old one first." };
+    const site = siteId ? await getBoardById(env, uid, siteId) : await getByUser(env, uid);
+    if (!site) return { error: "no site" };
+    const players = await getPlayers(env, site.id);
+    if (!players.length) return { error: "Nothing to archive — the board is empty." };
+    const owner = await one("SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1", [uid]);
+    const plan = effectivePlan(owner);
+    const maxArchives = ARCHIVE_LIMITS[plan] || 6;
+    const count = await one("SELECT COUNT(*) n FROM archives WHERE site_id=$1", [site.id]);
+    if (maxArchives < 999 && (Number(count?.n) || 0) >= maxArchives) return { error: `Archive limit reached (${maxArchives}). Delete an old one first. Upgrade for more.` };
   const lab = String(label || "").trim().slice(0, 60) ||
     new Date().toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   await getSql().begin(async (tx) => {
@@ -306,23 +347,35 @@ export async function saveSite(env, user, payload, siteId) {
   }
   const themeJson = JSON.stringify(themeObj);
 
-  // Invalidate cache before write
+  // Invalidate cache before write (both L1 and L2 for cross-isolate consistency)
   invalidateSiteCache(site.slug);
   invalidateSiteCache(uid);
   if (siteId) invalidateSiteCache(siteId);
+  // Also invalidate L2 KV entries explicitly with env for immediate effect
+  const _kv = env?.SESSIONS;
+  if (_kv) {
+    try {
+      await Promise.all([
+        _kv.delete(KV_PREFIX_SITE + site.slug),
+        _kv.delete(KV_PREFIX_SITE + uid),
+        siteId ? _kv.delete(KV_PREFIX_SITE + siteId) : Promise.resolve(),
+      ]);
+    } catch {}
+  }
 
   // Capture old top-3 for notifications
   const oldPlayers = await getPlayers(env, site.id);
   const oldTop3 = oldPlayers.slice().sort((a, b2) => (b2.wagered || 0) - (a.wagered || 0)).slice(0, 3);
 
   await getSql().begin(async (tx) => {
+    const publishedVal = typeof payload.published === "boolean" ? payload.published : site.published;
     await tx.unsafe(
-      `UPDATE sites SET name=$1, tagline=$2, casino=$3, code=$4, cta_url=$5, prize_pool=$6, period=$7, ends_at=$8, reset_note=$9, blurb=$10, extra_json=$11::jsonb, logo_data=$12, theme_json=$13::jsonb, updated_at=now() WHERE id=$14`,
+      `UPDATE sites SET name=$1, tagline=$2, casino=$3, code=$4, cta_url=$5, prize_pool=$6, period=$7, ends_at=$8, reset_note=$9, blurb=$10, extra_json=$11::jsonb, logo_data=$12, theme_json=$13::jsonb, published=$14, updated_at=now() WHERE id=$15`,
       [
         b.name ?? site.name, b.tagline ?? site.tagline, b.casino ?? site.casino, b.code ?? site.code,
         b.ctaUrl ?? site.cta_url, b.prizePool ?? site.prize_pool, b.period ?? site.period,
         payload.endsAt ?? site.ends_at, b.resetNote ?? site.reset_note, (payload.partner && payload.partner.blurb) ?? site.blurb,
-        extra, logoData, themeJson, site.id,
+        extra, logoData, themeJson, publishedVal, site.id,
       ]
     );
     if (Array.isArray(payload.players)) {

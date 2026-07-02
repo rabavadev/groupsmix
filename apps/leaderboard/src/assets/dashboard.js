@@ -40,6 +40,9 @@ async function init(){
   renderDomain();
   renderNotifications(p.notify || {});
   if (p.customDomain !== undefined) $("f_domain").value = p.customDomain || "";
+  // Published toggle
+  const pubToggle = $("pubToggle");
+  if (pubToggle) pubToggle.checked = p.published !== false;
   $("a_label").placeholder = new Date().toLocaleString("en-US",{month:"long",year:"numeric",timeZone:"UTC"});
   $("liveLink").textContent = location.host + "/" + SLUG; $("liveLink").href = "/" + SLUG; $("viewLive").href = "/" + SLUG;
   $("loading").hidden=true; $("dash").hidden=false;
@@ -148,6 +151,9 @@ $("addRow").addEventListener("click",()=>{
 function collect(){
   const players=[...$("rows").children].map(tr=>({name:tr.querySelector(".p-name").value.trim(),wagered:parseFloat(tr.querySelector(".p-wager").value)||0,prize:parseFloat(tr.querySelector(".p-prize").value)||0})).filter(p=>p.name);
   const out = { brand:{name:$("f_name").value.trim(),tagline:$("f_tagline").value.trim(),casino:$("f_casino").value.trim()||"Stake",code:$("f_code").value.trim(),ctaUrl:$("f_cta").value.trim(),prizePool:$("f_pool").value.trim(),period:$("f_period").value.trim()||"Monthly"}, endsAt:fromLocalInput($("f_ends").value), partner:{blurb:$("f_blurb").value.trim(),chips:EXTRA.chips}, whyStats:EXTRA.whyStats, rules:EXTRA.rules, socials:EXTRA.socials, players };
+  // Include published state from toggle
+  const pubToggle = $("pubToggle");
+  if (pubToggle) out.published = pubToggle.checked;
   if (ACTIVE_SITE_ID) out.siteId = ACTIVE_SITE_ID;
   if (ME && ME.plan !== "free") {
     out.branding = { accentA: $("c_a").value, accentB: $("c_b").value };

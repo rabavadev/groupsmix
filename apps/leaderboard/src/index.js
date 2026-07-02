@@ -1,8 +1,8 @@
 import { hashPassword, verifyPassword, uuid, newToken, createSession, destroySession, destroyAllUserSessions, currentUser, requireUser, isEmail, slugify, RESERVED, cookieSet, cookieClear, readToken, json, bad, ok, readJson, rateLimit, clientIp, handleAccountDelete } from "./auth.js";
-import { DEFAULT_EXTRA, getPublicSite, getUserSite, getUserSiteById, getUserBoardsList, saveSite, getByUser, getAllBoards, createBoard, invalidateUserCache, createArchive, deleteArchive } from "./site.js";
+import { DEFAULT_EXTRA, getPublicSite, getUserSite, getUserSiteById, getUserBoardsList, saveSite, getByUser, getAllBoards, createBoard, invalidateUserCache, createArchive, deleteArchive, ARCHIVE_LIMITS } from "./site.js";
 import { renderLeaderboard } from "./render.js";
 import { PAGES } from "./pages.js";
-import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS, PLAN_PRICES, priceUsd, handleCheckout, handleIpn, activatePlan } from "./billing.js";
+import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS, PLAN_PRICES, priceUsd, handleCheckout, handleIpn, activatePlan, activatePro } from "./billing.js";
 import { handleOverview, handleUsers, handleLeads, handlePayments, handleAction } from "./admin.js";
 import { sendEmail, resetEmail } from "./email.js";
 import { bumpStat, getStats, getHeatmap, getTopReferrers } from "./stats.js";
@@ -83,6 +83,7 @@ export default {
     if (typeof globalThis.process === "undefined") globalThis.process = { env: {} };
     const pe = globalThis.process.env;
     pe.DATABASE_URL = env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL;
+    globalThis.__yr_env = env; // for KV-backed cache invalidation in site.js
 
     const url = new URL(request.url);
     const path = url.pathname;
@@ -313,7 +314,7 @@ ${entries.join("\n")}
     // --- SEC-108: CSRF check for all authenticated state-changing requests ---
     // Exemptions: signup/login/forgot/reset (no session yet), IPN (server-to-server webhook),
     // /api/lead and /api/track/copy (public, no session), and GET/HEAD/OPTIONS (idempotent).
-    const CSRF_EXEMPT = new Set(["/api/billing/ipn", "/api/lead", "/api/track/copy"]);
+    const CSRF_EXEMPT = new Set(["/api/billing/ipn", "/api/lead", "/api/track/copy", "/api/scores"]);
     if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
       if (!verifyCsrf(request) && !CSRF_EXEMPT.has(path)) {
         return bad("CSRF validation failed. Please refresh the page.", 403);
@@ -338,7 +339,11 @@ ${entries.join("\n")}
 
     // --- API: billing ---
     if (path === "/api/billing/checkout" && method === "POST") return handleCheckout(request, env);
+    if (path === "/api/billing/trial" && method === "POST") return handleTrial(request, env);
     if (path === "/api/billing/ipn" && method === "POST") return handleIpn(request, env);
+
+    // --- API: score postback (authenticated via X-Postback-Key header, Pro+ only) ---
+    if (path === "/api/scores" && method === "POST") return handleScores(request, env);
 
     // --- tracked Join redirect: /go/<slug> → streamer's referral URL ---
     if (path === "/api/bot/connect" && method === "POST") return handleBotConnect(request, env);
@@ -355,6 +360,32 @@ ${entries.join("\n")}
 
     // --- API: public data ---
     if (path.startsWith("/api/public/") && method === "GET") {
+      // Full standings JSON endpoint for embedding / Telegram bot queries
+      const standingsMatch = path.match(/^\/api\/public\/([^/]+)\/standings$/);
+      if (standingsMatch) {
+        const slug = decodeURIComponent(standingsMatch[1]).toLowerCase();
+        if (!(await rateLimit(env, `pub-standings:${clientIp(request)}`, 100, 60))) return bad("Rate limit exceeded. Try again shortly.", 429);
+        const r = await getPublicSite(env, slug);
+        if (!r || r.suspended) return bad("not found", 404);
+        const d = r.data;
+        const sorted = (d.players || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
+        const players = sorted.map((p, i) => ({ name: p.name, wagered: p.wagered, prize: p.prize, position: i + 1 }));
+        const endsAt = d.endsAt || null;
+        let countdown = null;
+        if (endsAt) {
+          const remaining = Math.max(0, new Date(endsAt).getTime() - Date.now());
+          countdown = { endsAt, remaining };
+        }
+        return json({
+          slug,
+          name: d.brand?.name || slug,
+          casino: d.brand?.casino || "",
+          period: d.brand?.period || "Monthly",
+          prizePool: d.brand?.prizePool || "$0",
+          players,
+          countdown,
+        }, 200, { "cache-control": "public, max-age=30" });
+      }
       // Lightweight players-only endpoint for live polling
       const playersMatch = path.match(/^\/api\/public\/([^/]+)\/players$/);
       if (playersMatch) {
@@ -453,7 +484,15 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
       const slug = decodeURIComponent(path.slice(1).split("/")[0]).toLowerCase();
       if (RESERVED.has(slug)) return new Response("not found", { status: 404 });
       const r = await getPublicSite(env, slug);
-      if (!r) return new Response(notFoundPage(slug), { status: 404, headers: HTML });
+      if (!r) {
+        // Check if site exists but is unpublished — show Coming Soon instead of 404
+        const rawSite = await one("SELECT slug, published, suspended FROM sites WHERE slug=$1", [slug]);
+        if (rawSite && !rawSite.published && !rawSite.suspended) {
+          return new Response(comingSoonPage(slug), { status: 200, headers: HTML });
+        }
+        if (rawSite && rawSite.suspended) return new Response(suspendedPage(), { status: 403, headers: HTML });
+        return new Response(notFoundPage(slug), { status: 404, headers: HTML });
+      }
       if (r.suspended) return new Response(suspendedPage(), { status: 403, headers: HTML });
       // Only count one view per slug per browser per 24h (cookie-based cooldown).
       const viewCookieName = `__v_${slug}`;
@@ -494,6 +533,12 @@ function suspendedPage() {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unavailable</title>
 <style>body{background:#0b0b0c;color:#ededf0;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.b{text-align:center}a{color:#c8ff00}</style></head>
 <body><div class="b"><h1>This page is unavailable</h1><p>The owner's account is suspended.</p><p><a href="/">YourRank</a></p></div></body></html>`;
+}
+
+function comingSoonPage(slug) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coming Soon</title>
+<style>body{background:#0b0b0c;color:#ededf0;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.b{text-align:center}a{color:#c8ff00}h1{font-size:48px;margin:0 0 12px}p{color:rgba(255,255,255,0.5);font-size:16px}</style></head>
+<body><div class="b"><h1>🚧 Coming Soon</h1><p>This leaderboard is being set up. Check back soon!</p><p><a href="/">YourRank</a></p></div></body></html>`;
 }
 
 async function handleSignup(request, env) {
@@ -591,13 +636,14 @@ async function handleMe(request, env) {
     const boards = await getUserBoardsList(env, user.id);
     const plan = effectivePlan(user);
     return json({ ok: true, user: {
-      id: user.id, email: user.email,
-      plan, planExpiresAt: user.plan_expires_at || 0,
-      status: user.status, isAdmin: !!user.is_admin, slug: site?.slug || null,
-      limits: { players: PLAN_LIMITS[plan], boards: BOARD_LIMITS[plan] },
-      proPrice: priceUsd(env, "pro"),
-      boards,
-    } });
+        id: user.id, email: user.email,
+        plan, planExpiresAt: user.plan_expires_at || 0,
+        status: user.status, isAdmin: !!user.is_admin, slug: site?.slug || null,
+        limits: { players: PLAN_LIMITS[plan], boards: BOARD_LIMITS[plan] },
+        proPrice: priceUsd(env, "pro"),
+        hasTrial: !!user.has_trial,
+        boards,
+      } });
   } catch (e) {
     console.error("handleMe error:", String(e?.message || e), String(e?.stack || ""));
     return json({ ok: false, error: "Internal error", detail: String(e?.message || e) }, 500);
@@ -678,21 +724,22 @@ async function handleTrackCopy(request, env, ctx) {
 }
 
 async function handleGetSite(request, env) {
-    const { user, res } = await requireUser(request, env);
-    if (res) return res;
-    if (user.status === "suspended") return bad("This account is suspended.", 403);
-    const url = new URL(request.url);
-    const siteId = url.searchParams.get("siteId");
-    let s;
-    if (siteId) {
-      s = await getUserSiteById(env, user.id, siteId);
-    } else {
-      s = await getUserSite(env, user.id);
+      const { user, res } = await requireUser(request, env);
+      if (res) return res;
+      if (user.status === "suspended") return bad("This account is suspended.", 403);
+      const url = new URL(request.url);
+      const siteId = url.searchParams.get("siteId");
+      const plan = effectivePlan(user);
+      let s;
+      if (siteId) {
+        s = await getUserSiteById(env, user.id, siteId, plan);
+      } else {
+        s = await getUserSite(env, user.id, plan);
+      }
+      if (!s) return bad("No site for this account", 404);
+      const boards = await getUserBoardsList(env, user.id);
+      return json({ ok: true, slug: s.slug, published: s.published, plan: plan, data: s.data, notify: s.notify || {}, archives: s.archives, boards, siteId: s.id, customDomain: s.customDomain || "" });
     }
-    if (!s) return bad("No site for this account", 404);
-    const boards = await getUserBoardsList(env, user.id);
-    return json({ ok: true, slug: s.slug, published: s.published, plan: effectivePlan(user), data: s.data, notify: s.notify || {}, archives: s.archives, boards, siteId: s.id, customDomain: s.customDomain || "" });
-  }
 
 async function handleListBoards(request, env) {
     const { user, res } = await requireUser(request, env);
@@ -869,4 +916,76 @@ async function handleNotifyTest(request, env) {
   }
 
   return bad("Unknown channel. Use 'discord' or 'telegram'.");
+}
+
+// POST /api/billing/trial — start a free 7-day Pro trial (one-time per user).
+async function handleTrial(request, env) {
+try {
+  const { user, res } = await requireUser(request, env);
+  if (res) return res;
+  if (user.status === "suspended") return bad("This account is suspended.", 403);
+
+  // Gate: one trial ever
+  if (user.has_trial) return bad("You've already used your free trial.", 400);
+
+  // Don't allow trial if already on a paid plan
+  const current = effectivePlan(user);
+  if (current !== "free") return bad("You're already on a paid plan.", 400);
+
+  // Activate 7-day Pro trial
+  await activatePro(env, user.id, 7, { provider: "trial" });
+
+  // Mark has_trial = true so they can never trial again
+  await exec("UPDATE users SET has_trial=TRUE, updated_at=now() WHERE id=$1", [user.id]);
+
+  // Calculate expiry for the response
+  const expiresMs = Date.now() + 7 * 86400000;
+  const expiresAt = new Date(expiresMs).toISOString();
+
+  return json({ ok: true, expiresAt, days: 7 });
+} catch (e) {
+  console.error("trial failed:", String(e?.message || e));
+  return bad("Couldn't start trial. Try again.", 500);
+}
+}
+
+// POST /api/scores — authenticated by X-Postback-Key header.
+// Validates key against sites table, checks Pro plan gate, replaces player list.
+async function handleScores(request, env) {
+try {
+  const postbackKey = request.headers.get("x-postback-key");
+  if (!postbackKey) return bad("Missing X-Postback-Key header.", 401);
+  // Rate limit: 10/min per key
+  if (!(await rateLimit(env, `scores:${postbackKey}`, 10, 60))) return bad("Rate limit exceeded. Try again shortly.", 429);
+  // Validate key against sites table
+  const site = await one("SELECT id, user_id FROM sites WHERE postback_key=$1", [postbackKey]);
+  if (!site) return bad("Invalid postback key.", 401);
+  // Gate behind Pro plan
+  const owner = await one("SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1", [site.user_id]);
+  const plan = effectivePlan(owner);
+  if (plan !== "pro" && plan !== "agency") return bad("Score API is a Pro feature. Upgrade to unlock.", 403);
+  const body = await readJson(request);
+  if (!body) return bad("Invalid JSON body.");
+  const slug = String(body.slug || "").trim();
+  const players = body.players;
+  if (!Array.isArray(players)) return bad("players must be an array.");
+  // Plan gate: player count
+  const validPlayers = players.filter(p => p && p.name);
+  if (validPlayers.length > PLAN_LIMITS[plan]) return bad(`Your plan allows up to ${PLAN_LIMITS[plan]} players.`, 400);
+  // Fetch existing site data to preserve brand settings
+  const existingSite = await one("SELECT id, slug, name, tagline, casino, code, cta_url, prize_pool, period, ends_at, reset_note, blurb, extra_json, published, theme_json, updated_at FROM sites WHERE id=$1", [site.id]);
+  if (!existingSite) return bad("Site not found.", 404);
+  // Reuse saveSite with just the players update — pass minimal payload
+  const user = owner;
+  const savePayload = {
+    brand: { name: existingSite.name, tagline: existingSite.tagline, casino: existingSite.casino, code: existingSite.code, ctaUrl: existingSite.cta_url, prizePool: existingSite.prize_pool, period: existingSite.period, resetNote: existingSite.reset_note },
+    partner: { blurb: existingSite.blurb },
+    players: validPlayers.map(p => ({ name: String(p.name).slice(0, 40), wagered: Number(p.wagered) || 0, prize: Number(p.prize) || 0 })),
+  };
+  const r = await saveSite(env, user, savePayload, site.id);
+  return r.error ? bad(r.error, 400) : json({ ok: true, players: validPlayers.length });
+} catch (e) {
+  console.error("scores API failed:", String(e?.message || e));
+  return bad("Internal error.", 500);
+}
 }
