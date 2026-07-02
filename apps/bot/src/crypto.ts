@@ -67,3 +67,29 @@ export function newClickRef(): string {
 export function newPostbackKey(): string {
   return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
 }
+
+/**
+ * Constant-time verify of a hex HMAC-SHA256 over `payload` keyed by `secret`.
+ * Used by the signed postback endpoint (POST /pb). Casinos that support signing
+ * send `X-Postback-Signature: <hex hmac>` where the hmac is of the exact query
+ * string they sent (e.g. `event=deposit&amount=50&click_ref=x`). Verified
+ * against the streamer's own postback_key as the HMAC secret — same value the
+ * legacy path uses, so no schema change.
+ */
+export async function verifyHmacSha256Hex(secret: string, payload: string, signatureHex: string): Promise<boolean> {
+  const sig = String(signatureHex ?? "").trim().toLowerCase();
+  if (!sig || !/^[0-9a-f]{64}$/.test(sig)) return false; // SHA-256 = 64 hex chars
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  const expected = Buffer.from(mac).toString("hex");
+  if (expected.length !== sig.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+  return diff === 0;
+}

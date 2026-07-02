@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Update } from "grammy/types";
 import { config } from "./config.js";
 import { one, query } from "./db.js";
-import { encryptToken, newClickRef, newLinkSlug, newWebhookSecret } from "./crypto.js";
+import { encryptToken, newClickRef, newLinkSlug, newWebhookSecret, verifyHmacSha256Hex } from "./crypto.js";
 import { getBotBySecret, handleUpdateForBot } from "./botEngine.js";
 import { getMe, setWebhook } from "./telegram.js";
 import { buildDashboard } from "./dashboard.js";
@@ -22,6 +22,42 @@ function safeEqual(a: string, b: string): boolean {
     diff |= (sa.charCodeAt(i) ?? 0) ^ (sb.charCodeAt(i) ?? 0);
   }
   return diff === 0;
+}
+
+/**
+ * Insert a conversion row from a casino postback. Shared by the legacy
+ * GET|POST /pb/:key path (key in the URL, no signature) and the new signed
+ * POST /pb path (key in X-Postback-Key header + HMAC in X-Postback-Signature).
+ * `ownerId` is resolved by the caller; `q` is the parsed query object.
+ */
+type PostbackQuery = Record<string, string | string[]>;
+async function recordConversion(ownerId: string, q: PostbackQuery): Promise<void> {
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const clickRef = first(q.click_ref) ?? first(q.clickid) ?? first(q.subid) ?? first(q.sub_id) ?? null;
+  const event = (first(q.event) ?? first(q.goal) ?? "deposit").toLowerCase().slice(0, 32);
+  // Clamp amount to a non-negative bounded number. Negatives / NaN / absurd
+  // values feed revenue/conversion stats and could drive affiliate payouts.
+  const rawAmt = first(q.amount) == null ? NaN : Number(first(q.amount));
+  const amount = Number.isFinite(rawAmt) && rawAmt >= 0 && rawAmt <= 1e12 ? rawAmt : null;
+  const currency = (first(q.currency) ?? "USD").toUpperCase().slice(0, 8);
+
+  // Attribute to an offer via the click ref when possible.
+  let offerId: string | null = null;
+  if (clickRef) {
+    const hit = await one<{ offer_id: string }>(
+      `SELECT sl.offer_id FROM clicks cl
+         JOIN short_links sl ON sl.id = cl.short_link_id
+        WHERE cl.click_ref = $1 LIMIT 1`,
+      [clickRef]
+    );
+    offerId = hit?.offer_id ?? null;
+  }
+
+  await query(
+    `INSERT INTO conversions (owner_id, offer_id, click_ref, event, amount, currency, raw)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [ownerId, offerId, clickRef, event, amount, currency, JSON.stringify(q)]
+  );
 }
 
 type Bindings = {
@@ -101,52 +137,57 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
   });
 
   // =================================================================
-  // 2b) CASINO POSTBACKS — /pb/:key?event=deposit&amount=50&click_ref=x
-  //     The key is the streamer's secret postback_key. Casinos /
-  //     affiliate networks call this on registration / deposit.
+  // 2b) CASINO POSTBACKS
+  //     Two equivalent paths to the same recordConversion():
+  //       - SIGNED (preferred): POST /pb
+  //           X-Postback-Key: <postback_key>
+  //           X-Postback-Signature: <hex HMAC-SHA256 of the raw query string,
+  //                                  keyed by the postback_key>
+  //           ?event=deposit&amount=50&click_ref=x
+  //         The key never rides the URL (no access-log/Referer leakage) and the
+  //         HMAC means a logged/intercepted request can't be forged or replayed
+  //         with new params. Use this once your affiliate networks support it.
+  //       - LEGACY (still works, for casinos already configured): GET|POST
+  //         /pb/:key?event=deposit&amount=50&click_ref=x — key in the URL path.
+  //         Rate-limited per key + amount clamped; no signature. Safe to keep
+  //         until every integration migrates, then deprecate.
   // =================================================================
-  app.on(["GET", "POST"], "/pb/:key", async (c) => {
-    const key = c.req.param("key");
-    // Per-key rate limit (the postback_key is the only auth on this route, and
-    // it's not behind the admin/api limiter). Caps a known key from being
-    // hammered to inflate conversions or stat-flood a streamer. Generous enough
-    // for legit casino bursts. Fails open if KV is unavailable.
+  app.post("/pb", async (c) => {
+    const key = c.req.header("x-postback-key");
+    const sig = c.req.header("x-postback-signature");
+    if (!key || !sig) return c.json({ error: "missing X-Postback-Key / X-Postback-Signature" }, 400);
+    // Rate limit per key (same limiter as the legacy path).
     const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 120, 60);
     if (!rl.ok) { c.header("Retry-After", String(rl.retryAfter)); return c.json({ error: "rate limited" }, 429); }
 
-    const owner = await one<{ id: string }>(
-      `SELECT id FROM users WHERE postback_key = $1`,
+    const owner = await one<{ id: string; postback_key: string }>(
+      `SELECT id, postback_key FROM users WHERE postback_key = $1`,
       [key]
     );
+    if (!owner || !owner.postback_key) return c.json({ error: "unknown key" }, 404);
+
+    // HMAC is over the EXACT query string the casino sent. Hono exposes it via
+    // c.req.url's search portion. This binds the signature to the params, so a
+    // logged request can't be tampered with (e.g. bump amount/click_ref).
+    const qs = new URL(c.req.url).search.slice(1); // without the leading '?'
+    const valid = await verifyHmacSha256Hex(owner.postback_key, qs, sig);
+    if (!valid) return c.json({ error: "bad signature" }, 401);
+
+    await recordConversion(owner.id, c.req.query() as PostbackQuery);
+    return c.json({ ok: true });
+  });
+
+  // LEGACY path — key in the URL, unsigned. Kept for integrations already
+  // calling GET /pb/:key. See the signed POST /pb above for the upgrade path.
+  app.on(["GET", "POST"], "/pb/:key", async (c) => {
+    const key = c.req.param("key");
+    const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 120, 60);
+    if (!rl.ok) { c.header("Retry-After", String(rl.retryAfter)); return c.json({ error: "rate limited" }, 429); }
+
+    const owner = await one<{ id: string }>(`SELECT id FROM users WHERE postback_key = $1`, [key]);
     if (!owner) return c.json({ error: "unknown key" }, 404);
 
-    const q = c.req.query();
-    const clickRef = q.click_ref ?? q.clickid ?? q.subid ?? q.sub_id ?? null;
-    const event = (q.event ?? q.goal ?? "deposit").toLowerCase().slice(0, 32);
-    // Clamp amount to a non-negative bounded number. Negatives / NaN / absurd
-    // values were accepted raw and feed revenue/conversion stats (and could
-    // drive affiliate payouts). Cap at 1e12 — generous for any real currency.
-    const rawAmt = q.amount == null ? NaN : Number(q.amount);
-    const amount = Number.isFinite(rawAmt) && rawAmt >= 0 && rawAmt <= 1e12 ? rawAmt : null;
-    const currency = (q.currency ?? "USD").toUpperCase().slice(0, 8);
-
-    // Attribute to an offer via the click ref when possible.
-    let offerId: string | null = null;
-    if (clickRef) {
-      const hit = await one<{ offer_id: string }>(
-        `SELECT sl.offer_id FROM clicks cl
-           JOIN short_links sl ON sl.id = cl.short_link_id
-          WHERE cl.click_ref = $1 LIMIT 1`,
-        [clickRef]
-      );
-      offerId = hit?.offer_id ?? null;
-    }
-
-    await query(
-      `INSERT INTO conversions (owner_id, offer_id, click_ref, event, amount, currency, raw)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [owner.id, offerId, clickRef, event, amount, currency, JSON.stringify(q)]
-    );
+    await recordConversion(owner.id, c.req.query() as PostbackQuery);
     return c.json({ ok: true });
   });
 

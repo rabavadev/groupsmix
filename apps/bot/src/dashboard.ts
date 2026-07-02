@@ -540,6 +540,8 @@ ${shellNavHtml({ activePath: "/bot/dashboard", user })}
   <div class="panel"><h2>Conversions (postbacks)</h2>
     <p class="muted" style="margin-bottom:10px">Give your affiliate manager this postback URL and add
       <code>{click_ref}</code> anywhere in your affiliate URL to attribute deposits to clicks.</p>
+    <p class="muted" style="margin-bottom:10px;font-size:12px">Your network supports request signing? Use <code>POST ${config.publicBaseUrl}/pb</code> with headers
+      <code>X-Postback-Key</code> (your key, below) + <code>X-Postback-Signature</code> (hex HMAC-SHA256 of the query string, keyed by that same key). It's the secure option — the key never rides the URL and the signature blocks tampering.</p>
     <div style="margin-bottom:10px"><button class="ghost" onclick="revealPostback()">Show my postback URL</button>
       <span id="pbUrl" class="copy" style="margin-left:8px"></span></div>
     <table><thead><tr><th>When</th><th>Event</th><th>Amount</th><th>Offer</th></tr></thead>
