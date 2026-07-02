@@ -4,7 +4,7 @@ import { query, one, exec, getSql } from "./db.js";
 import { notifyTop3Change, notifyReset, detectTop3Changes } from "./notifications.js";
 
 export const DEFAULT_EXTRA = {
-  chips: ["Instant Withdrawals", "Crypto Native", "24/7 Support"],
+  chips: ["Fast Payouts", "Crypto Friendly", "24/7 Support"],
   whyStats: [
     { big: "Deposit", label: "Bonus", sub: "Match on your first deposit" },
     { big: "Instant", label: "Rakeback", sub: "Automatic on every bet" },
@@ -214,7 +214,7 @@ export async function createBoard(env, uid, { slug, name } = {}) {
   const siteId = crypto.randomUUID();
   await exec(
     "INSERT INTO sites (id,user_id,slug,name,casino,prize_pool,period,published,extra_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)",
-    [siteId, uid, slug, name || slug, "Stake", "$0", "Monthly", true, JSON.stringify(DEFAULT_EXTRA)]
+    [siteId, uid, slug, name || slug, "", "$0", "Monthly", true, JSON.stringify(DEFAULT_EXTRA)]
   );
   invalidateUserCache(uid);
   return { ok: true, id: siteId, slug };

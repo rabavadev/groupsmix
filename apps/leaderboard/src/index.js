@@ -618,7 +618,11 @@ async function handleForgot(request, env) {
     await env.SESSIONS.put(`reset:${token}`, user.id, { expirationTtl: 3600 });
     const link = `${new URL(request.url).origin}/reset?token=${token}`;
     const mail = resetEmail(link);
-    await sendEmail(env, { to: user.email, ...mail });
+    const result = await sendEmail(env, { to: user.email, ...mail });
+    if (!result.sent) {
+      console.error("[forgot]: email send failed", result.reason);
+      return bad("Couldn't send the reset email right now. Please try again in a few minutes or contact support.", 502);
+    }
   }
   return ok({ message: "If that account exists, a reset link is on its way." });
 }
