@@ -69,16 +69,27 @@ export default {
 
     // --- SEO: sitemap.xml (SEO-002) ---
     if (path === "/sitemap.xml") {
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+      const origin = url.origin;
+      let entries = [
+        \`<url><loc>${origin}/</loc><priority>1.0</priority></url>\`,
+        \`<url><loc>${origin}/terms</loc><priority>0.3</priority></url>\`,
+        \`<url><loc>${origin}/privacy</loc><priority>0.3</priority></url>\`,
+        \`<url><loc>${origin}/responsible</loc><priority>0.3</priority></url>\`,
+      ];
+      try {
+        const sites = await query("SELECT slug FROM sites WHERE published=true AND suspended IS NOT TRUE");
+        for (const s of sites) {
+          entries.push(\`<url><loc>${origin}/${encodeURIComponent(s.slug)}</loc><priority>0.8</priority></url>\`);
+        }
+      } catch (e) {
+        console.error("sitemap: site query failed:", String(e?.message || e));
+      }
+      const sitemap = \`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>https://yourrank.site/</loc></url>
-<url><loc>https://yourrank.site/login</loc></url>
-<url><loc>https://yourrank.site/signup</loc></url>
-<url><loc>https://yourrank.site/terms</loc></url>
-<url><loc>https://yourrank.site/privacy</loc></url>
-</urlset>`;
+${entries.join("\n")}
+</urlset>\`;
       return new Response(sitemap, {
-        headers: { "content-type": "application/xml", "cache-control": "public, max-age=86400" },
+        headers: { "content-type": "application/xml", "cache-control": "public, max-age=3600" },
       });
     }
 
