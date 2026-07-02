@@ -53,6 +53,9 @@ export async function rateLimit(
     await kv.put(key, String(used), { expirationTtl: windowSec });
     return { ok: true, remaining: Math.max(0, limit - used), limit, retryAfter };
   } catch {
-    return { ok: true, remaining: limit, limit, retryAfter: 0 }; // fail open
+    // Fail closed: if KV is down, deny the request rather than allowing
+    // unlimited access. The admin API is still protected by its API key;
+    // this just adds defense-in-depth against brute force.
+    return { ok: false, remaining: 0, limit, retryAfter: windowSec };
   }
 }
