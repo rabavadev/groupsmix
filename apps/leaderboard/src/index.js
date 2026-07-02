@@ -6,7 +6,7 @@ import { effectivePlan, PLAN_LIMITS, priceUsd, handleCheckout, handleIpn, activa
 import { handleOverview, handleUsers, handleLeads, handlePayments, handleAction } from "./admin.js";
 import { sendEmail, resetEmail } from "./email.js";
 import { bumpStat, getStats } from "./stats.js";
-import { leaderboard_css, leaderboard_js, app_css, auth_js, dashboard_js, admin_js, landing_css, landing_js, analytics_js, billing_js, bot_setup_js } from "./assets_bundled.js";
+import { leaderboard_css, leaderboard_js, app_css, auth_js, dashboard_js, admin_js, landing_css, landing_js, analytics_js, billing_js, bot_setup_js, referral_js } from "./assets_bundled.js";
 import { query, one, exec, getSql } from "./db.js";
 import { shellNavHtml, SHELL_NAV_CSS } from "../../../shared/shell-nav.js";
 
@@ -83,6 +83,7 @@ export default {
         "/assets/analytics.js": [analytics_js, ".js"],
         "/assets/billing.js": [billing_js, ".js"],
         "/assets/bot-setup.js": [bot_setup_js, ".js"],
+        "/assets/referral.js": [referral_js, ".js"],
       };
       const entry = map[path];
       if (entry) return new Response(entry[0], { headers: { "content-type": MIME[entry[1]], "cache-control": "public, max-age=300, s-maxage=3600" } });
