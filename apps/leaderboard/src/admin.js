@@ -94,6 +94,12 @@ export async function handleAction(request, env) {
       await query("UPDATE users SET status='active', updated_at=now() WHERE id=$1", [target.id]);
       return ok();
     case "reset-link": {
+      // Don't let one admin mint a login-as link for ANOTHER admin. The suspend
+      // case already refuses admin targets; this closes the parallel path where
+      // a single compromised admin key would otherwise take over every other
+      // admin account (including the primary operator). Support reset-links are
+      // for regular users only.
+      if (target.is_admin) return bad("Can't generate a reset link for an admin");
       const token = newToken();
       await env.SESSIONS.put(`reset:${token}`, target.id, { expirationTtl: 86400 }); // admin links last 24h
       const origin = new URL(request.url).origin;

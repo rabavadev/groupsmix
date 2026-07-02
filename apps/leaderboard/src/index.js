@@ -15,6 +15,18 @@ const MIME = {
   ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml",
 };
 const HTML = { "content-type": "text/html; charset=utf-8" };
+// Hardened headers for the authenticated/app pages (login, signup, forgot,
+// reset, dashboard, admin). The public leaderboard keeps the plain HTML set
+// (it's intentionally iframe-able and loads Google Fonts) so we scope security
+// headers only to the pages that hold sessions/credentials. CSP allows inline
+// styles (the templates use <style> blocks) + Google Fonts (the auth pages load
+// them); nothing else. nosniff + Referrer-Policy are free wins everywhere.
+const SECURE_HTML = {
+  "content-type": "text/html; charset=utf-8",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "same-origin",
+  "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; connect-src 'self'; frame-ancestors 'self'",
+};
 
 export default {
   async fetch(request, env, ctx) {
@@ -48,19 +60,26 @@ export default {
 
     // --- pages ---
     if (path === "/" || path === "/index.html") return new Response(PAGES.index, { headers: HTML });
-    if (path === "/login" || path === "/login.html") return new Response(PAGES.login, { headers: HTML });
-    if (path === "/signup" || path === "/signup.html") return new Response(PAGES.signup, { headers: HTML });
+    if (path === "/login" || path === "/login.html") return new Response(PAGES.login, { headers: SECURE_HTML });
+  // GET /logout — the shared shell nav links here (a plain <a> can't POST).
+  // Destroy the session from the cookie's token, clear the cookie, and send the
+  // user to the login page. The in-page buttons still hit POST /api/auth/logout.
+  if ((path === "/logout" || path === "/logout.html") && method === "GET") {
+    await destroySession(env, readToken(request));
+    return new Response(null, { status: 302, headers: { "set-cookie": cookieClear(), location: "/login" } });
+  }
+    if (path === "/signup" || path === "/signup.html") return new Response(PAGES.signup, { headers: SECURE_HTML });
     if (path === "/dashboard" || path === "/dashboard.html") {
       const user = await currentUser(request, env);
       if (!user) return Response.redirect(new URL("/login", url), 302);
       const html = PAGES.dashboard
         .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
         .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard", user }));
-      return new Response(html, { headers: HTML });
+      return new Response(html, { headers: SECURE_HTML });
     }
-    if (path === "/forgot") return new Response(PAGES.forgot, { headers: HTML });
-    if (path === "/reset") return new Response(PAGES.reset, { headers: HTML });
-    if (path === "/admin") return new Response(PAGES.admin, { headers: HTML });
+    if (path === "/forgot") return new Response(PAGES.forgot, { headers: SECURE_HTML });
+    if (path === "/reset") return new Response(PAGES.reset, { headers: SECURE_HTML });
+    if (path === "/admin") return new Response(PAGES.admin, { headers: SECURE_HTML });
     if (path === "/terms") return new Response(PAGES.terms, { headers: HTML });
     if (path === "/privacy") return new Response(PAGES.privacy, { headers: HTML });
     if (path === "/responsible") return new Response(PAGES.responsible, { headers: HTML });
@@ -143,10 +162,15 @@ export default {
   },
 };
 
+// HTML-escape a value for interpolation into text/attribute context. Mirrors
+// render.js's esc(); duplicated here so index.js doesn't pull render.js's SSR
+// deps into the route layer.
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
 function notFoundPage(slug) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Not found</title>
 <style>body{background:#0b0b0c;color:#ededf0;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.b{text-align:center}a{color:#c8ff00}</style></head>
-<body><div class="b"><h1>No leaderboard here</h1><p>There's no page at <b>/${slug}</b> yet.</p><p><a href="/">Back to RankUp</a></p></div></body></html>`;
+<body><div class="b"><h1>No leaderboard here</h1><p>There's no page at <b>/${esc(slug)}</b> yet.</p><p><a href="/">Back to RankUp</a></p></div></body></html>`;
 }
 
 function suspendedPage() {
@@ -173,8 +197,27 @@ async function handleSignup(request, env) {
   const { hash, salt } = await hashPassword(password);
   const userId = uuid();
   // created_at/updated_at default to now(); id generated in-app for consistency.
-  await query("INSERT INTO users (id,email,password_hash,password_salt,plan,status) VALUES ($1,$2,$3,$4,$5,$6)", [userId, email, hash, salt, "free", "active"]);
-  await query("INSERT INTO sites (id,user_id,slug,name,casino,prize_pool,period,published,extra_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)", [uuid(), userId, finalSlug, name || finalSlug, "Stake", "$0", "Monthly", true, JSON.stringify(DEFAULT_EXTRA)]);
+  // The slug check above is a TOCTOU race: two concurrent signups choosing the
+  // same slug can both pass the SELECT, then the second INSERT hits sites.slug
+  // UNIQUE and threw an unhandled 500. Wrap the inserts; on a unique violation
+  // (23505) on the slug, append a short random suffix and retry once.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await query("INSERT INTO users (id,email,password_hash,password_salt,plan,status) VALUES ($1,$2,$3,$4,$5,$6)", [userId, email, hash, salt, "free", "active"]);
+      await query("INSERT INTO sites (id,user_id,slug,name,casino,prize_pool,period,published,extra_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)", [uuid(), userId, finalSlug, name || finalSlug, "Stake", "$0", "Monthly", true, JSON.stringify(DEFAULT_EXTRA)]);
+      break;
+    } catch (e) {
+      const msg = String(e?.message || e);
+      if (/23505/.test(msg) && attempt < 2) {
+        // unique violation — likely the slug raced; retry with a fresh suffix
+        finalSlug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+        continue;
+      }
+      // users.email UNIQUE collision (already checked above, but concurrent) or
+      // a real error: surface a clean message, never a raw 500.
+      return bad(/users_email_key|23505.*email/i.test(msg) ? "An account with that email already exists" : "Sign-up failed, please try again", 409);
+    }
+  }
   const token = await createSession(env, userId);
   return json({ ok: true, user: { id: userId, email, slug: finalSlug } }, 200, { "set-cookie": cookieSet(token) });
 }
@@ -188,9 +231,16 @@ async function handleLogin(request, env) {
   if (!isEmail(email) || !password) return bad("Email and password required");
   const user = await one("SELECT id,email,password_hash,password_salt,status FROM users WHERE email=$1", [email]);
   if (!user || !user.password_hash) return bad("Incorrect email or password", 401);
-  const good = await verifyPassword(password, user.password_salt, user.password_hash);
-  if (!good) return bad("Incorrect email or password", 401);
+  const { ok, needsRehash } = await verifyPassword(password, user.password_salt, user.password_hash);
+  if (!ok) return bad("Incorrect email or password", 401);
   if (user.status === "suspended") return bad("This account is suspended. Contact support.", 403);
+  // Lazy upgrade: if the stored hash used fewer PBKDF2 iterations than the
+  // current target, re-hash at the new count and persist — no password reset
+  // needed. Fire-and-forget so login latency isn't dominated by the rehash.
+  if (needsRehash) {
+    const { hash, salt } = await hashPassword(password);
+    query("UPDATE users SET password_hash=$1, password_salt=$2, updated_at=now() WHERE id=$3", [hash, salt, user.id]).catch(() => {});
+  }
   const site = await one("SELECT slug FROM sites WHERE user_id=$1", [user.id]);
   const token = await createSession(env, user.id);
   return json({ ok: true, user: { id: user.id, email: user.email, slug: site?.slug || null } }, 200, { "set-cookie": cookieSet(token) });
@@ -310,6 +360,17 @@ async function handleLead(request, env) {
   const contact = String(body.contact || "").slice(0, 160), note = String(body.note || "").slice(0, 500);
   if (!handle && !contact) return bad("Tell us who you are");
   await query("INSERT INTO leads (id,handle,casino,contact,note) VALUES ($1,$2,$3,$4,$5)", [uuid(), handle, casino, contact, note]);
-  if (env.LEAD_WEBHOOK_URL) { try { await fetch(env.LEAD_WEBHOOK_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ content: `New RankUp lead: ${handle} (${casino}) — ${contact}\n${note}` }) }); } catch {} }
+  if (env.LEAD_WEBHOOK_URL) {
+    // Strip Discord/Slack mention syntax so a lead submitter can't @everyone,
+    // <@&role-id>, or otherwise ping the operator's server through the webhook.
+    const safe = (s) => String(s ?? "").replace(/@/g, "@\u200b").replace(/</g, "<\u200b");
+    try {
+      await fetch(env.LEAD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: `New RankUp lead: ${safe(handle)} (${safe(casino)}) — ${safe(contact)}\n${safe(note)}` }),
+      });
+    } catch {}
+  }
   return json({ ok: true });
 }

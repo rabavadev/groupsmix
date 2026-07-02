@@ -163,6 +163,13 @@ export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
     }
     const uid = await currentUserId(c.req.raw, c.env);
     if (!uid) return c.json({ error: "not logged in" }, 401);
+    // Re-check suspended status on EVERY request, not just at login. The shared
+    // KV session lives up to 30 days and currentUserId() only resolves the token
+    // -> UUID; without this, an admin-suspended streamer's existing session keeps
+    // working (managing bots/offers/broadcasts) until the TTL expires.
+    const u = await one<{ status: string }>(`SELECT status FROM users WHERE id = $1`, [uid]);
+    if (!u) return c.json({ error: "not logged in" }, 401);
+    if (u.status === "suspended") return c.json({ error: "account suspended" }, 403);
     c.set("uid", uid);
     await next();
   });
