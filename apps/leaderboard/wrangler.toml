@@ -4,8 +4,10 @@ name = "groupsmix-leaderboard"
 # src/assets_bundled.js.
 main = "src/index.js"
 compatibility_date = "2024-11-01"
-# Required for the node 'pg' driver (uses node:* built-ins) used by src/db.js.
-compatibility_flags = ["nodejs_compat"]
+# Required for the node 'pg' driver. nodejs_compat_v2 ships the complete
+# node:net / node:tls polyfills pg's socket pool needs to stay stable on
+# Workers (v1 caused intermittent connection-setup hangs / 1101s).
+compatibility_flags = ["nodejs_compat_v2"]
 
 # This Worker owns the ROOT of the zone. The bot Worker claims the more-specific
 # /bot/*, /hook/*, /r/*, /pb/*, /billing/hook/* prefixes; more-specific wins, so
