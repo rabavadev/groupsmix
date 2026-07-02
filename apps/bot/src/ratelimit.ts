@@ -52,7 +52,8 @@ export async function rateLimit(
     // Refresh the TTL to the current window each hit; the key dies with the window.
     await kv.put(key, String(used), { expirationTtl: windowSec });
     return { ok: true, remaining: Math.max(0, limit - used), limit, retryAfter };
-  } catch {
-    return { ok: true, remaining: limit, limit, retryAfter: 0 }; // fail open
+  } catch (err) {
+    console.error("[ratelimit]: KV operation failed, failing open", err);
+    return { ok: true, remaining: limit, limit, retryAfter: 0 };
   }
 }

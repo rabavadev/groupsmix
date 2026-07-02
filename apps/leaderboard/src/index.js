@@ -455,7 +455,7 @@ async function handleLead(request, env) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ content: `New RankUp lead: ${safe(handle)} (${safe(casino)}) — ${safe(contact)}\n${safe(note)}` }),
       });
-    } catch {}
+    } catch (err) { console.error("[leadWebhook]: webhook delivery failed", err); }
   }
   return json({ ok: true });
 }
