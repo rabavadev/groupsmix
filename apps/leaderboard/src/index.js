@@ -70,12 +70,21 @@ export default {
   }
     if (path === "/signup" || path === "/signup.html") return new Response(PAGES.signup, { headers: SECURE_HTML });
     if (path === "/dashboard" || path === "/dashboard.html") {
-      const user = await currentUser(request, env);
-      if (!user) return Response.redirect(new URL("/login", url), 302);
-      const html = PAGES.dashboard
-        .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
-        .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard", user }));
-      return new Response(html, { headers: SECURE_HTML });
+      try {
+        const user = await currentUser(request, env);
+        if (!user) return Response.redirect(new URL("/login", url), 302);
+        const html = PAGES.dashboard
+          .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
+          .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard", user }));
+        return new Response(html, { headers: SECURE_HTML });
+      } catch (e) {
+        // TEMP diagnostic — return the real exception so we can see what throws
+        // on authenticated /dashboard (1101 hides it). Revert once root-caused.
+        const msg = String(e?.message || e);
+        const stack = String(e?.stack || "").split("\n").slice(0, 4).join(" | ");
+        console.error("dashboard render failed:", msg, stack);
+        return new Response(`dash debug: ${msg} :: ${stack}`, { status: 500, headers: { "content-type": "text/plain" } });
+      }
     }
     if (path === "/forgot") return new Response(PAGES.forgot, { headers: SECURE_HTML });
     if (path === "/reset") return new Response(PAGES.reset, { headers: SECURE_HTML });
