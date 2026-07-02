@@ -94,7 +94,7 @@ const loadUser = (env, uid) =>
     one(
       `SELECT id, email, plan,
               (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at,
-              status, is_admin, has_trial,
+              status, is_admin,
               (EXTRACT(EPOCH FROM created_at) * 1000)::double precision AS created_at
          FROM users WHERE id=$1`,
       [uid]
