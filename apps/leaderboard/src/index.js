@@ -281,14 +281,22 @@ ${entries.join("\n")}
       const r = await getPublicSite(env, slug);
       if (!r) return new Response(notFoundPage(slug), { status: 404, headers: HTML });
       if (r.suspended) return new Response(suspendedPage(), { status: 403, headers: HTML });
-      if (r.id) ctx.waitUntil(bumpStat(env, r.id, "views"));
+      // Only count one view per slug per browser per 24h (cookie-based cooldown).
+      const viewCookieName = `__v_${slug}`;
+      const viewCookies = (request.headers.get("cookie") || "");
+      const alreadyViewed = new RegExp(`(?:^|;\\s*)${viewCookieName}=`).test(viewCookies);
+      const respHeaders = { ...HTML, "cache-control": "public, max-age=30" };
+      if (r.id && !alreadyViewed) {
+        ctx.waitUntil(bumpStat(env, r.id, "views"));
+        respHeaders["set-cookie"] = `${viewCookieName}=1; Path=/${slug}; Max-Age=86400; SameSite=Lax; Secure`;
+      }
       const pro = r.plan === "pro";
       return new Response(
         renderLeaderboard(r.data, {
           watermark: !pro, homeUrl: url.origin, slug,
           logoUrl: pro && r.data.branding?.hasLogo ? `${url.origin}/logo/${slug}` : null,
         }),
-        { headers: { ...HTML, "cache-control": "public, max-age=30" } }
+        { headers: respHeaders }
       );
     }
 
