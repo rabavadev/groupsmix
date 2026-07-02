@@ -27,7 +27,7 @@ export const DEFAULT_EXTRA = {
 // All site columns except logo_data (base64 image, up to 180KB) — that's only
 // needed by the /logo/:slug endpoint and saveSite(), which fetch it separately.
 // PERF-004 / PERF-107: avoid SELECT * to prevent 180KB+ transfers on every page.
-const SITE_COLUMNS = "id, user_id, slug, name, tagline, casino, code, cta_url, prize_pool, period, ends_at, reset_note, blurb, extra_json, published, theme_json, updated_at, board_order, custom_domain";
+const SITE_COLUMNS = "id, user_id, slug, name, tagline, casino, code, cta_url, prize_pool, period, ends_at, reset_note, blurb, extra_json, published, theme_json, updated_at";
 
 // In-memory TTL cache for site configs (per-Worker isolate).
 const siteCache = new Map();
@@ -53,11 +53,11 @@ export function invalidateUserCache(uid) {
 const getBySlug = (env, slug) => getCached(slug, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE slug=$1`, [slug]));
 
 // Multi-board: returns the FIRST board for a user (legacy single-board compat).
-const getByUser = (env, uid) => getCached(uid, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE user_id=$1 ORDER BY board_order ASC, created_at ASC LIMIT 1`, [uid]));
+const getByUser = (env, uid) => getCached(uid, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE user_id=$1 ORDER BY id ASC LIMIT 1`, [uid]));
 
 // Multi-board: returns ALL boards for a user.
 export async function getAllBoards(env, uid) {
-  const rows = await query(`SELECT ${SITE_COLUMNS} FROM sites WHERE user_id=$1 ORDER BY board_order ASC, created_at ASC`, [uid]);
+  const rows = await query(`SELECT ${SITE_COLUMNS} FROM sites WHERE user_id=$1 ORDER BY id ASC`, [uid]);
   return rows || [];
 }
 
@@ -211,11 +211,10 @@ export async function createBoard(env, uid, { slug, name } = {}) {
   }
   const existing = await one("SELECT id FROM sites WHERE slug=$1", [slug]);
   if (existing) return { error: "That URL is already taken. Pick another.", code: "slug_taken" };
-  const boardOrder = boards.length;
   const siteId = crypto.randomUUID();
   await exec(
-    "INSERT INTO sites (id,user_id,slug,name,casino,prize_pool,period,published,extra_json,board_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)",
-    [siteId, uid, slug, name || slug, "Stake", "$0", "Monthly", true, JSON.stringify(DEFAULT_EXTRA), boardOrder]
+    "INSERT INTO sites (id,user_id,slug,name,casino,prize_pool,period,published,extra_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)",
+    [siteId, uid, slug, name || slug, "Stake", "$0", "Monthly", true, JSON.stringify(DEFAULT_EXTRA)]
   );
   invalidateUserCache(uid);
   return { ok: true, id: siteId, slug };
