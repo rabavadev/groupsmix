@@ -1,8 +1,9 @@
 import { hashPassword, verifyPassword, uuid, newToken, createSession, destroySession, destroyAllUserSessions, currentUser, requireUser, isEmail, slugify, RESERVED, cookieSet, cookieClear, readToken, json, bad, ok, readJson, rateLimit, clientIp, handleAccountDelete } from "./auth.js";
+import { sendErrorToDiscord } from "../../../shared/monitoring.js";
 import { DEFAULT_EXTRA, getPublicSite, getUserSite, getUserSiteById, getUserBoardsList, saveSite, getByUser, getAllBoards, createBoard, invalidateUserCache, createArchive, deleteArchive, ARCHIVE_LIMITS } from "./site.js";
 import { renderLeaderboard } from "./render.js";
 import { PAGES } from "./pages.js";
-import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS, PLAN_PRICES, priceUsd, handleCheckout, handleIpn, activatePlan, activatePro } from "./billing.js";
+import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS, PLAN_PRICES, priceUsd, handleCheckout, handleCheckoutLifetime, handleIpn, activatePlan, activatePro } from "./billing.js";
 import { handleOverview, handleUsers, handleLeads, handlePayments, handleAction } from "./admin.js";
 import { sendEmail, resetEmail } from "./email.js";
 import { bumpStat, getStats, getHeatmap, getTopReferrers } from "./stats.js";
@@ -77,16 +78,17 @@ async function resolveCustomDomain(env, host) {
 
 export default {
   async fetch(request, env, ctx) {
-    // Populate process.env so the shared Postgres data layer (db.js) can read
-    // the connection string. The Pool is created lazily on first query(), so
-    // this must run before any DB call — mirrors the bot Worker's worker.ts.
-    if (typeof globalThis.process === "undefined") globalThis.process = { env: {} };
-    const pe = globalThis.process.env;
-    pe.DATABASE_URL = env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL;
-    globalThis.__yr_env = env; // for KV-backed cache invalidation in site.js
+    try {
+      // Populate process.env so the shared Postgres data layer (db.js) can read
+      // the connection string. The Pool is created lazily on first query(), so
+      // this must run before any DB call — mirrors the bot Worker's worker.ts.
+      if (typeof globalThis.process === "undefined") globalThis.process = { env: {} };
+      const pe = globalThis.process.env;
+      pe.DATABASE_URL = env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL;
+      globalThis.__yr_env = env; // for KV-backed cache invalidation in site.js
 
-    const url = new URL(request.url);
-    const path = url.pathname;
+      const url = new URL(request.url);
+      const path = url.pathname;
     const method = request.method;
     const host = (request.headers.get("host") || "").toLowerCase().split(":")[0];
 
@@ -339,6 +341,7 @@ ${entries.join("\n")}
 
     // --- API: billing ---
     if (path === "/api/billing/checkout" && method === "POST") return handleCheckout(request, env);
+    if (path === "/api/billing/checkout-lifetime" && method === "POST") return handleCheckoutLifetime(request, env);
     if (path === "/api/billing/trial" && method === "POST") return handleTrial(request, env);
     if (path === "/api/billing/ipn" && method === "POST") return handleIpn(request, env);
 
@@ -515,7 +518,22 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
     }
 
     return new Response("not found", { status: 404 });
-  },
+  } catch (err) {
+    const errPath = (() => { try { return new URL(request.url).pathname; } catch { return "unknown"; } })();
+    console.error(`[leaderboard] unhandled error on ${errPath}:`, String(err?.message || err), err?.stack || "");
+    // Fire-and-forget Discord monitoring webhook
+    if (env.DISCORD_MONITORING_WEBHOOK) {
+      ctx.waitUntil(sendErrorToDiscord({
+        webhookUrl: env.DISCORD_MONITORING_WEBHOOK,
+        title: "YourRank Error",
+        message: String(err?.stack || err?.message || err),
+        path: errPath,
+        worker: "leaderboard",
+      }));
+    }
+    return new Response("Internal Server Error", { status: 500 });
+  }
+},
 };
 
 // HTML-escape a value for interpolation into text/attribute context. Mirrors

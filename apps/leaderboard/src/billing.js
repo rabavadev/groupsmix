@@ -2,68 +2,13 @@
 import { json, bad, ok, uuid, requireUser, safeEqual } from "./auth.js";
 import { query, one, exec, getSql } from "./db.js";
 
-// 4-tier plan limits (player caps per plan)
-export const PLAN_LIMITS = { free: 10, starter: 25, pro: 9999, agency: 9999 };
-// Max boards per plan
-export const BOARD_LIMITS = { free: 1, starter: 1, pro: 3, agency: 99 };
-// Prices in USD per 31-day billing period
-export const PLAN_PRICES = { free: 0, starter: 12, pro: 29, agency: 79 };
-// Display names and feature lists for the landing page pricing table
-export const PLAN_META = {
-  free: {
-    name: "Free", price: "$0", period: "",
-    highlight: false,
-    features: [
-      "1 leaderboard",
-      "Up to 10 players",
-      "YourRank badge on your page",
-      "Basic analytics (7 days)",
-      "Live countdown & auto-sort",
-    ],
-    cta: "Start free",
-  },
-  starter: {
-    name: "Starter", price: "$12", period: "/mo",
-    highlight: false,
-    features: [
-      "1 leaderboard",
-      "Up to 25 players",
-      "No YourRank badge",
-      "Full analytics (30 days)",
-      "CSV import",
-      "Custom referral code",
-    ],
-    cta: "Start",
-  },
-  pro: {
-    name: "Pro", price: "$29", period: "/mo",
-    highlight: true,
-    features: [
-      "Up to 3 leaderboards",
-      "Unlimited players",
-      "No YourRank badge",
-      "Custom domain",
-      "OBS overlay widget",
-      "Discord webhooks",
-      "Telegram notifications",
-      "Priority support",
-    ],
-    cta: "Go Pro",
-  },
-  agency: {
-    name: "Agency", price: "$79", period: "/mo",
-    highlight: false,
-    features: [
-      "Unlimited leaderboards",
-      "Unlimited players",
-      "White-label branding",
-      "API access",
-      "Everything in Pro",
-      "Dedicated support",
-    ],
-    cta: "Contact us",
-  },
-};
+// Plan definitions imported from shared source of truth.
+// Re-exported here for backward compatibility with any local imports.
+import { PLAN_LIMITS as _PL, BOARD_LIMITS as _BL, PLAN_PRICES as _PP, PLAN_META as _PM } from "../../../shared/plans.js";
+export const PLAN_LIMITS = _PL;
+export const BOARD_LIMITS = _BL;
+export const PLAN_PRICES = _PP;
+export const PLAN_META = _PM;
 
 export const PRO_DAYS = 31;
 
@@ -162,6 +107,48 @@ export async function handleCheckout(request, env) {
   return ok({ url: inv.invoice_url });
 }
 
+// POST /api/billing/checkout-lifetime — create a NOWPayments invoice for $149 lifetime Pro.
+export async function handleCheckoutLifetime(request, env) {
+  const { user, res } = await requireUser(request, env);
+  if (res) return res;
+  if (!env.NOWPAYMENTS_API_KEY) return bad("Payments aren't configured yet. Contact support.", 503);
+  const current = effectivePlan(user);
+  if (current === "agency") return bad("You're already on the Agency plan.", 400);
+  const origin = new URL(request.url).origin;
+  const price = 149;
+  const orderId = `rk_lt_${uuid()}`;
+  await exec(
+    "INSERT INTO payments (user_id,provider,amount,currency,status,tx_ref) VALUES ($1,$2,$3,$4,$5,$6)",
+    [user.id, "nowpayments", price, "USD", "created", orderId]
+  );
+  let inv = null;
+  try {
+    const r = await fetch("https://api.nowpayments.io/v1/invoice", {
+      method: "POST",
+      headers: { "x-api-key": env.NOWPAYMENTS_API_KEY, "content-type": "application/json" },
+      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({
+        price_amount: price,
+        price_currency: "usd",
+        order_id: orderId,
+        order_description: "YourRank Lifetime Pro — pay once, use forever",
+        ipn_callback_url: `${origin}/api/billing/ipn`,
+        success_url: `${origin}/dashboard?upgraded=1`,
+        cancel_url: `${origin}/dashboard`,
+      }),
+    });
+    inv = await r.json().catch(() => null);
+    if (!r.ok || !inv || !inv.invoice_url) inv = null;
+  } catch { inv = null; }
+  if (!inv) {
+    await exec("UPDATE payments SET status='failed', updated_at=now() WHERE tx_ref=$1", [orderId]);
+    return bad("Couldn't start the payment. Try again in a minute or contact support.", 502);
+  }
+  await exec("UPDATE payments SET invoice_id=$1, status='waiting', updated_at=now() WHERE tx_ref=$2",
+    [String(inv.id || ""), orderId]);
+  return ok({ url: inv.invoice_url });
+}
+
 // Recursively sort object keys — NOWPayments signs the key-sorted JSON body.
 function sortObj(v) {
   if (Array.isArray(v)) return v.map(sortObj);
@@ -221,7 +208,17 @@ export async function handleIpn(request, env) {
         else if (amt >= PLAN_PRICES.pro - 1) targetPlan = "pro";
         else if (amt >= PLAN_PRICES.starter - 1) targetPlan = "starter";
 
-        if (PRO_DAYS > 0) {
+        // Lifetime payment ($149): activate Pro with no expiry
+        if (amt >= 148 && orderId.startsWith("rk_lt_")) {
+          await tx.unsafe(
+            "UPDATE users SET plan=$1, plan_expires_at=NULL, updated_at=now() WHERE id=$2",
+            ["pro", pay.user_id]
+          );
+          await tx.unsafe(
+            "INSERT INTO subscriptions (user_id, plan, status, provider, current_period_end) VALUES ($1, $2, 'active', 'nowpayments_lifetime', $3::timestamptz)",
+            [pay.user_id, "pro", "2099-12-31T23:59:59Z"]
+          );
+        } else if (PRO_DAYS > 0) {
           const base = (["pro", "starter", "agency"].includes(u.plan) && Number(u.plan_expires_at) > Date.now()) ? Number(u.plan_expires_at) : Date.now();
           const expiresMs = base + PRO_DAYS * 86400000;
           await tx.unsafe(

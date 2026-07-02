@@ -31,14 +31,59 @@ function populateEnv(env: Record<string, any>): void {
 // Cache the Hono app instance so it's built once per isolate, not per request.
 let cachedApp: any = null;
 
+/**
+ * POST a Discord webhook embed on cron failure.
+ * Falls back to console.error only if the webhook URL is not configured.
+ */
+async function notifyCronFailure(env: Record<string, any>, cron: string, task: string, err: unknown): Promise<void> {
+  const webhookUrl = env.DISCORD_MONITORING_WEBHOOK;
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error(`[cron ${cron}] ${task} failed:`, err);
+
+  if (!webhookUrl) return; // No webhook configured — console.error is enough.
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        embeds: [{
+          title: "⚠️ Cron Failure Alert",
+          description: `**Task:** \`${task}\`\n**Cron:** \`${cron}\`\n**Error:**\n\`\`\`\n${msg.slice(0, 1800)}\n\`\`\``,
+          color: 0xff4444,
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    });
+  } catch {
+    // Swallow — we must never crash on alerting failure.
+    console.error("[cron] Failed to send Discord webhook notification");
+  }
+}
+
 export default {
   async fetch(req: Request, env: Record<string, any>): Promise<Response> {
-    populateEnv(env);
-    if (!cachedApp) {
-      const { buildHonoApp } = await import("./hono-app.js");
-      cachedApp = buildHonoApp();
+    try {
+      populateEnv(env);
+      if (!cachedApp) {
+        const { buildHonoApp } = await import("./hono-app.js");
+        cachedApp = buildHonoApp();
+      }
+      return await cachedApp.fetch(req, env as any);
+    } catch (err: unknown) {
+      const errPath = (() => { try { return new URL(req.url).pathname; } catch { return "unknown"; } })();
+      console.error(`[bot] unhandled error on ${errPath}:`, String((err as any)?.message || err));
+      if (env.DISCORD_MONITORING_WEBHOOK) {
+        await sendErrorToDiscord({
+          webhookUrl: env.DISCORD_MONITORING_WEBHOOK,
+          title: "YourRank Error",
+          message: String((err as any)?.stack || (err as any)?.message || err),
+          path: errPath,
+          worker: "bot",
+        }).catch(() => {});
+      }
+      return new Response("Internal Server Error", { status: 500 });
     }
-    return cachedApp.fetch(req, env as any);
   },
 
   // Cron Triggers (see wrangler.toml):
@@ -70,7 +115,21 @@ export default {
           })(),
           (async () => {
             try {
-              await downgradeExpired();
+              const downgraded = await downgradeExpired();
+              console.log(`[cron 0 3 * * *] downgradeExpired: ${downgraded} user(s) downgraded to free`);
+              // Alert via monitoring webhook if any users were downgraded
+              if (downgraded > 0 && env.DISCORD_MONITORING_WEBHOOK) {
+                await sendCronSummaryToDiscord({
+                  webhookUrl: env.DISCORD_MONITORING_WEBHOOK,
+                  title: "🌙 Nightly Plan Downgrade Report",
+                  fields: [
+                    { name: "Users Downgraded", value: String(downgraded), inline: true },
+                    { name: "Action", value: "Expired plans reset to Free", inline: true },
+                    { name: "Cron", value: "`0 3 * * *`", inline: true },
+                  ],
+                });
+              }
+              return downgraded;
             } catch (err) {
               console.error("[cron 0 3 * * *] downgradeExpired failed:", err);
               throw err;
@@ -79,10 +138,11 @@ export default {
         ]);
 
         // Log any rejections but don't throw — other tasks may have succeeded
-        for (const r of results) {
-          if (r.status === "rejected") {
-            console.error("[cron 0 3 * * *] one task failed:", r.reason);
-          }
+        const failures = results.filter(r => r.status === "rejected");
+        if (failures.length > 0) {
+          console.error(`[cron 0 3 * * *] ${failures.length} task(s) failed`);
+        } else {
+          console.log(`[cron 0 3 * * *] All tasks completed successfully at ${new Date().toISOString()}`);
         }
       } else {
         // Default: broadcast batch (every minute cron)
@@ -94,7 +154,7 @@ export default {
         );
       }
     } catch (err) {
-      console.error(`[cron ${event.cron}] handler failed:`, err);
+      await notifyCronFailure(env, event.cron, "scheduled-handler", err);
     }
   },
 };

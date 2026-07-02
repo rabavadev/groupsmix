@@ -52,3 +52,34 @@ APP_NAME = "YourRank"
 #                            an empty From)
 #   PRO_PRICE_USD           (optional; defaults to 29)
 #   LEAD_WEBHOOK_URL        (optional; Discord/Slack ping on a new lead)
+#   DISCORD_MONITORING_WEBHOOK (optional; error reporting + cron summaries)
+
+# ---------------------------------------------------------------------------
+# Staging environment (wrangler deploy --env staging)
+# See STAGING.md for setup instructions.
+# ---------------------------------------------------------------------------
+[env.staging]
+name = "yourrank-site-staging"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+routes = [
+  { pattern = "staging.yourrank.site/*", zone_name = "yourrank.site" },
+]
+
+[env.staging.vars]
+APP_NAME = "YourRank (Staging)"
+
+# Staging KV namespace (separate from production — sessions don't carry over)
+# Create with: npx wrangler kv namespace create SESSIONS --env staging
+# Then paste the printed id below:
+[[env.staging.kv_namespaces]]
+binding = "SESSIONS"
+id = "STAGING_KV_NAMESPACE_ID_HERE"
+
+# Staging Hyperdrive (points at the staging Supabase project)
+# Create with: npx wrangler hyperdrive create yourrank-staging-pg --connection-string="..."
+# Then paste the printed id below:
+[[env.staging.hyperdrive]]
+binding = "HYPERDRIVE"
+id = "STAGING_HYPERDRIVE_ID_HERE"

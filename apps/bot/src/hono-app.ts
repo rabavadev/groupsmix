@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Update } from "grammy/types";
 import { config } from "./config.js";
 import { exec, one, query } from "./db.js";
-import { encryptToken, newClickRef, newLinkSlug, newWebhookSecret, verifyHmacSha256Hex } from "./crypto.js";
+import { encryptToken, decryptToken, reencryptToken, isCurrentVersion, newClickRef, newLinkSlug, newWebhookSecret, verifyHmacSha256Hex } from "./crypto.js";
 import { getBotBySecret, handleUpdateForBot } from "./botEngine.js";
 import { getMe, setWebhook } from "./telegram.js";
 import { buildDashboard } from "./dashboard.js";
@@ -347,6 +347,36 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
       return c.json({ error: "set PLATFORM_BOT_TOKEN and PLATFORM_WEBHOOK_SECRET first" }, 400);
     await setupBillingWebhook(config.publicBaseUrl);
     return c.json({ ok: true, webhook: `${config.publicBaseUrl}/billing/hook/***` });
+  });
+
+  // POST /api/reencrypt — re-encrypt all bot tokens with the current key.
+  // Used after a TOKEN_ENC_KEY rotation: old tokens (legacy or old version
+  // prefix) are decrypted with the old key and re-encrypted with the current
+  // one (producing a fresh "v1:" prefix).
+  api.post("/reencrypt", async (c) => {
+    const rows = await query<{ id: string; token_encrypted: Buffer }>(
+      `SELECT id, token_encrypted FROM bots`
+    );
+    let migrated = 0;
+    let skipped = 0;
+    let errors = 0;
+    for (const row of rows) {
+      const blob = Buffer.from(row.token_encrypted);
+      try {
+        // Skip tokens already on the current key version
+        if (isCurrentVersion(blob)) {
+          skipped++;
+          continue;
+        }
+        const reencrypted = await reencryptToken(blob);
+        await exec(`UPDATE bots SET token_encrypted = $1 WHERE id = $2`, [reencrypted, row.id]);
+        migrated++;
+      } catch (err) {
+        console.error(`[reencrypt] bot ${row.id} failed:`, String((err as any)?.message || err));
+        errors++;
+      }
+    }
+    return c.json({ ok: true, total: rows.length, migrated, skipped, errors });
   });
 
   app.route("/api", api);

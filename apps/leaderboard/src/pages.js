@@ -35,7 +35,7 @@ export const PAGES = {
 </head><body>
 <div class="wrap">
 <nav class="top"><div class="brand">Your<b>Rank</b></div>
-<div class="links"><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav>
+<div class="links"><a href="#how">How it works</a><a href="#postbacks">Postbacks</a><a href="#pricing">Pricing</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav>
 <header class="hero"><div>
 <p class="label" style="margin-bottom:18px">Leaderboards for casino streamers</p>
 <h1>Run your leaderboard without touching code.</h1>
@@ -58,6 +58,12 @@ export const PAGES = {
 <div class="steps" style="margin-top:24px">
 <div class="step"><div class="n">✦</div><div><h3>Built-in analytics</h3><p>Track views, clicks, and referrers from your dashboard. See what's working and where your traffic comes from.</p></div></div>
 </div></div></section>
+<section id="postbacks"><div class="wrap"><h2 class="sec">Track real conversions</h2><p class="sec-sub">When a casino confirms a player deposited, YourRank receives the postback and updates the leaderboard automatically. No manual updates. No guessing.</p>
+<div class="steps">
+<div class="step"><div class="n">⟲</div><div><h3>Automatic updates</h3><p>Postbacks from the casino push real deposit data straight into your leaderboard. Your standings stay accurate without you lifting a finger.</p></div></div>
+<div class="step"><div class="n">🔌</div><div><h3>Works with any postback-enabled casino</h3><p>Stake, Rollbit, BC.Game, and any other casino that supports postback URLs. Just plug in your YourRank postback URL and the data flows in.</p></div></div>
+<div class="step"><div class="n">⚡</div><div><h3>No spreadsheets, no copy-paste</h3><p>Forget manually updating player wagers. The postback system does it in real time — confirmed deposits, verified conversions, zero human error.</p></div></div>
+</div></div></section>
 <section id="example"><div class="wrap"><h2 class="sec">A real page</h2><p class="sec-sub">This is a live leaderboard running on YourRank. Yours works the same way.</p>
 <div class="example"><div class="bar"><span>yourrank.site/demo</span><span>live</span></div>
 <iframe src="/demo" loading="lazy" title="Example leaderboard"></iframe></div></div></section>
@@ -67,6 +73,7 @@ export const PAGES = {
 <div class="price-card"><div class="price-head"><h3>Starter</h3><div class="price-amount">$12<span>/mo</span></div></div><ul class="price-features"><li>1 leaderboard</li><li>Up to 25 players</li><li>No YourRank badge</li><li>Full analytics (30 days)</li><li>CSV import</li><li>Custom referral code</li></ul><a href="/signup" class="btn btn--sm price-cta">Start</a></div>
 <div class="price-card price-card--popular"><div class="price-badge">Most Popular</div><div class="price-head"><h3>Pro</h3><div class="price-amount">$29<span>/mo</span></div></div><ul class="price-features"><li>Up to 3 leaderboards</li><li>Unlimited players</li><li>No YourRank badge</li><li>Custom domain</li><li>OBS overlay widget</li><li>Discord webhooks</li><li>Telegram notifications</li><li>Priority support</li></ul><a href="/signup" class="btn btn--sm btn--accent price-cta">Go Pro</a></div>
 <div class="price-card"><div class="price-head"><h3>Agency</h3><div class="price-amount">$79<span>/mo</span></div></div><ul class="price-features"><li>Unlimited leaderboards</li><li>Unlimited players</li><li>White-label branding</li><li>API access</li><li>Everything in Pro</li><li>Dedicated support</li></ul><a href="/signup" class="btn btn--sm price-cta">Contact us</a></div>
+<div class="price-card" style="border:2px solid #c8ff00;position:relative"><div class="price-badge" style="background:#c8ff00;color:#000">Best Value</div><div class="price-head"><h3>Lifetime Pro</h3><div class="price-amount">$149<span style="font-size:13px;font-weight:400"> one-time</span></div></div><ul class="price-features"><li>All Pro features</li><li>Pay once, use forever</li><li>No monthly bills</li><li>Up to 3 leaderboards</li><li>Unlimited players</li><li>Custom domain &amp; OBS widget</li><li>Priority support</li></ul><a href="/signup" class="btn btn--accent btn--sm price-cta">Get Lifetime Pro</a></div>
 </div></div></section>
 <section id="start"><div class="wrap"><h2 class="sec">Ready to start?</h2><p class="sec-sub">Create your free page in under a minute. No credit card needed.</p>
 <div class="cta" style="text-align:center;margin:32px 0"><a href="/signup" class="btn btn--accent" style="font-size:18px;padding:16px 36px">Create your free page</a></div></div></section>
@@ -312,10 +319,18 @@ billing: `<!DOCTYPE html><html lang="en"><head>
 <p class="hint">After the trial ends, your plan will revert to Free. Upgrade anytime to keep Pro features.</p></div>
 <div class="card" id="upgradeCard"><h2>Upgrade</h2><p class="card-sub" id="upgradeSub">Choose the plan that fits your needs.</p>
 <div id="planOptions"></div>
+<div id="lifetimeBox" style="margin-top:16px;padding:16px;border:2px solid var(--accent);border-radius:12px;background:var(--panel-2)">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+<div><div style="font-weight:700;font-size:16px;color:var(--accent)">⚡ Lifetime Pro — $149</div>
+<div class="hint" style="margin-top:4px">Pay once, use forever. All Pro features, no monthly bills. No expiry.</div></div>
+<button class="btn btn--accent" id="lifetimeBtn" type="button">Get Lifetime Pro</button>
+</div>
+<p class="status" id="lifetimeStatus"></p></div>
 <p class="hint">Pay with crypto (BTC, ETH, USDT and 100+ more). Activates automatically once the network confirms — usually a few minutes.</p>
 <p class="status" id="status"></p></div>
 <div class="card" id="proCard" hidden><h2>You're on <span id="currentPlanName">Pro</span></h2><p class="card-sub">Thanks for supporting YourRank. Manage everything from the Leaderboard tab.</p>
-<p class="hint" id="proExp"></p></div></div>
+<p class="hint" id="proExp"></p>
+<p class="hint" id="lifetimeNotice" hidden style="color:var(--accent);font-weight:600">⭐ Lifetime Pro — no expiry. You own this forever.</p></div></div>
 <div class="skel" id="loading">Loading billing…</div></div>
 <script src="/assets/billing.js"></script></body></html>`,
 

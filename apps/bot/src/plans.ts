@@ -1,31 +1,12 @@
 import { one, query } from "./db.js";
+import { BOT_PLANS } from "../../../shared/plans.js";
+import type { BotPlanDef, PlanTier } from "../../../shared/plans.js";
 
-// ------------------------------------------------------------------
-// Plan definitions + gating. users.plan is the source of truth;
-// the billing webhook upgrades it, the nightly job downgrades
-// expired subscriptions back to free.
-// ------------------------------------------------------------------
+// Re-export for consumers that import from this module.
+export type { BotPlanDef, PlanTier } from "../../../shared/plans.js";
+export const PLANS = BOT_PLANS;
 
-export type PlanTier = "free" | "pro" | "agency";
-
-export interface PlanDef {
-  tier: PlanTier;
-  label: string;
-  maxBots: number;
-  maxOffers: number;
-  broadcasts: boolean;
-  postbacks: boolean;
-  /** Price per 30 days in Telegram Stars (XTR). 0 = not purchasable. */
-  starsPrice: number;
-}
-
-export const PLANS: Record<PlanTier, PlanDef> = {
-  free:   { tier: "free",   label: "Free",   maxBots: 1,  maxOffers: 3,   broadcasts: false, postbacks: false, starsPrice: 0 },
-  pro:    { tier: "pro",    label: "Pro",    maxBots: 3,  maxOffers: 50,  broadcasts: true,  postbacks: true,  starsPrice: 1250 },
-  agency: { tier: "agency", label: "Agency", maxBots: 25, maxOffers: 999, broadcasts: true,  postbacks: true,  starsPrice: 4500 },
-};
-
-export async function getUserPlan(userId: string): Promise<PlanDef> {
+export async function getUserPlan(userId: string): Promise<BotPlanDef> {
   const row = await one<{ plan: PlanTier }>(`SELECT plan FROM users WHERE id = $1`, [userId]);
   return PLANS[row?.plan ?? "free"] ?? PLANS.free;
 }

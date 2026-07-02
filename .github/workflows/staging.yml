@@ -1,0 +1,46 @@
+name: Deploy Staging
+
+# Manual trigger only — staging deploys are on-demand, not automatic.
+# Trigger from the GitHub Actions tab with "Run workflow".
+
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy-leaderboard-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: oven-sh/setup-bun@735343b667d3e6bfb39c11a0c3b3a1ca0a8a8c0e
+      - working-directory: apps/leaderboard
+        run: bun install --frozen-lockfile
+      - working-directory: apps/leaderboard
+        run: node build.js
+      - uses: cloudflare/wrangler-action@6d50771a405efa6ad3b959cf90f9e64ca6711e4d
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/leaderboard
+          command: deploy --env staging
+          wranglerVersion: "4.106.0"
+
+  deploy-bot-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: oven-sh/setup-bun@735343b667d3e6bfb39c11a0c3b3a1ca0a8a8c0e
+      - working-directory: apps/bot
+        run: bun install --frozen-lockfile
+      - working-directory: apps/bot
+        run: bun run typecheck
+      - uses: cloudflare/wrangler-action@6d50771a405efa6ad3b959cf90f9e64ca6711e4d
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/bot
+          command: deploy --env staging
+          wranglerVersion: "4.106.0"

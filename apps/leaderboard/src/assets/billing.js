@@ -72,9 +72,16 @@ function fmtExp(ms) {
     $("upgradeCard").hidden = true;
     $("proCard").hidden = false;
     $("currentPlanName").textContent = isTrial ? "Pro (Trial)" : currentTier.name;
-    $("proExp").textContent = isTrial
-      ? "After your trial ends, upgrade to keep Pro features."
-      : "Manage your leaderboard from the Leaderboard tab. Extend your subscription below.";
+    // Check if lifetime (no expiry)
+    const isLifetime = !planExpiry || Number(planExpiry) === 0;
+    if (isLifetime && !isTrial) {
+      $("lifetimeNotice").hidden = false;
+      $("proExp").textContent = "";
+    } else {
+      $("proExp").textContent = isTrial
+        ? "After your trial ends, upgrade to keep Pro features."
+        : "Manage your leaderboard from the Leaderboard tab. Extend your subscription below.";
+    }
     // Still show extend option
     const opts = $("planOptions");
     if (opts) {
@@ -183,4 +190,29 @@ async function startCheckout() {
   } catch {
     status.textContent = "Couldn't start checkout. Try again in a minute.";
   }
+}
+
+async function startLifetimeCheckout() {
+  const status = $("lifetimeStatus");
+  const btn = $("lifetimeBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Opening checkout…"; }
+  status.textContent = "";
+  try {
+    const r = await fetch("/api/billing/checkout-lifetime", { method: "POST", headers: { "x-csrf-token": getCsrf() } });
+    const d = await r.json();
+    if (r.ok && d.url) {
+      window.location.href = d.url;
+      return;
+    }
+    status.textContent = d.error || "Couldn't start checkout.";
+  } catch {
+    status.textContent = "Couldn't start checkout. Try again in a minute.";
+  }
+  if (btn) { btn.disabled = false; btn.textContent = "Get Lifetime Pro"; }
+}
+
+// Lifetime button handler
+const lifetimeBtn = document.getElementById("lifetimeBtn");
+if (lifetimeBtn) {
+  lifetimeBtn.addEventListener("click", startLifetimeCheckout);
 }
