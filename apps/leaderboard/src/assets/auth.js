@@ -39,6 +39,6 @@ form.addEventListener("submit", async (e) => {
       submit.textContent = "Sent";
       return;
     }
-    location.href = "/dashboard";
+    location.href = mode === "signup" ? "/dashboard/setup" : "/dashboard";
   } catch (_) { errEl.textContent = "Network error. Try again."; submit.disabled = false; submit.textContent = orig; }
 });

@@ -1,5 +1,5 @@
 // ============================================================================
-//  GroupsMix — SHARED SESSION (leaderboard Worker, JavaScript)
+//  YourRank — SHARED SESSION (leaderboard Worker, JavaScript)
 //
 //  ONE session model used identically by BOTH Workers:
 //    * Cookie name:      gm_session

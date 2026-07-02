@@ -1,4 +1,5 @@
-/* RankUp public leaderboard — hydrates from window.__SITE_DATA__ (SSR-injected). */
+/* YourRank public leaderboard — hydrates from window.__SITE_DATA__ (SSR-injected). */
+   Features: live polling every 30s, rank-change flash, particle field, countdown polish. */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -16,6 +17,186 @@ const SOCIAL_ICONS = {
   twitch: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 2 3 6v13h4v3h3l3-3h4l5-5V2H4Zm16 10-3 3h-4l-3 3v-3H7V4h13v8Zm-3-6h-2v5h2V6Zm-5 0h-2v5h2V6Z"/></svg>',
   x: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2h3.3l-7.2 8.3L23.5 22h-6.6l-5.2-6.8L5.7 22H2.4l7.7-8.8L1.9 2h6.8l4.7 6.2L18.9 2Zm-1.2 18h1.8L7.1 3.9H5.2L17.7 20Z"/></svg>',
 };
+
+// ---- Particle field (subtle hero background animation) ----
+function initParticles() {
+  const container = $(".hero");
+  if (!container) return;
+  // Respect reduced-motion preference
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "particle-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  container.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+
+  let w, h;
+  const particles = [];
+  const PARTICLE_COUNT = 40;
+
+  function resize() {
+    w = canvas.width = container.offsetWidth;
+    h = canvas.height = container.offsetHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: 1.5 + Math.random() * 2,
+      alpha: 0.15 + Math.random() * 0.25,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw connecting lines between nearby particles
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(120, 100, 255, ${0.08 * (1 - dist / 120)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw particles
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(140, 120, 255, ${p.alpha})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ---- Live polling ----
+let previousPlayerNames = []; // tracks ordered names from last render for rank-change detection
+
+function buildPlayerRow(pl, rank, delay) {
+  const prize = pl.prize ? `<span class="tr-prize has ta-r">${moneyShort(pl.prize)}</span>` : `<span class="tr-prize no ta-r">—</span>`;
+  return `<li class="t-row" data-position="${rank}" data-name="${esc(pl.name)}" style="animation-delay:${delay}s">
+    <span class="tr-rank">${String(rank).padStart(2, "0")}</span>
+    <span class="tr-player"><span class="tr-av">${esc(initials(pl.name))}</span><span class="tr-name">${esc(pl.name)}</span></span>
+    <span class="tr-wager">${money(pl.wagered)}</span>${prize}</li>`;
+}
+
+function buildTop3Card(pl, rank) {
+  return `<div class="t3 t3--${rank}"><span class="t3-medal">RANK ${String(rank).padStart(2, "0")}</span><div class="t3-name">${esc(pl.name)}</div><div class="t3-wager">${money(pl.wagered)}</div><span class="t3-prize">${pl.prize ? moneyShort(pl.prize) : "—"}</span></div>`;
+}
+
+function updateLeaderboard(players) {
+  const sorted = players.slice().sort((a, b) => b.wagered - a.wagered);
+  const cnt = $("[data-count]");
+  if (cnt) cnt.textContent = sorted.length;
+
+  // Update top 3
+  const t3 = $("[data-top3]");
+  if (t3 && sorted.length >= 3) {
+    t3.innerHTML = sorted.slice(0, 3).map((pl, i) => buildTop3Card(pl, i + 1)).join("");
+  }
+
+  // Build new name→rank map for rank-change detection
+  const newRankMap = {};
+  sorted.forEach((pl, i) => { newRankMap[pl.name] = i + 1; });
+
+  const rows = $("[data-rows]");
+  if (rows) {
+    rows.innerHTML = sorted.map((pl, i) => {
+      const rank = i + 1;
+      return buildPlayerRow(pl, rank, Math.min(i * 0.025, 0.5));
+    }).join("");
+
+    // Flash rank-change indicators
+    const rowEls = $$("[data-rows] .t-row");
+    rowEls.forEach((row) => {
+      const name = row.dataset.name;
+      const newPos = parseInt(row.dataset.position, 10);
+      const oldPos = previousPlayerNames.indexOf(name) + 1; // 0-based → 1-based, -1+1=0 if not found
+
+      if (oldPos > 0 && oldPos !== newPos) {
+        const direction = newPos < oldPos ? "rank-up" : "rank-down";
+        row.classList.add(direction);
+        // Add arrow indicator
+        const arrow = document.createElement("span");
+        arrow.className = `rank-arrow ${direction === "rank-up" ? "rank-arrow-up" : "rank-arrow-down"}`;
+        arrow.textContent = direction === "rank-up" ? `▲${oldPos - newPos}` : `▼${newPos - oldPos}`;
+        row.querySelector(".tr-rank").appendChild(arrow);
+
+        // Remove animation class after it completes
+        setTimeout(() => {
+          row.classList.remove(direction);
+          arrow.classList.add("fade-out");
+          setTimeout(() => arrow.remove(), 400);
+        }, 2000);
+      }
+    });
+  }
+
+  // Store current ordering for next poll
+  previousPlayerNames = sorted.map((pl) => pl.name);
+
+  // Update payouts
+  const po = $("[data-payouts]");
+  if (po) {
+    const winners = sorted.map((pl, idx) => ({ rank: idx + 1, prize: pl.prize })).filter((w) => w.prize > 0);
+    if (winners.length) {
+      const groups = [];
+      winners.forEach((w) => {
+        const last = groups[groups.length - 1];
+        if (last && last.prize === w.prize && last.to === w.rank - 1) last.to = w.rank;
+        else groups.push({ from: w.rank, to: w.rank, prize: w.prize });
+      });
+      po.innerHTML = `<span class="pay-label">Payouts</span>` + groups.map((g) =>
+        `<span class="pay"><b>${g.from === g.to ? ord(g.from) : `${ord(g.from)}–${ord(g.to)}`}</b>${moneyShort(g.prize)}</span>`).join("");
+      po.hidden = false;
+    }
+  }
+
+  // Pulse the LIVE badge to show fresh data
+  const badge = $("[data-live-badge]");
+  if (badge) {
+    badge.classList.add("live-badge--fresh");
+    setTimeout(() => badge.classList.remove("live-badge--fresh"), 2000);
+  }
+}
+
+async function pollPlayers() {
+  const slug = window.__SLUG__;
+  if (!slug) return;
+  try {
+    const resp = await fetch(`/api/public/${encodeURIComponent(slug)}/players`);
+    if (!resp.ok) return;
+    const json = await resp.json();
+    if (json.players && Array.isArray(json.players)) {
+      updateLeaderboard(json.players);
+    }
+  } catch (_) {
+    // Silently ignore poll failures — next poll will retry
+  }
+}
 
 function boot() {
   const data = window.__SITE_DATA__ || {};
@@ -48,10 +229,17 @@ function boot() {
   const cnt = $("[data-count]"); if (cnt) cnt.textContent = players.length;
 
   const t3 = $("[data-top3]");
-  if (t3 && players.length >= 3) t3.innerHTML = players.slice(0, 3).map((pl, i) => { const r = i + 1; return `<div class="t3 t3--${r}"><span class="t3-medal">RANK ${String(r).padStart(2,"0")}</span><div class="t3-name">${esc(pl.name)}</div><div class="t3-wager">${money(pl.wagered)}</div><span class="t3-prize">${pl.prize ? moneyShort(pl.prize) : "—"}</span></div>`; }).join("");
+  if (t3 && players.length >= 3) t3.innerHTML = players.slice(0, 3).map((pl, i) => buildTop3Card(pl, i + 1)).join("");
 
   const rows = $("[data-rows]");
-  if (rows) rows.innerHTML = players.map((pl, i) => { const r = i + 1; const prize = pl.prize ? `<span class="tr-prize has ta-r">${moneyShort(pl.prize)}</span>` : `<span class="tr-prize no ta-r">—</span>`; return `<li class="t-row" style="animation-delay:${Math.min(i*0.025,0.5)}s"><span class="tr-rank">${String(r).padStart(2,"0")}</span><span class="tr-player"><span class="tr-av">${esc(initials(pl.name))}</span><span class="tr-name">${esc(pl.name)}</span></span><span class="tr-wager">${money(pl.wagered)}</span>${prize}</li>`; }).join("");
+  if (rows) {
+    rows.innerHTML = players.map((pl, i) => {
+      const r = i + 1;
+      return buildPlayerRow(pl, r, Math.min(i * 0.025, 0.5));
+    }).join("");
+  }
+  // Store initial ordering
+  previousPlayerNames = players.map((pl) => pl.name);
 
   const rl = $("[data-rules]"); if (rl && Array.isArray(data.rules)) rl.innerHTML = data.rules.map((r) => `<li>${esc(r)}</li>`).join("");
 
@@ -87,6 +275,14 @@ function boot() {
   if (sc && Array.isArray(data.socials)) sc.innerHTML = data.socials.map((s) => { const brand = (s.brand || s.name || "").toLowerCase(); const ico = SOCIAL_ICONS[brand] || SOCIAL_ICONS.discord; return `<div class="scard"><div class="scard-ico ${esc(brand)}">${ico}</div><div class="scard-name">${esc(s.name)}</div><div class="scard-handle">${esc(s.handle || "")}</div><a class="btn btn--grad" href="${safeUrl(s.url)}" target="_blank" rel="noopener">${esc(s.action || "Follow")}</a></div>`; }).join("");
 
   startCountdown(data.endsAt);
+
+  // Initialize particle effect
+  initParticles();
+
+  // Start live polling every 30 seconds
+  if (window.__SLUG__) {
+    setInterval(pollPlayers, 30000);
+  }
 }
 
 function startCountdown(endsAt) {
@@ -102,7 +298,19 @@ function startCountdown(endsAt) {
     if (diff <= 0) { if (el) el.textContent = "Resetting"; if (cells) Object.values(cells).forEach((c) => c && (c.textContent = "00")); return; }
     const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
     if (el) el.textContent = `${d}d ${pad(h)}h ${pad(m)}m`;
-    if (cells) { cells.d && (cells.d.textContent = pad(d)); cells.h && (cells.h.textContent = pad(h)); cells.m && (cells.m.textContent = pad(m)); cells.s && (cells.s.textContent = pad(s)); }
+    if (cells) {
+      cells.d && (cells.d.textContent = pad(d));
+      cells.h && (cells.h.textContent = pad(h));
+      cells.m && (cells.m.textContent = pad(m));
+      if (cells.s) {
+        const newVal = pad(s);
+        if (cells.s.textContent !== newVal) {
+          cells.s.classList.add("tick");
+          cells.s.textContent = newVal;
+          setTimeout(() => cells.s.classList.remove("tick"), 300);
+        }
+      }
+    }
   };
   tick(); setInterval(tick, 1000);
 }

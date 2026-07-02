@@ -76,7 +76,7 @@ export async function handleCheckout(request, env) {
         price_amount: price,
         price_currency: "usd",
         order_id: orderId,
-        order_description: `RankUp Pro — ${PRO_DAYS} days`,
+        order_description: `YourRank Pro — ${PRO_DAYS} days`,
         ipn_callback_url: `${origin}/api/billing/ipn`,
         success_url: `${origin}/dashboard?upgraded=1`,
         cancel_url: `${origin}/dashboard`,

@@ -6,9 +6,9 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 export function renderLeaderboard(data, opts = {}) {
   const b = data.brand || {};
   const br = data.branding || {};
-  // Free-plan pages carry the badge — it's how RankUp spreads.
+  // Free-plan pages carry the badge — it's how YourRank spreads.
   const badge = opts.watermark
-    ? `<a class="rk-badge" href="${esc(opts.homeUrl || "/")}" target="_blank" rel="noopener">⚡ Powered by <b>RankUp</b></a>`
+    ? `<a class="rk-badge" href="${esc(opts.homeUrl || "/")}" target="_blank" rel="noopener">⚡ Powered by <b>YourRank</b></a>`
     : "";
   // Pro theme: one gradient pair drives the page accents. Validated hex only.
   const themeCss = (!opts.watermark && HEX.test(br.accentA || "") && HEX.test(br.accentB || ""))
@@ -58,7 +58,7 @@ ${heroLogo}<p class="hero-kicker">Welcome to</p><h1 class="hero-name" data-brand
 <div class="pcol pcol-why"><span class="pcol-label">Why <span data-casino>${esc(b.casino || "Stake")}</span></span><div class="why-grid" data-why></div></div></div></section>
 <section id="board" class="board"><div class="board-head">
 <p class="eyebrow"><span data-pool>${esc(b.prizePool)}</span> · <span data-period>${esc(b.period || "Monthly")}</span> Leaderboard</p>
-<h2 class="sec-title">Standings</h2><div class="board-meta">
+<div class="board-title-group"><h2 class="sec-title">Standings</h2><span class="live-badge" data-live-badge><span class="live-badge-dot"></span>LIVE</span></div><div class="board-meta">
 <span class="bm"><b class="countdown" data-countdown>--</b><span>Resets in</span></span>
 <span class="bm"><b data-count>0</b><span>Players</span></span></div></div>
 <div class="payouts" data-payouts hidden></div>

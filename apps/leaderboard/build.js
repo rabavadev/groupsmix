@@ -9,7 +9,7 @@ const files = fs.readdirSync(assetsDir).filter((f) => /\.(js|css)$/.test(f));
 let outSrc = "// Auto-generated. Do not edit. Asset files inlined as strings.\n";
 for (const f of files) {
   const content = fs.readFileSync(path.join(assetsDir, f), "utf8");
-  const key = f.replace(/\./g, "_");
+  const key = f.replace(/[\.\-]/g, "_");
   outSrc += `export const ${key} = ${JSON.stringify(content)};\n`;
 }
 fs.writeFileSync(out, outSrc);

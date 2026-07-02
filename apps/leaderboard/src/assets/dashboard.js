@@ -44,7 +44,7 @@ function renderPlan(){
     $("planMeta").textContent = until ? `Active until ${until} · up to ${ME.limits.players} players · no badge` : `Lifetime · up to ${ME.limits.players} players · no badge`;
     $("goPro").textContent = "Extend Pro (+31 days)";
   } else {
-    $("planMeta").textContent = `Up to ${ME.limits.players} players · RankUp badge on your page`;
+    $("planMeta").textContent = `Up to ${ME.limits.players} players · YourRank badge on your page`;
     $("goPro").textContent = `Upgrade to Pro — $${ME.proPrice}/mo`;
   }
 }

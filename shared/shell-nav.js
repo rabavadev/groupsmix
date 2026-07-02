@@ -1,5 +1,5 @@
 // ============================================================================
-//  GroupsMix — SHARED DASHBOARD SHELL / TOP NAV  (leaderboard Worker, JS)
+//  YourRank — SHARED DASHBOARD SHELL / TOP NAV  (leaderboard Worker, JS)
 //
 //  One header injected at the top of BOTH dashboards so the two Workers feel
 //  like one app. Renders: streamer name, plan badge, and the tab links
@@ -82,8 +82,8 @@ export function shellNavHtml({ activePath, user } = {}) {
   return `<header class="gm-shell-nav">
   <div class="gm-shell-inner">
     <a class="gm-brand" href="/dashboard">
-      <span class="gm-brand-mark">GM</span>
-      <span class="gm-brand-word">GroupsMix</span>
+      <span class="gm-brand-mark">YR</span>
+      <span class="gm-brand-word">YourRank</span>
     </a>
     <nav class="gm-tabs">${tabs}</nav>
     <div class="gm-who">
