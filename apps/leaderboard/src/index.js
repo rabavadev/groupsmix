@@ -90,10 +90,10 @@ export default {
     // --- pages ---
     if (path === "/" || path === "/index.html") return new Response(PAGES.index, { headers: HTML });
     if (path === "/login" || path === "/login.html") return new Response(PAGES.login, { headers: SECURE_HTML });
-  // GET /logout — the shared shell nav links here (a plain <a> can't POST).
-  // Destroy the session from the cookie's token, clear the cookie, and send the
-  // user to the login page. The in-page buttons still hit POST /api/auth/logout.
-  if ((path === "/logout" || path === "/logout.html") && method === "GET") {
+  // POST /logout only (BE-003). Previously GET, which allowed CSRF via
+  // <img src="/logout">. Now only POST is accepted. The in-page buttons
+  // already hit POST /api/auth/logout; the nav link should use a form POST.
+  if ((path === "/logout" || path === "/logout.html") && method === "POST") {
     await destroySession(env, readToken(request));
     return new Response(null, { status: 302, headers: { "set-cookie": cookieClear(), location: "/login" } });
   }
