@@ -62,7 +62,7 @@ export default {
 
     // --- SEO: robots.txt (SEO-001) ---
     if (path === "/robots.txt") {
-      return new Response("User-agent: *\nAllow: /\nSitemap: https://yourrank.site/sitemap.xml\n", {
+      return new Response("User-agent: *\nAllow: /\nDisallow: /dashboard\nDisallow: /admin\nDisallow: /auth\nDisallow: /billing\nSitemap: https://yourrank.site/sitemap.xml\n", {
         headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400" },
       });
     }
