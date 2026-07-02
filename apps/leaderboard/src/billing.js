@@ -115,8 +115,15 @@ export async function handleIpn(request, env) {
   await query("UPDATE payments SET status=$1, payload_json=$2::jsonb, updated_at=now() WHERE id=$3",
     [status, JSON.stringify(body), pay.id]);
 
-  // Activate exactly once, on the final "finished" state.
-  if (status === "finished" && pay.status !== "finished") {
+  // Activate exactly once, on the first transition into a paid-equivalent
+  // state. NOWPayments emits several terminal "paid" statuses: `finished` is
+  // the canonical one, but some currencies/setups settle at `confirmed` and
+  // never advance. Treating only `finished` as activation caused a money leak
+  // — a user who paid and ended at `confirmed` stayed on Free. Fix: activate on
+  // the first of {confirmed, finished} we see, but only if we haven't already
+  // activated (guarded by pay.status so a replay can't double-activate).
+  const PAID = ["confirmed", "finished"];
+  if (PAID.includes(status) && !PAID.includes(pay.status)) {
     await activatePro(env, pay.user_id, PRO_DAYS);
   }
   return ok();

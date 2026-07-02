@@ -10,7 +10,13 @@ import {
   readTokenWithLegacy,
   KV_PREFIX,
 } from "../../../shared/session.js";
-const ITERATIONS = 100000;
+// PBKDF2-SHA256. OWASP 2023+ guidance is >=600,000 iterations for SHA-256; the
+// old 100,000 was below that. We version the stored hash as "<iters>$<hex>" so
+// legacy bare-hex hashes (implicitly 100k, from before this change) still
+// verify, and verifyPassword reports whether a rehash to the current count is
+// needed so login can lazily upgrade old hashes without a password reset.
+const PBKDF2_ITERATIONS = 600000;
+const LEGACY_ITERATIONS = 100000;
 const enc = new TextEncoder();
 const bytesToHex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 const hexToBytes = (h) => {
@@ -19,11 +25,20 @@ const hexToBytes = (h) => {
   return o;
 };
 
+// Parse a stored hash: "iters$hex" (versioned) or bare "hex" (legacy 100k).
+function parseStored(stored) {
+  const s = String(stored ?? "");
+  const i = s.indexOf("$");
+  if (i > 0 && /^\d+$/.test(s.slice(0, i))) return { iterations: Number(s.slice(0, i)), hash: s.slice(i + 1) };
+  return { iterations: LEGACY_ITERATIONS, hash: s };
+}
+
 export async function hashPassword(password, saltHex) {
   const salt = saltHex ? hexToBytes(saltHex) : crypto.getRandomValues(new Uint8Array(16));
   const km = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: ITERATIONS, hash: "SHA-256" }, km, 256);
-  return { salt: bytesToHex(salt), hash: bytesToHex(new Uint8Array(bits)) };
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" }, km, 256);
+  // Versioned so a future count bump re-upgrades lazily the same way.
+  return { salt: bytesToHex(salt), hash: `${PBKDF2_ITERATIONS}$${bytesToHex(new Uint8Array(bits))}` };
 }
 
 export function safeEqual(a, b) {
@@ -33,9 +48,14 @@ export function safeEqual(a, b) {
   return d === 0;
 }
 
+// Returns { ok, needsRehash } — needsRehash is true when the stored hash used
+// fewer iterations than the current target, so the caller can re-hash+persist.
 export async function verifyPassword(password, saltHex, expected) {
-  const { hash } = await hashPassword(password, saltHex);
-  return safeEqual(hash, expected);
+  const { iterations, hash: expectedHex } = parseStored(expected);
+  const km = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: hexToBytes(saltHex), iterations, hash: "SHA-256" }, km, 256);
+  const computed = bytesToHex(new Uint8Array(bits));
+  return { ok: safeEqual(computed, expectedHex), needsRehash: iterations < PBKDF2_ITERATIONS };
 }
 
 export const uuid = () => crypto.randomUUID();

@@ -106,16 +106,28 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
   //     affiliate networks call this on registration / deposit.
   // =================================================================
   app.on(["GET", "POST"], "/pb/:key", async (c) => {
+    const key = c.req.param("key");
+    // Per-key rate limit (the postback_key is the only auth on this route, and
+    // it's not behind the admin/api limiter). Caps a known key from being
+    // hammered to inflate conversions or stat-flood a streamer. Generous enough
+    // for legit casino bursts. Fails open if KV is unavailable.
+    const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 120, 60);
+    if (!rl.ok) { c.header("Retry-After", String(rl.retryAfter)); return c.json({ error: "rate limited" }, 429); }
+
     const owner = await one<{ id: string }>(
       `SELECT id FROM users WHERE postback_key = $1`,
-      [c.req.param("key")]
+      [key]
     );
     if (!owner) return c.json({ error: "unknown key" }, 404);
 
     const q = c.req.query();
     const clickRef = q.click_ref ?? q.clickid ?? q.subid ?? q.sub_id ?? null;
     const event = (q.event ?? q.goal ?? "deposit").toLowerCase().slice(0, 32);
-    const amount = q.amount && !isNaN(Number(q.amount)) ? Number(q.amount) : null;
+    // Clamp amount to a non-negative bounded number. Negatives / NaN / absurd
+    // values were accepted raw and feed revenue/conversion stats (and could
+    // drive affiliate payouts). Cap at 1e12 — generous for any real currency.
+    const rawAmt = q.amount == null ? NaN : Number(q.amount);
+    const amount = Number.isFinite(rawAmt) && rawAmt >= 0 && rawAmt <= 1e12 ? rawAmt : null;
     const currency = (q.currency ?? "USD").toUpperCase().slice(0, 8);
 
     // Attribute to an offer via the click ref when possible.
@@ -252,7 +264,8 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
 
   api.get("/stats", async (c) => {
     const owner_id = c.req.query("owner_id");
-    const days = c.req.query("days") ?? "7";
+    const rawDays = Number(c.req.query("days") ?? "7");
+    const days = Number.isFinite(rawDays) && rawDays >= 1 && rawDays <= 365 ? rawDays : 7;
     if (!owner_id) return c.json({ error: "owner_id required" }, 400);
     return c.json(await query(
       `SELECT o.label, c.name AS casino,

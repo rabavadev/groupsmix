@@ -57,8 +57,9 @@ async function checkout(btn){
   btn.disabled = false; btn.textContent = orig;
 }
 function playerRow(p={name:"",wagered:"",prize:""}){
+  const esc=(s)=>String(s??"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   const tr=document.createElement("tr");
-  tr.innerHTML = `<td class="rank"></td><td><input class="p-name" placeholder="*****ess" value="${(p.name??"").toString().replace(/"/g,"&quot;")}"></td><td class="num"><input class="p-wager" inputmode="decimal" placeholder="0" value="${p.wagered??""}"></td><td class="num"><input class="p-prize" inputmode="decimal" placeholder="0" value="${p.prize??""}"></td><td class="act"><button class="row-x" title="Remove" type="button">×</button></td>`;
+  tr.innerHTML = `<td class="rank"></td><td><input class="p-name" placeholder="*****ess" value="${esc(p.name)}"></td><td class="num"><input class="p-wager" inputmode="decimal" placeholder="0" value="${esc(p.wagered)}"></td><td class="num"><input class="p-prize" inputmode="decimal" placeholder="0" value="${esc(p.prize)}"></td><td class="act"><button class="row-x" title="Remove" type="button">×</button></td>`;
   tr.querySelector(".row-x").addEventListener("click",()=>{tr.remove();renumber();toggleEmpty();});
   return tr;
 }
