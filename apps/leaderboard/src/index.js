@@ -88,6 +88,14 @@ export default {
       return new Response(null, { status: 204 });
     }
 
+      // --- health check ---
+      if (path === "/health") {
+        return new Response(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+
     // --- pages ---
     if (path === "/" || path === "/index.html") return new Response(PAGES.index, { headers: HTML });
     if (path === "/login" || path === "/login.html") return new Response(PAGES.login, { headers: SECURE_HTML });
@@ -353,6 +361,8 @@ async function handleForgot(request, env) {
   const body = await readJson(request);
   const email = String(body?.email || "").trim().toLowerCase();
   if (!isEmail(email)) return bad("Enter a valid email");
+  // Per-email rate limit: 3 resets per hour (prevents email bomb abuse).
+  if (!(await rateLimit(env, `forgot-email:${email}`, 3, 3600))) return bad("Too many attempts. Try again later.", 429);
   const user = await one("SELECT id, email FROM users WHERE email=$1", [email]);
   if (user) {
     const token = newToken();
@@ -458,6 +468,7 @@ async function handleLead(request, env) {
       await fetch(env.LEAD_WEBHOOK_URL, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: AbortSignal.timeout(10_000),
         body: JSON.stringify({ content: `New RankUp lead: ${safe(handle)} (${safe(casino)}) — ${safe(contact)}\n${safe(note)}` }),
       });
     } catch {}

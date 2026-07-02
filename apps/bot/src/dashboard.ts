@@ -38,6 +38,7 @@ import {
   type SessionEnv,
 } from "../../../shared/session.js";
 import { shellNavHtml, SHELL_NAV_CSS } from "../../../shared/shell-nav.js";
+import { rateLimit } from "./ratelimit.js";
 
 // ---------------- telegram login verification ----------------
 
@@ -163,6 +164,14 @@ export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
 
   // ---- session-scoped API ----
   const api = new Hono<{ Bindings: DashBindings; Variables: { uid: string } }>();
+  // Rate-limit all API requests (120 req/min per IP).
+  api.use("*", async (c, next) => {
+    const ip = c.req.header("cf-connecting-ip") || "0.0.0.0";
+    const rlResult = await rateLimit(c.env.SESSIONS, `dash:${ip}`, 120, 60);
+    if (!rlResult.ok) return c.json({ error: "rate limit exceeded", retryAfter: rlResult.retryAfter }, 429);
+    await next();
+  });
+
   api.use("*", async (c, next) => {
     // CSRF: block cross-site state-changing calls that ride the session cookie.
     // GET/HEAD are safe (read-only) and skipped.
