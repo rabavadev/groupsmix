@@ -95,7 +95,7 @@ ${entries.join("\n")}
 
     // --- SEO: favicon.ico (SEO-006) ---
     if (path === "/favicon.ico") {
-      return new Response("<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>", {
+      return new Response('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>', {
         headers: { "content-type": "image/svg+xml", "cache-control": "public, max-age=86400" },
       });
     }
