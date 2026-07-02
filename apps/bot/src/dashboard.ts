@@ -38,6 +38,7 @@ import {
   type SessionEnv,
 } from "../../../shared/session.js";
 import { shellNavHtml, SHELL_NAV_CSS } from "../../../shared/shell-nav.js";
+import { rateLimit } from "./ratelimit.js";
 
 // ---------------- telegram login verification ----------------
 
