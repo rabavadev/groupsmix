@@ -23,6 +23,7 @@ const HTML = { "content-type": "text/html; charset=utf-8" };
 // them); nothing else. nosniff + Referrer-Policy are free wins everywhere.
 const SECURE_HTML = {
   "content-type": "text/html; charset=utf-8",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "same-origin",
   "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; connect-src 'self'; frame-ancestors 'self'",
