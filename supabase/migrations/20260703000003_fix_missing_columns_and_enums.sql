@@ -30,3 +30,9 @@ CREATE TRIGGER trg_sync_site_suspended
 -- Add missing enum values
 ALTER TYPE pay_provider ADD VALUE IF NOT EXISTS 'trial';
 ALTER TYPE plan_tier ADD VALUE IF NOT EXISTS 'starter';
+
+-- BUG-007: casinos.created_by foreign key was ON DELETE NO ACTION, which
+-- blocked account deletion when a user had any casinos rows. Changed to CASCADE.
+ALTER TABLE casinos DROP CONSTRAINT IF EXISTS casinos_created_by_fkey;
+ALTER TABLE casinos ADD CONSTRAINT casinos_created_by_fkey 
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE;
