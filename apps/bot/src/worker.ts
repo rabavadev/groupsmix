@@ -8,7 +8,7 @@
 // Copy every binding the app reads onto process.env so shared modules (which
 // read process.env, not c.env) work unchanged. Called from BOTH fetch and
 // scheduled — they MUST populate the same set, or a binding set in only one
-import { sendErrorToDiscord, sendCronSummaryToDiscord } from "../../shared/monitoring.js";
+import { sendErrorToDiscord, sendCronSummaryToDiscord } from "../../../shared/monitoring.js";
 // handler is silently undefined in the other (this previously broke billing:
 // PLATFORM_BOT_* were set in scheduled() but not fetch(), so the Stars
 // webhook / invoice creation ran with an undefined token on every request).
