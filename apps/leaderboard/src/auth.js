@@ -159,6 +159,6 @@ export async function handleAccountDelete(request, env) {
     return ok({ message: "Account deleted successfully." });
   } catch (e) {
     console.error("account delete failed:", String(e?.message || e));
-    return bad("Account deletion failed. Please try again.", 500);
+    return bad(`Account deletion failed: ${String(e?.message || e).slice(0, 100)}`, 500);
   }
 }
