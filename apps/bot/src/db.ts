@@ -113,7 +113,11 @@ export async function withTransaction<R>(fn: (tx: Tx) => Promise<R>): Promise<R>
   } catch (err) {
     // Reset stale connection so the next withTransaction call reconnects.
     const msg = String((err as any)?.message ?? err);
+    // Check both the structured error code (postgres.js / Node.js) and the
+    // message string so provider-specific errors don't slip through.
+    const code = String((err as any)?.code ?? "");
     const isConnError =
+      /^(ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EPIPE|ECONNABORTED)$/.test(code) ||
       /ECONNRESET|ENOTFOUND|ETIMEDOUT|connection|socket|closed|EOF|network/i.test(msg);
     if (isConnError) {
       try { await txSql?.end({ timeout: 0 }); } catch {}
