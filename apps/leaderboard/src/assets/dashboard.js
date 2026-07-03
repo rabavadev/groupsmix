@@ -302,6 +302,18 @@ $("csvTemplateBtn")?.addEventListener("click", () => {
 });
 
 /* --- custom domain (Pro) --- */
+function renderNotifications(n){
+  const paid = ME.plan !== "free";
+  $("notifyBody").hidden = !paid; $("notifyLock").hidden = paid;
+  if (!paid) {
+    $("notifyUpgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); location.href="/dashboard/billing"; });
+    return;
+  }
+  const wh = $("f_webhook"); if (wh && n.discord_webhook_url) wh.value = ""; // boolean from API, don't expose URL
+  const tg = $("f_tgNotify"); if (tg) tg.checked = !!n.telegram_notify;
+  const tgChat = $("f_tgChat"); if (tgChat) tgChat.value = n.telegram_chat_id || "";
+}
+
 function renderDomain(){
   const pro = ME.plan === "pro" || ME.plan === "agency";
   const domainBody = $("domainBody");
