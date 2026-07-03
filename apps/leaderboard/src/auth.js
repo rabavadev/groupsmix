@@ -81,10 +81,9 @@ export const destroySession = (env, token) => _destroySession(env, token);
 export const destroyAllUserSessions = (env, userId) => _destroyAllUserSessions(env, userId);
 export const cookieSet = (token) => _cookieSet(token);
 export const cookieClear = () => _cookieClear();
-// readToken honors a legacy rk_session cookie during the cutover grace period.
-// SEC-104: use shared readToken directly (legacy shim removed)
-export { readToken } from "../../../shared/session.js";
+// readToken is used locally by currentUser(). Re-exported for other modules.
 import { readToken } from "../../../shared/session.js";
+export { readToken };
 
 // Loads the full user row from Postgres for a resolved user id.
 // TIMESTAMPTZ columns come back as epoch-ms so downstream code (effectivePlan,
