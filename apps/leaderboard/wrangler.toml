@@ -17,6 +17,11 @@ routes = [
 ]
 
 # --- Sessions live in KV (shared with the bot Worker), NOT in Postgres. ---
+# WARNING: This KV namespace is shared with the bot Worker (apps/bot/wrangler.toml).
+# Both Workers use the same SESSIONS KV for cross-Worker session sharing.
+# If this namespace is deleted from the Cloudflare dashboard, ALL active sessions
+# across the entire platform are wiped simultaneously — instant total logout.
+# Consider adding Cloudflare account-level protections (e.g., API token restrictions).
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "26e47bcce19941839a20bd2cd5879e42"

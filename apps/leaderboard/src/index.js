@@ -398,6 +398,37 @@ ${entries.join("\n")}
         const players = (r.data.players || []).slice().sort((a, b) => b.wagered - a.wagered);
         return json({ players }, 200, { "cache-control": "public, max-age=10" });
       }
+      // Plain-text rank lookup for Nightbot / Streamlabs custom commands.
+      // /api/public/:slug/rank?user=X returns plain text like:
+      // "CryptoKing is #2 of 15 ($12,345 wagered, $312 behind #1)"
+      const rankMatch = path.match(/^\/api\/public\/([^/]+)\/rank$/);
+      if (rankMatch) {
+        const slug = decodeURIComponent(rankMatch[1]).toLowerCase();
+        const userParam = new URL(request.url).searchParams.get("user") || "";
+        if (!userParam) return new Response("Usage: /api/public/:slug/rank?user=NAME", { status: 400, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=30" } });
+        if (!(await rateLimit(env, `pub-rank:${clientIp(request)}`, 60, 60))) return new Response("Rate limit exceeded.", { status: 429, headers: { "content-type": "text/plain; charset=utf-8" } });
+        const r = await getPublicSite(env, slug);
+        if (!r || r.suspended) return new Response("Leaderboard not found.", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+        const sorted = (r.data.players || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
+        const matchUser = userParam.toLowerCase().replace(/^@/, "");
+        const idx = sorted.findIndex(p => String(p.name || "").toLowerCase().replace(/^\*+/, "").includes(matchUser));
+        if (idx === -1) return new Response(`${userParam} is not on ${r.data.brand?.name || slug}'s leaderboard yet.`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=30" } });
+        const player = sorted[idx];
+        const rank = idx + 1;
+        const total = sorted.length;
+        const wagered = "$" + Number(player.wagered || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
+        let gap = "";
+        if (rank > 1) {
+          const ahead = sorted[idx - 1];
+          const diff = (ahead.wagered || 0) - (player.wagered || 0);
+          gap = ` ($${Number(diff).toLocaleString("en-US", { maximumFractionDigits: 0 })} behind #${rank - 1})`;
+        }
+        const name = r.data.brand?.name || slug;
+        const text = rank === 1
+          ? `${player.name} is #1 of ${total} on ${name}'s leaderboard! 🏆 ${wagered} wagered`
+          : `${player.name} is #${rank} of ${total} on ${name}'s leaderboard. ${wagered} wagered${gap}`;
+        return new Response(text, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=30" } });
+      }
       const slug = decodeURIComponent(path.slice("/api/public/".length)).toLowerCase();
       const r = await getPublicSite(env, slug);
       return r && !r.suspended ? json(r.data, 200, { "cache-control": "public, max-age=30" }) : bad("not found", 404);

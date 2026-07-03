@@ -53,14 +53,14 @@ CREATE TABLE IF NOT EXISTS users (
 --  data layer generates ids in app code (crypto.randomUUID()).
 -- ============================================================
 
--- One user owns one site (1:1). Public page lives at /<slug>.
+-- Multi-board: one user can own multiple sites (1:N).
 CREATE TABLE IF NOT EXISTS sites (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id      UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     slug         TEXT NOT NULL UNIQUE,
     name         TEXT NOT NULL DEFAULT '',
     tagline      TEXT NOT NULL DEFAULT '',
-    casino       TEXT NOT NULL DEFAULT 'Stake',
+    casino       TEXT NOT NULL DEFAULT '',
     code         TEXT NOT NULL DEFAULT '',
     cta_url      TEXT NOT NULL DEFAULT '',
     prize_pool   TEXT NOT NULL DEFAULT '$0',
