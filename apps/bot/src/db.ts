@@ -4,41 +4,41 @@
 import postgres from "postgres";
 import { config } from "./config.js";
 
-let sql: ReturnType<typeof postgres> | null = null;
-function getSql(): ReturnType<typeof postgres> {
-  if (!sql) {
-    const url = config.databaseUrl;
-    if (!url) throw new Error("DATABASE_URL is not configured (set the HYPERDRIVE binding or DATABASE_URL secret)");
-    sql = postgres(url, {
-      max: 1,
-      prepare: false,
-      idle_timeout: 5,
-      connect_timeout: 30,
-      debug: false,
-    });
-  }
-  return sql;
+function createSql(): ReturnType<typeof postgres> {
+  const url = config.databaseUrl;
+  if (!url) throw new Error("DATABASE_URL is not configured (set the HYPERDRIVE binding or DATABASE_URL secret)");
+  return postgres(url, {
+    max: 1,
+    prepare: false,
+    idle_timeout: 5,
+    connect_timeout: 10,
+    debug: false,
+  });
 }
 
-function resetSql() {
-  try { if (sql) sql.end({ timeout: 1 }); } catch {}
-  sql = null;
+// Cached instance for transactions (getSql().begin())
+let txSql: ReturnType<typeof postgres> | null = null;
+function getSql(): ReturnType<typeof postgres> {
+  if (!txSql) txSql = createSql();
+  return txSql;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function runWithRetry(text: string, params: unknown[]): Promise<any[]> {
+async function withRetry(text: string, params: unknown[]): Promise<any[]> {
   let lastErr: any;
   for (let attempt = 0; attempt < 3; attempt++) {
+    const sql = createSql();
     try {
-      const rows = await getSql().unsafe(text, params as any[]);
+      const rows = await sql.unsafe(text, params as any[]);
       return rows.map((r: any) => ({ ...r }));
     } catch (e: any) {
       lastErr = e;
       const msg = String(e?.message || e);
       if (/23505|23514|23503|23502|23506/.test(msg)) throw e;
-      resetSql();
-      if (attempt < 2) await sleep(100 * (attempt + 1));
+      if (attempt < 2) await sleep(200 * (attempt + 1));
+    } finally {
+      try { await sql.end({ timeout: 1 }); } catch {}
     }
   }
   throw lastErr;
@@ -48,11 +48,11 @@ export async function query<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  return runWithRetry(text, params) as unknown as Promise<T[]>;
+  return withRetry(text, params) as unknown as Promise<T[]>;
 }
 
 export async function exec(text: string, params: unknown[] = []): Promise<any> {
-  return runWithRetry(text, params);
+  return withRetry(text, params);
 }
 
 /** Like query() but returns the first row (or undefined). */
