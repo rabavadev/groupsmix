@@ -73,11 +73,6 @@ export async function exec(text, params = []) {
   return withRetry(text, params);
 }
 
-export async function execOne(text, params = []) {
-  const rows = await exec(text, params);
-  return rows[0];
-}
-
 /** Like exec() but returns the first row (or undefined). */
 export async function execOne(text, params = []) {
   const rows = await exec(text, params);
