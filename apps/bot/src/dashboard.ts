@@ -431,6 +431,7 @@ export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
       `SELECT display_name, email, plan FROM users WHERE id=$1`,
       [uid]
     );
+    c.header("Cache-Control", "no-store, no-cache, must-revalidate");
     return c.html(appHtml(user ?? { display_name: "", email: "", plan: "free" }));
   });
 
@@ -684,5 +685,13 @@ async function upgrade(tier){
   window.open(r.invoice_link, '_blank');
 }
 load(); loadExtras();
+window.addEventListener('error', (e) => {
+  const bl = $('botList'); if (bl) bl.textContent = 'Error: ' + (e.error?.message || e.message || 'unknown');
+  const pi = $('planInfo'); if (pi) pi.textContent = 'Error: ' + (e.error?.message || e.message || 'unknown');
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const pi = $('planInfo'); if (pi) pi.textContent = 'Error: ' + (e.reason?.message || e.reason || 'unknown');
+  const bl = $('botList'); if (bl) bl.textContent = 'Error: ' + (e.reason?.message || e.reason || 'unknown');
+});
 </script></body></html>`;
 }

@@ -223,7 +223,7 @@ ${entries.join("\n")}
         const html = PAGES.dashboard
           .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
           .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard", user }));
-        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader } });
+        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader, "cache-control": "no-store, no-cache, must-revalidate" } });
       } catch (e) {
         // A transient DB/Hyperdrive hiccup on currentUser used to bubble as a
         // raw Cloudflare 1101 after the session cookie redirected past the
@@ -239,7 +239,7 @@ ${entries.join("\n")}
         const html = PAGES.analytics
           .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
           .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard/analytics", user }));
-        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader } });
+        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader, "cache-control": "no-store, no-cache, must-revalidate" } });
       } catch (e) {
         console.error("analytics render failed:", String(e?.message || e));
         return new Response("Analytics couldn't load right now — please refresh.", { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } });
@@ -252,7 +252,7 @@ ${entries.join("\n")}
         const html = PAGES.billing
           .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
           .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard/billing", user }));
-        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader } });
+        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader, "cache-control": "no-store, no-cache, must-revalidate" } });
       } catch (e) {
         console.error("billing render failed:", String(e?.message || e));
         return new Response("Billing couldn't load right now — please refresh.", { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } });
@@ -265,7 +265,7 @@ ${entries.join("\n")}
         const html = PAGES.botSetup
           .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
           .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard/bot/setup", user }));
-        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader } });
+        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader, "cache-control": "no-store, no-cache, must-revalidate" } });
       } catch (e) {
         console.error("bot setup render failed:", String(e?.message || e));
         return new Response("Bot setup couldn't load right now — please refresh.", { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } });
@@ -283,7 +283,7 @@ ${entries.join("\n")}
         const html = PAGES.setup
           .replace("<!--GM_NAV_CSS-->", `<style>${SHELL_NAV_CSS}</style>`)
           .replace("<!--GM_NAV-->", shellNavHtml({ activePath: "/dashboard", user }));
-        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader } });
+        return new Response(html, { headers: { ...SECURE_HTML, ...csrfHeader, "cache-control": "no-store, no-cache, must-revalidate" } });
       } catch (e) {
         console.error("setup render failed:", String(e?.message || e));
         return new Response("Setup couldn't load right now — please refresh.", { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } });
