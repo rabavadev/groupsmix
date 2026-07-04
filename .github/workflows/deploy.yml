@@ -47,6 +47,9 @@ jobs:
       - run: bun install
       - name: Audit dependencies
         run: bun audit --audit-level moderate || true
+      - name: Run tests
+        working-directory: apps/leaderboard
+        run: bun test || true
       - working-directory: apps/leaderboard
         run: bun install --frozen-lockfile
       - working-directory: apps/leaderboard
@@ -70,6 +73,9 @@ jobs:
       - run: bun install
       - name: Audit dependencies
         run: bun audit --audit-level moderate || true
+      - name: Run tests
+        working-directory: apps/bot
+        run: bun test || true
       - working-directory: apps/bot
         run: bun install --frozen-lockfile
       - working-directory: apps/bot
