@@ -57,9 +57,9 @@ export async function checkFeature(
 export async function withPlanLimit<R>(
   userId: string,
   kind: "bots" | "offers",
-  fn: (tx: import("./db.js").Tx) => Promise<R>
+  fn: (tx: import("../../../shared/db.js").Tx) => Promise<R>
 ): Promise<{ error: string } | { result: R }> {
-  const { withTransaction } = await import("./db.js");
+  const { withTransaction } = await import("../../../shared/db.js");
   // Two stable int4 keys from userId + kind. Postgres pg_advisory_xact_lock
   // takes bigint; we pack (userIdHashHi, kindHashLo) into a stable pair.
   const kindId = kind === "bots" ? 1 : 2;

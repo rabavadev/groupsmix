@@ -11,6 +11,7 @@ import { billingEnabled, createStarsInvoice } from "./billing.js";
 import { checkFeature, PLANS } from "./plans.js";
 import { rateLimit } from "./ratelimit.js";
 import { sameOrigin } from "./dashboard-auth.js";
+import type { SessionEnv } from "../../../shared/session.js";
 
 interface TgLogin {
   id: number; first_name?: string; last_name?: string; username?: string;
@@ -23,7 +24,7 @@ export function buildDashboardApi(): Hono<{ Variables: { uid: string } }> {
   // Rate-limit all API requests (120 req/min per IP).
   api.use("*", async (c, next) => {
     const ip = c.req.header("cf-connecting-ip") || "0.0.0.0";
-    const rlResult = await rateLimit(c.env.SESSIONS, `dash:${ip}`, 120, 60);
+    const rlResult = await rateLimit((c.env as SessionEnv).SESSIONS, `dash:${ip}`, 120, 60);
     if (!rlResult.ok) return c.json({ error: "rate limit exceeded", retryAfter: rlResult.retryAfter }, 429);
     await next();
   });

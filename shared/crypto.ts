@@ -62,7 +62,7 @@ async function getKey(): Promise<CryptoKey> {
   if (_key) return _key;
   _key = await crypto.subtle.importKey(
     "raw",
-    getTokenEncKey(),
+    getTokenEncKey() as BufferSource,
     "AES-GCM",
     false,
     ["encrypt", "decrypt"]
@@ -144,7 +144,7 @@ export async function encrypt(plaintext: string, hexKey: string): Promise<string
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await crypto.subtle.importKey(
     "raw",
-    hexToBytes(hexKey),
+    hexToBytes(hexKey) as Uint8Array<ArrayBuffer>,
     "AES-GCM",
     false,
     ["encrypt", "decrypt"]
@@ -181,7 +181,7 @@ export async function decrypt(blobHex: string, hexKey: string): Promise<string> 
   const ct = bytes.slice(offset + 12);
   const key = await crypto.subtle.importKey(
     "raw",
-    hexToBytes(hexKey),
+    hexToBytes(hexKey) as Uint8Array<ArrayBuffer>,
     "AES-GCM",
     false,
     ["encrypt", "decrypt"]
@@ -210,7 +210,7 @@ function hexToBytes(hex: string): Uint8Array {
 export async function hashIp(ip: string): Promise<Buffer> {
   const data = new TextEncoder().encode(getIpHashSalt() + ip);
   const hash = await crypto.subtle.digest("SHA-256", data);
-  return Buffer.from(hash);
+  return Buffer.from(hash as ArrayBuffer);
 }
 
 /** Routing id + Telegram secret header value. */
@@ -259,7 +259,7 @@ export async function verifyHmacSha256Hex(secret: string, payload: string, signa
     ["sign"]
   );
   const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-  const expected = Buffer.from(mac).toString("hex");
+  const expected = Buffer.from(mac as ArrayBuffer).toString("hex");
   if (expected.length !== sig.length) return false;
   let diff = 0;
   for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);

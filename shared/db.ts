@@ -147,7 +147,7 @@ export async function withTransaction<R>(fn: (tx: Tx) => Promise<R>): Promise<R>
   // would re-run side effects the caller hasn't made idempotent).
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const result = await getSql().begin(async (sqlTx) => {
+      const result = await getSql().begin(async (sqlTx: any) => {
         const tx: Tx = {
           async query<T = Record<string, unknown>>(text: string, params: unknown[] = []) {
             const rows = (await sqlTx.unsafe(text, params as any[])) as unknown[];

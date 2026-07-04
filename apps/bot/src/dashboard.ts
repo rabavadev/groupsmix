@@ -127,7 +127,7 @@ export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
   
   // Set the user ID middleware for the API
   api.use("*", async (c, next) => {
-    const uid = await currentUserId(c.req.raw, c.env);
+    const uid = await currentUserId(c.req.raw, c.env as SessionEnv);
     if (!uid) return c.json({ error: "not logged in" }, 401);
     c.set("uid", uid);
     await next();

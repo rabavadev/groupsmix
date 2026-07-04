@@ -16,7 +16,7 @@ export async function logClick(
     // The lock serializes inserts for the same (short_link_id, ip_hash) pair
     await withTransaction(async (tx) => {
       // Acquire advisory lock for this (short_link_id, ip_hash) pair
-      const lockResult = await tx.one<{ acquire_click_uniqueness_lock: boolean }>(
+      const lockResult = await tx.one<{ lock_acquired: boolean }>(
         `SELECT acquire_click_uniqueness_lock($1, $2) AS lock_acquired`,
         [shortLinkId, ipH]
       );

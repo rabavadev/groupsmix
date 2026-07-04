@@ -217,7 +217,7 @@ export async function notifyTop3Change(
         });
         const text = `⚡ *${siteName}* — New Top 3!\n\n${lines.join("\n")}`;
         await sendTelegramMessage(botToken, tgChatId, text).catch(() => {});
-      } catch (e) {
+      } catch (e: any) {
         console.error("[notify] failed to decrypt bot token:", String(e?.message || e));
       }
     }
@@ -291,7 +291,7 @@ export async function notifySubscribedPlayers(
   let botToken: string;
   try {
     botToken = await decryptToken(Buffer.from(bot.token_encrypted));
-  } catch (e) {
+  } catch (e: any) {
     console.error("[notify] failed to decrypt bot token:", String(e?.message || e));
     return;
   }
