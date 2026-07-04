@@ -30,6 +30,12 @@ export async function rollupClicks(): Promise<void> {
     await query(
       `DELETE FROM click_daily WHERE day < current_date - 30`
     );
+
+    // DB-101: Prune raw click partitions beyond 90 days.  These rows have
+    // already been rolled into click_daily and the dashboard never scans raw.
+    await query(
+      `DELETE FROM clicks WHERE ts < now() - interval '90 days'`
+    );
   } catch (err) {
     console.error("[rollup] rollupClicks failed:", err);
     throw err;

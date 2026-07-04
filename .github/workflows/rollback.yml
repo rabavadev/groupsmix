@@ -1,0 +1,78 @@
+name: Rollback
+
+# Manually deploy a pinned version of a worker for rollback.
+# Trigger from GitHub Actions tab → "Run workflow" → select worker + git ref.
+
+on:
+  workflow_dispatch:
+    inputs:
+      worker:
+        description: "Worker to rollback (bot or leaderboard)"
+        required: true
+        type: choice
+        options:
+          - bot
+          - leaderboard
+      version:
+        description: "Git ref to deploy (commit SHA, tag, or branch)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rollback-${{ inputs.worker }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: '1.2.15'
+
+      - run: bun install --frozen-lockfile
+
+      - name: Rollback deploy
+        working-directory: apps/${{ inputs.worker }}
+        run: |
+          echo "==========================================="
+          echo "ROLLBACK: deploying ${{ inputs.worker }} at ref ${{ inputs.version }}"
+          echo "==========================================="
+          npx wrangler@4.106.0 deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke check
+        run: |
+          sleep 15
+          if [ "${{ inputs.worker }}" = "leaderboard" ]; then
+            URL="https://yourrank.site/"
+          else
+            URL="https://yourrank.site/bot/dashboard"
+          fi
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 20 "$URL")
+          if [ "$STATUS" = "200" ]; then
+            echo "OK: rollback smoke check passed (HTTP $STATUS)"
+          else
+            echo "FAIL: rollback smoke check returned HTTP $STATUS"
+            exit 1
+          fi
+
+      - name: Summarise
+        if: always()
+        run: |
+          echo "==========================================="
+          echo "ROLLBACK RESULT"
+          echo "Worker: ${{ inputs.worker }}"
+          echo "Ref:    ${{ inputs.version }}"
+          echo "Status: ${{ job.status }}"
+          echo "==========================================="

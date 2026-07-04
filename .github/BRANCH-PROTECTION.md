@@ -1,49 +1,58 @@
-# Branch Protection Rules (CICD-102)
+# Branch Protection & Environment Setup
 
-This document describes the recommended branch protection settings for the
-YourRank repository. These cannot be set via code — a maintainer must
-configure them in GitHub → Settings → Branches → Branch protection rules.
+## Required GitHub Settings
 
-## Rules for `main`
+### 1. Branch Protection Rules (Settings → Branches → main)
 
-### 1. Require pull request reviews before merging
+- ✅ Require pull request reviews before merging (1 approval)
+- ✅ Require status checks to pass before merging
+  - Required checks: `pr-check`
+- ✅ Require branches to be up to date before merging
+- ✅ Do not allow bypassing the above settings (even for admins recommended)
 
-- **Required approving reviews:** 1
-- **Dismiss stale reviews when new commits are pushed:** Yes
-- **Require review from code owners:** Optional (no CODEOWNERS file yet)
+### 2. Environment Protection (Settings → Environments)
 
-### 2. Require status checks to pass before merging
+#### `production` Environment
 
-Required checks:
-- `deploy-leaderboard` (typecheck + build)
-- `deploy-bot` (typecheck + build)
-- `migrate` (if db/ paths changed)
+| Setting | Value |
+|---------|-------|
+| Deployment branches | `main` only |
+| Required reviewers | Add at least 1 team member |
+| Wait timer | 0 minutes (or 5 min for extra safety) |
 
-- **Require branches to be up to date before merging:** Yes
+Used by: `deploy.yml` — both `deploy-leaderboard` and `deploy-bot` jobs.
 
-### 3. Require conversation resolution before merging
+#### `staging` Environment
 
-Yes — ensures all review comments are addressed.
+| Setting | Value |
+|---------|-------|
+| Deployment branches | All branches |
+| Required reviewers | None (on-demand) |
 
-### 4. Do not allow force pushes
+Used by: `staging.yml` — both `deploy-leaderboard-staging` and `deploy-bot-staging` jobs.
 
-Restrict force push to `main` for everyone, including admins.
+### 3. Workflow Environment References
 
-### 5. Do not allow deletions
+All deploy jobs have the `environment:` field set:
 
-Prevent accidental branch deletion of `main`.
+- **deploy.yml** `deploy-leaderboard` → `environment: production`
+- **deploy.yml** `deploy-bot` → `environment: production`
+- **staging.yml** `deploy-leaderboard-staging` → `environment: staging`
+- **staging.yml** `deploy-bot-staging` → `environment: staging`
 
-### 6. Allow squash merging only (recommended)
+## How It Works
 
-Set the repository merge button settings to allow only squash merges.
-This keeps the main branch history linear and clean.
+1. **Push to main** → `deploy.yml` runs. GitHub waits for production environment approval before deploying.
+2. **Manual trigger** → `staging.yml` runs. Deploys immediately to staging environment (any branch).
+3. **Rollback** → Use `rollback.yml` workflow_dispatch with a specific git ref.
 
-## How to configure
+## Secrets per Environment
 
-1. Go to **Settings** → **Branches** → **Add branch protection rule**
-2. Set the branch name pattern to `main`
-3. Check the boxes listed above
-4. Click **Create** / **Save changes**
+Both environments need these secrets (can be scoped per environment for isolation):
 
-> **Note:** Admins can still bypass protections if "Include administrators"
-> is unchecked. For maximum safety, enable it for all rules.
+| Secret | Description |
+|--------|-------------|
+| `CLOUDFLARE_API_TOKEN` | CF API token |
+| `CLOUDFLARE_ACCOUNT_ID` | CF account ID (48ae72b0370b5aa9feca1a45ea37f577) |
+| `SUPABASE_ACCESS_TOKEN` | For DB migrations (production only) |
+| `SUPABASE_DB_PASSWORD` | For DB migrations (production only) |

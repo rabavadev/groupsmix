@@ -116,7 +116,10 @@ export async function one<T = Record<string, unknown>>(
 }
 
 // ----------------------------------------------------------------------------
-// Public API - writes (no retry - callers handle idempotency)
+// Public API - writes
+// Note: exec() retries ONLY on connection errors (ECONNRESET, ETIMEDOUT, etc.)
+// NOT on constraint violations (23505, etc.). Callers must ensure mutations are
+// idempotent or wrapped in transactions for safety.
 // ----------------------------------------------------------------------------
 
 export async function exec(text: string, params: unknown[] = []): Promise<any> {

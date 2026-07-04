@@ -1,9 +1,11 @@
 // Static HTML pages served by the Worker. Kept as plain template strings.
 
 // Shared shell for the legal pages — plain, readable, no fluff.
-const legal = (title, updated, body, pagePath) => `<!DOCTYPE html><html lang="en"><head>
+const legal = (title, updated, body, pagePath, desc) => `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${title} · YourRank</title><link rel="canonical" href="https://yourrank.site/${pagePath}" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<title>${title} · YourRank</title>
+<meta name="description" content="${desc || title}" />
+<link rel="canonical" href="https://yourrank.site/${pagePath}" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
 <header class="topbar"><a class="brand" href="/">Your<b>Rank</b></a>

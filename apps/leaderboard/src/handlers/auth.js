@@ -61,12 +61,15 @@ export async function handleSignup(request, env) {
 
 export async function handleLogin(request, env) {
   try {
+    // SEC-110: IP-based rate limit
     if (!(await rateLimit(env, `login:${clientIp(request)}`, 20, 600, { failClosed: true }))) return bad("Too many attempts. Try again in a few minutes.", 429);
     const body = await readJson(request);
     if (!body) return bad("Invalid request");
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
     if (!isEmail(email) || !password) return bad("Email and password required");
+    // SEC-110: Per-account rate limit (prevents brute-force across multiple IPs)
+    if (!(await rateLimit(env, `login-email:${email}`, 10, 900, { failClosed: true }))) return bad("Too many attempts on this account. Try again later.", 429);
     const user = await one("SELECT id,email,password_hash,password_salt,status FROM users WHERE email=$1", [email]);
     if (!user || !user.password_hash) return bad("Incorrect email or password", 401);
     const { ok, needsRehash } = await verifyPassword(password, user.password_salt, user.password_hash);
