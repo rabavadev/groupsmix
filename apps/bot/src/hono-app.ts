@@ -105,7 +105,12 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
   // 2) TRACKED REDIRECT
   // =================================================================
   app.get("/r/:slug", async (c) => {
-    const slug = c.req.param("slug");
+      const ip = c.req.header("cf-connecting-ip") ?? "0.0.0.0";
+      // BE-005: Rate limit redirects to prevent click fraud amplification
+      const rl = await rateLimit(c.env.SESSIONS, `redirect:${ip}`, 200, 60);
+      if (!rl.ok) return c.json({ error: "rate limit exceeded" }, 429);
+
+      const slug = c.req.param("slug");
     const link = await one<{ id: string; referral_url: string }>(
       `SELECT sl.id, o.referral_url
          FROM short_links sl JOIN offers o ON o.id = sl.offer_id
@@ -117,9 +122,8 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const u = c.req.query("u");
     const tgUserId = u && /^\d+$/.test(u) ? Number(u) : null;
     const country = c.req.header("cf-ipcountry") ?? null;
-    const ip = c.req.header("cf-connecting-ip") ?? "0.0.0.0";
 
-    // Click reference: substituted into the affiliate URL so casinos
+    // Click reference:
     // can echo it back via postback ({click_ref} or {click_id}).
     const ref = newClickRef();
     const destination = link.referral_url
