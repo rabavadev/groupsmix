@@ -11,6 +11,7 @@ import { shellNavHtml, SHELL_NAV_CSS } from "../../../shared/shell-nav.js";
 import { findRoute } from "./routes.js";
 import {
   generateCsrfToken, csrfCookie, verifyCsrf, shouldRequireCsrf,
+  csrfDebugDomain,
   resolveCustomDomain, isCustomHost,
   serveStaticAsset,
   serveRobotsTxt, serveSitemapXml, serveFavicon,
@@ -77,6 +78,14 @@ export default {
       // --- health check ---
       if (path === "/health") {
         return new Response(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      // --- debug csrf domain (temporary) ---
+      if (path === "/debug-csrf") {
+        return new Response(JSON.stringify(csrfDebugDomain()), {
           status: 200,
           headers: { "content-type": "application/json" },
         });

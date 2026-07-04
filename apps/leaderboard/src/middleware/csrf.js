@@ -7,13 +7,25 @@ export function generateCsrfToken() {
 }
 
 export function csrfCookie(token) {
-  // CSRF_FIX_V3: explicit default, no template-literal undefined
   let domain = ".yourrank.site";
   try {
     const envDomain = typeof process !== "undefined" && typeof process.env !== "undefined" && process.env.SESSION_COOKIE_DOMAIN;
     if (envDomain) domain = envDomain;
   } catch {}
   return `__csrf=${token}; Path=/; Domain=${domain}; Secure; SameSite=Lax; Max-Age=86400`;
+}
+
+// Debug helper — remove after fixing CSRF domain bug
+export function csrfDebugDomain() {
+  try {
+    const hasProcess = typeof process !== "undefined";
+    const hasEnv = hasProcess && typeof process.env !== "undefined";
+    const raw = hasEnv ? process.env.SESSION_COOKIE_DOMAIN : "N/A";
+    const cookie = csrfCookie("test");
+    return { hasProcess, hasEnv, rawDomain: raw, cookieHeader: cookie };
+  } catch (e) {
+    return { error: String(e) };
+  }
 }
 
 export function readCsrfToken(req) {
