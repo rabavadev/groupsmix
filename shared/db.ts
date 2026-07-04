@@ -100,6 +100,7 @@ async function withRetry(text: string, params: unknown[]): Promise<any[]> {
 // Public API - reads (safe to retry)
 // ----------------------------------------------------------------------------
 
+/** Execute a SQL read query with automatic retry on connection errors. */
 export async function query<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = []
@@ -107,6 +108,7 @@ export async function query<T = Record<string, unknown>>(
   return withRetry(text, params) as unknown as Promise<T[]>;
 }
 
+/** Execute a SQL read query and return the first row, or undefined if no rows. */
 export async function one<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = []
@@ -122,6 +124,7 @@ export async function one<T = Record<string, unknown>>(
 // idempotent or wrapped in transactions for safety.
 // ----------------------------------------------------------------------------
 
+/** Execute a SQL write statement with automatic retry on connection errors. */
 export async function exec(text: string, params: unknown[] = []): Promise<any> {
   return withRetry(text, params);
 }

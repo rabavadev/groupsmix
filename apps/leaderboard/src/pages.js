@@ -799,7 +799,7 @@ ${endsAt ? `<p class="ov-timer-label">${esc(b.prizePool || "")} resets in</p>
 <h2>Liability</h2>
 <p>YourRank is provided as-is. We work to keep pages online, but we don't guarantee uninterrupted service and we're not liable for lost revenue, lost viewers, or disputes between you and your community. Our total liability is capped at what you paid us in the last 3 months.</p>
 <h2>Contact</h2>
-<p>Questions about these terms: reach us through the contact form on the home page.</p>`, "terms"),
+<p>Questions about these terms: reach us through the contact form on the home page.</p>`, "terms", "YourRank terms of service. Covers accounts, content, payments, liability, and how we handle disputes."),
 
   privacy: legal("Privacy Policy", "July 2026", `
 <h2>What we collect</h2>
@@ -819,7 +819,7 @@ ${endsAt ? `<p class="ov-timer-label">${esc(b.prizePool || "")} resets in</p>
 <h2>Your page is public</h2>
 <p>Anything you publish on your leaderboard page is visible to anyone with the link, including player names you enter. Mask player names (like <span class="mono">*****ess</span>) if your community expects it.</p>
 <h2>Contact</h2>
-<p>Privacy questions or deletion requests: use the contact form on the home page.</p>`, "privacy"),
+<p>Privacy questions or deletion requests: use the contact form on the home page.</p>`, "privacy", "YourRank privacy policy. We collect minimal data: email, hashed password, and your public page content. No ad trackers."),
 
   responsible: legal("Responsible Play", "July 2026", `
 <p><b>YourRank pages are about gambling, and gambling carries real risk.</b> The leaderboards hosted here track wagers made on third-party casino sites. YourRank itself takes no bets and pays no winnings — but if you're a viewer taking part in these communities, this page is for you.</p>
@@ -840,5 +840,5 @@ ${endsAt ? `<p class="ov-timer-label">${esc(b.prizePool || "")} resets in</p>
 </ul>
 <p>Most casinos, including Stake, offer self-exclusion and loss-limit tools in account settings. Use them.</p>
 <h2>For streamers</h2>
-<p>If you run a leaderboard on YourRank: be straight with your community about the risks, honour the prizes you post, and never pressure viewers to wager. Pages that mislead their communities get suspended.</p>`, "responsible"),
+<p>If you run a leaderboard on YourRank: be straight with your community about the risks, honour the prizes you post, and never pressure viewers to wager. Pages that mislead their communities get suspended.</p>`, "responsible", "Responsible play guidelines for YourRank users and viewers. Gambling carries real risk — know the limits and find help resources."),
 };

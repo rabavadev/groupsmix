@@ -69,6 +69,7 @@ export const cookieClear = (): string =>
   `${COOKIE_NAME}=; ${cookieAttrs()}; Max-Age=0`;
 
 // ---- read the token from a Request ----
+/** Extract the session token from the Cookie header of a Request. */
 export function readToken(req: Request): string | null {
   const c = req.headers.get("cookie") || "";
   const re = new RegExp("(?:^|;\\s*)" + COOKIE_NAME + "=([^;]+)");
@@ -108,6 +109,7 @@ async function removeUserSession(env: SessionEnv, userId: string, token: string)
   } catch { /* best-effort index */ }
 }
 
+/** Create a new session in KV and return the token. */
 export async function createSession(env: SessionEnv, userId: string): Promise<string> {
   const token = newToken();
   await env.SESSIONS.put(KV_PREFIX + token, userId, { expirationTtl: SESSION_TTL_S });
@@ -115,6 +117,7 @@ export async function createSession(env: SessionEnv, userId: string): Promise<st
   return token;
 }
 
+/** Delete a single session token from KV and remove it from the user index. */
 export async function destroySession(env: SessionEnv, token: string | null): Promise<void> {
   if (token) {
     const uid = await env.SESSIONS.get(KV_PREFIX + token);
