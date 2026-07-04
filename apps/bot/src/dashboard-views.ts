@@ -30,7 +30,7 @@ function escHtml(s: string): string {
   return (s ?? "").replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>)[ch]);
 }
 
-export function loginHtml(botUsername: string, devLogin: boolean, publicBaseUrl: string): string {
+export function loginHtml(botUsername: string, devLogin: boolean, publicBaseUrl: string, nonce?: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>YourRank Bot — Login</title>
@@ -54,7 +54,7 @@ export function loginHtml(botUsername: string, devLogin: boolean, publicBaseUrl:
     <button onclick="devLogin()">Enter</button>
   </div>` : ""}
 </div></div>
-<script>
+<script${nonce ? ` nonce="${nonce}"` : ""}>
 async function onTgAuth(user) {
   const r = await fetch('/bot/auth/telegram', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(user)});
   if (r.ok) location.reload(); else alert('Login failed: ' + (await r.json()).error);
@@ -68,7 +68,7 @@ async function devLogin() {
 </script></body></html>`;
 }
 
-export function appHtml(user: { display_name: string; email: string; plan: string }, publicBaseUrl: string): string {
+export function appHtml(user: { display_name: string; email: string; plan: string }, publicBaseUrl: string, nonce?: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Streamer Dashboard</title><style>${SHELL_NAV_CSS}${BASE_CSS}</style></head><body>
@@ -150,7 +150,7 @@ ${shellNavHtml({ activePath: "/bot/dashboard", user })}
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
-<script>
+<script${nonce ? ` nonce="${nonce}"` : ""}>
 const $ = (id) => document.getElementById(id);
 function toast(msg) { const t=$('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }
 async function api(path, opts) {

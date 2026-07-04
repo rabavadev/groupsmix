@@ -62,11 +62,13 @@ export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
     return c.json({ error: "Internal server error — please try again" }, 500);
   });
 
-  // CSP header on all dashboard responses (SEC-102)
+  // CSP header on all dashboard responses (SEC-102, SEC-703)
   app.use("*", async (c, next) => {
+    const nonce = crypto.randomUUID().replace(/-/g, "");
+    c.set("cspNonce", nonce);
     await next();
     if (!c.res.headers.has("Content-Security-Policy")) {
-      c.header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;");
+      c.header("Content-Security-Policy", `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;`);
     }
     c.res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   });
@@ -137,13 +139,13 @@ export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
     const uid = await currentUserId(c.req.raw, c.env);
     const loginBotUsername = process.env.LOGIN_BOT_USERNAME ?? "";
     const devLogin = process.env.ALLOW_DEV_LOGIN === "1";
-    if (!uid) return c.html(loginHtml(loginBotUsername, devLogin, config.publicBaseUrl));
+    if (!uid) return c.html(loginHtml(loginBotUsername, devLogin, config.publicBaseUrl, c.get("cspNonce")));
     // Fetch the user row for the shared nav (name + plan badge).
     const user = await one<{ display_name: string; email: string; plan: string }>(
       `SELECT display_name, email, plan FROM users WHERE id=$1`,
       [uid]
     );
-    return c.html(appHtml(user ?? { display_name: "", email: "", plan: "free" }, config.publicBaseUrl));
+    return c.html(appHtml(user ?? { display_name: "", email: "", plan: "free" }, config.publicBaseUrl, c.get("cspNonce")));
   });
 
   return app;
