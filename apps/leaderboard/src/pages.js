@@ -135,7 +135,7 @@ export const PAGES = {
   <p class="foot"><a href="/login">Back to sign in</a></p></div></main></div>
   <script src="/assets/auth.js?v=2"></script></body></html>`,
 
-    signup:
+    signup: `
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Create account · YourRank</title>
 <meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/signup" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
