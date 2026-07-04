@@ -68,7 +68,7 @@ export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
     c.set("cspNonce", nonce);
     await next();
     if (!c.res.headers.has("Content-Security-Policy")) {
-      c.header("Content-Security-Policy", `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;`);
+      c.header("Content-Security-Policy", `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://telegram.org; frame-src https://telegram.org;`);
     }
     c.res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   });
