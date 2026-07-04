@@ -19,12 +19,11 @@ mock.module("../db.js", () => ({
 // Now we can safely import billing.js
 const {
   effectivePlan,
-  PLAN_LIMITS,
-  BOARD_LIMITS,
-  PLAN_PRICES,
-  PLAN_META,
   priceUsd,
 } = await import("../billing.js");
+
+// Import plan constants directly from source (mock.module can break re-exports in bun <1.3)
+const { PLAN_LIMITS, BOARD_LIMITS, PLAN_PRICES, PLAN_META } = await import("../../../../shared/plans.js");
 
 // ─── effectivePlan ────────────────────────────────────────────────────────
 
