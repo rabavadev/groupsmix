@@ -12,7 +12,7 @@ export function populateEnv(env: Record<string, any>, options?: { setGlobalEnv?:
   // proxy has been intermittently dropping connections causing 500s.
   let hdConn: string | null = null;
   try { hdConn = env.HYPERDRIVE?.connectionString ?? null; } catch {}
-  pe.DATABASE_URL = env.DATABASE_URL ?? hdConn;
+  pe.DATABASE_URL = env.DATABASE_URL || hdConn;
   
   // Common bindings used by both Workers
   pe.PUBLIC_BASE_URL = env.PUBLIC_BASE_URL;
