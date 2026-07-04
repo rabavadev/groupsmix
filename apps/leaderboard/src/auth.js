@@ -12,26 +12,24 @@ import {
   // SEC-104: readTokenWithLegacy removed (grace period over)
   KV_PREFIX,
 } from "../../../shared/session.js";
-// PBKDF2-SHA256 iteration count.
-//
-// Why 200,000 and not OWASP's 600,000:
-//   Cloudflare Workers cap CPU time per invocation. A single deriveBits call
-//   at 600k throws error 1101 (CPU exceeded) — confirmed in prod. 200k is the
-//   highest value that ships reliably on Workers without hitting the cap,
-//   giving 2x the attack cost of the original 100k that launched with the app.
+// Why 100,000 and not OWASP's 600,000:
+//   Cloudflare Workers runtime rejects PBKDF2 iteration counts above 100,000
+//   with: "iteration counts above 100000 are not supported". This is a hard
+//   runtime limit, not a CPU-time issue. 100k is the maximum the Workers
+//   WebCrypto implementation accepts for PBKDF2.
 //
 //   OWASP's >=600k guidance targets long-lived Node servers, not edge
-//   functions. 200k is the best we can do within the Workers CPU budget today.
+//   functions with constrained WebCrypto implementations.
 //
-// Lazy rehash: verifyPassword() returns needsRehash=true when the stored hash
+//   Lazy rehash: verifyPassword() returns needsRehash=true when the stored hash
 //   used fewer iterations than PBKDF2_ITERATIONS. Callers re-hash and persist
 //   on successful login — existing users upgrade automatically, no forced reset.
 //
-// Migration path if the CPU cap ever lifts:
+//   Migration path if the Workers limit ever lifts:
 //   1. Bump PBKDF2_ITERATIONS — lazy rehash handles the rest.
 //   2. Or switch to argon2id if Workers adds native support.
-const PBKDF2_ITERATIONS = 200000;
-const LEGACY_ITERATIONS = 100000;  // kept to verify pre-200k hashes during lazy-rehash window
+const PBKDF2_ITERATIONS = 100000;
+const LEGACY_ITERATIONS = 100000;  // same as current — kept for future-proofing if iterations change
 const enc = new TextEncoder();
 const bytesToHex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 const hexToBytes = (h) => {
