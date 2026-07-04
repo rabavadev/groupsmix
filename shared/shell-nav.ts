@@ -84,7 +84,7 @@ export function shellNavHtml(
     <div class="gm-who">
       <span class="gm-who-name">${name}</span>
       ${badge}
-      <a class="gm-logout" href="/logout">Logout</a>
+      <form method="POST" action="/logout" style="display:inline"><button class="gm-logout" type="submit">Logout</button></form>
     </div>
   </div>
 </header>`;

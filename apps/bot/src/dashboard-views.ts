@@ -31,9 +31,9 @@ function escHtml(s: string): string {
 }
 
 export function loginHtml(botUsername: string, devLogin: boolean, publicBaseUrl: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Streamer Dashboard — Login</title><style>${BASE_CSS}
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>YourRank Bot — Login</title>
   .center { min-height:90vh; display:flex; align-items:center; justify-content:center; }
   .card { text-align:center; max-width:380px; }
 </style></head><body>
@@ -67,7 +67,7 @@ async function devLogin() {
 }
 
 export function appHtml(user: { display_name: string; email: string; plan: string }, publicBaseUrl: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Streamer Dashboard</title><style>${SHELL_NAV_CSS}${BASE_CSS}</style></head><body>
 ${shellNavHtml({ activePath: "/bot/dashboard", user })}
