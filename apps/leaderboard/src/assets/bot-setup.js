@@ -58,6 +58,29 @@ connectBtn.addEventListener("click", async () => {
       connectBtn.textContent = "Connected ✓";
       connectBtn.disabled = true;
       tokenInput.disabled = true;
+      // E2E-013: Show "Change bot" link so user can reconnect a different bot
+      let changeLink = document.getElementById("changeBotLink");
+      if (!changeLink) {
+        changeLink = document.createElement("a");
+        changeLink.id = "changeBotLink";
+        changeLink.href = "#";
+        changeLink.textContent = "Change bot";
+        changeLink.style.cssText = "display:inline-block;margin-top:8px;font-size:13px;color:var(--ink-mute,#999);text-decoration:underline;cursor:pointer";
+        connectBtn.parentNode.insertBefore(changeLink, connectBtn.nextSibling);
+      }
+      changeLink.hidden = false;
+      changeLink.onclick = (e) => {
+        e.preventDefault();
+        connectBtn.disabled = false;
+        connectBtn.textContent = "Connect bot";
+        tokenInput.value = "";
+        tokenInput.disabled = false;
+        statusEl.textContent = "";
+        statusEl.className = "hint";
+        step4.hidden = true;
+        changeLink.hidden = true;
+        tokenInput.focus();
+      };
     } else {
       statusEl.textContent = data.error || "Connection failed. Check the token and try again.";
       statusEl.className = "err";

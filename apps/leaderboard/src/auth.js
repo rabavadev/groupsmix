@@ -30,6 +30,11 @@ import {
 //   2. Or switch to argon2id if Workers adds native support.
 const PBKDF2_ITERATIONS = 100000;
 const LEGACY_ITERATIONS = 100000;  // same as current — kept for future-proofing if iterations change
+// CODE-007: bytesToHex and hexToBytes duplicate helpers in shared/crypto.ts.
+// safeEqual also duplicates the constant-time comparison pattern used by
+// verifyHmacSha256Hex in shared/crypto.ts. Do NOT refactor now (too risky for
+// a hot-fix wave), but the next cleanup pass should import these from the shared
+// module instead of maintaining two copies.
 const enc = new TextEncoder();
 const bytesToHex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 const hexToBytes = (h) => {

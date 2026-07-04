@@ -29,7 +29,10 @@ export function serveStaticAsset(path) {
     return new Response(entry[0], { 
       headers: { 
         "content-type": MIME[entry[1]], 
-        "cache-control": "public, max-age=300, s-maxage=3600" 
+        // PERF-002: Long cache — assets_bundled.js is regenerated on every deploy
+        // (bundled from src/assets/ by build.js), so content changes = new deploy.
+        // Browser gets stale asset for max 24h; CDN edge serves for up to 7 days.
+        "cache-control": "public, max-age=86400, s-maxage=604800" 
       } 
     });
   }

@@ -431,13 +431,13 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <div class="stats"><div class="stat"><b id="s_users">–</b><span>accounts</span></div><div class="stat"><b id="s_pro">–</b><span>on Pro</span></div><div class="stat"><b id="s_leads">–</b><span>leads</span></div><div class="stat"><b id="s_rev">–</b><span>revenue (USD)</span></div></div>
 <div class="tabs"><button class="tab is-on" data-tab="users" type="button">Users</button><button class="tab" data-tab="leads" type="button">Leads</button><button class="tab" data-tab="payments" type="button">Payments</button></div>
 <div class="tabpane" id="tab-users">
-<table class="admin-table"><thead><tr><th>Email</th><th>Page</th><th>Plan</th><th>Status</th><th class="ta-r">Players</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="usersBody"></tbody></table>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Email</th><th>Page</th><th>Plan</th><th>Status</th><th class="ta-r">Players</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="usersBody"></tbody></table></div>
 <div class="empty" id="usersEmpty" hidden>No users yet.</div></div>
 <div class="tabpane" id="tab-leads" hidden>
-<table class="admin-table"><thead><tr><th>Handle</th><th>Casino</th><th>Contact</th><th>Note</th><th>When</th></tr></thead><tbody id="leadsBody"></tbody></table>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Handle</th><th>Casino</th><th>Contact</th><th>Note</th><th>When</th></tr></thead><tbody id="leadsBody"></tbody></table></div>
 <div class="empty" id="leadsEmpty" hidden>No leads yet. Share the landing page around.</div></div>
 <div class="tabpane" id="tab-payments" hidden>
-<table class="admin-table"><thead><tr><th>User</th><th>Provider</th><th class="ta-r">Amount</th><th>Status</th><th>When</th></tr></thead><tbody id="payBody"></tbody></table>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>User</th><th>Provider</th><th class="ta-r">Amount</th><th>Status</th><th>When</th></tr></thead><tbody id="payBody"></tbody></table></div>
 <div class="empty" id="payEmpty" hidden>No payments yet.</div></div>
 <p class="hint" style="margin-top:18px">Manual activation: use <b>+31d Pro</b> on any user after they pay you directly (PayPal, bank, whatever). Crypto payments through the site activate on their own. Reset links work for 24h — send them over Discord/Telegram if email isn't wired up.</p>
 </div></div>

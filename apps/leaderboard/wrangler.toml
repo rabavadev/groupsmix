@@ -22,6 +22,9 @@ routes = [
 # If this namespace is deleted from the Cloudflare dashboard, ALL active sessions
 # across the entire platform are wiped simultaneously — instant total logout.
 # Consider adding Cloudflare account-level protections (e.g., API token restrictions).
+# NOTE: SESSIONS KV is shared between Workers for both session storage AND rate limiting keys.
+# Rate limit keys use the "rl:" prefix (see auth.js rateLimit()), session keys use "gm_s:",
+# and 2FA flags use "2fa:" — all in this same namespace.
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "26e47bcce19941839a20bd2cd5879e42"
@@ -74,6 +77,7 @@ id = "e0b6cba066ad4168ad76629f23b5111d"
 # Create a separate staging Hyperdrive instance and update the id below.
 # DO NOT share the production database with staging as this can destroy real user data.
 # Current id is a placeholder - replace with actual staging Hyperdrive id.
+# REL-007: TODO: Add Hyperdrive binding for staging (currently uses DATABASE_URL fallback)
 [[env.staging.hyperdrive]]
 binding = "HYPERDRIVE"
 # TODO: Replace with staging-specific Hyperdrive id after creating staging database
