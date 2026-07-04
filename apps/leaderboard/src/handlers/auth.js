@@ -4,10 +4,10 @@ import { DEFAULT_EXTRA, getUserBoardsList } from "../site.js";
 import { sendEmail, resetEmail } from "../email.js";
 import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS, priceUsd } from "../billing.js";
 import {
-  findUserByEmail, findUserByCredentials, findSiteByUserId, findUserForReset,
+  findUserByEmail, findUserByCredentials, findSiteByUserId, findSiteBySlug, findUserForReset,
   findSubscriptionByUserId, createUser, createSite, updateUserPassword, findUserWithTotpSecret
 } from "../data/auth.js";
-import { getSql } from "../../../../shared/db.js";
+import { getSql, one, exec } from "../../../../shared/db.js";
 
 export async function handleSignup(request, env) {
   try {
