@@ -50,9 +50,10 @@ import { rateLimit } from "./ratelimit.js";
 // `app.fetch(req, env as any)`), so the shared SESSIONS KV binding declared in
 // wrangler.toml is reachable as `c.env.SESSIONS`.
 type DashBindings = SessionEnv & Record<string, unknown>;
+type DashEnv = { Bindings: DashBindings; Variables: { cspNonce: string } };
 
-export function buildDashboard(): Hono<{ Bindings: DashBindings }> {
-  const app = new Hono<{ Bindings: DashBindings }>();
+export function buildDashboard(): Hono<DashEnv> {
+  const app = new Hono<DashEnv>();
 
   // Global error handler — same reason as buildHonoApp: Hono's default
   // text/plain 500 breaks the dashboard's api() JSON parse.

@@ -18,3 +18,4 @@ shared/env.js
 shared/plans.js
 # Auto-generated asset bundle
 apps/leaderboard/src/assets_bundled.js
+.local/

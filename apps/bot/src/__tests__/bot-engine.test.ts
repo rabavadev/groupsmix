@@ -36,16 +36,16 @@ describe("Bot Engine", () => {
 describe("Conversions", () => {
   describe("recordConversion", () => {
     it("should handle missing click_ref", () => {
-      const q = { event: "deposit", amount: "50" };
+      const q: Record<string, string> = { event: "deposit", amount: "50" };
       const clickRef = q.click_ref ?? q.clickid ?? q.subid ?? q.sub_id ?? null;
       expect(clickRef).toBeNull();
     });
 
     it("should extract click_ref from various params", () => {
-      const q1 = { click_ref: "abc123" };
-      const q2 = { clickid: "abc123" };
-      const q3 = { subid: "abc123" };
-      const q4 = { sub_id: "abc123" };
+      const q1: Record<string, string> = { click_ref: "abc123" };
+      const q2: Record<string, string> = { clickid: "abc123" };
+      const q3: Record<string, string> = { subid: "abc123" };
+      const q4: Record<string, string> = { sub_id: "abc123" };
 
       expect(q1.click_ref ?? q1.clickid ?? q1.subid ?? q1.sub_id ?? null).toBe("abc123");
       expect(q2.click_ref ?? q2.clickid ?? q2.subid ?? q2.sub_id ?? null).toBe("abc123");
@@ -54,7 +54,7 @@ describe("Conversions", () => {
     });
 
     it("should clamp amount to non-negative bounded number", () => {
-      const clamp = (v) => {
+      const clamp = (v: unknown) => {
         const rawAmt = v == null ? NaN : Number(v);
         return Number.isFinite(rawAmt) && rawAmt >= 0 && rawAmt <= 1e12 ? rawAmt : null;
       };
@@ -68,14 +68,14 @@ describe("Conversions", () => {
     });
 
     it("should sanitize event name", () => {
-      const sanitize = (v) => (v ?? "deposit").toLowerCase().slice(0, 32);
+      const sanitize = (v: string | undefined) => (v ?? "deposit").toLowerCase().slice(0, 32);
       expect(sanitize("DEPOSIT")).toBe("deposit");
       expect(sanitize(undefined)).toBe("deposit");
       expect(sanitize("a".repeat(50))).toHaveLength(32);
     });
 
     it("should sanitize currency to uppercase 8 chars", () => {
-      const sanitize = (v) => (v ?? "USD").toUpperCase().slice(0, 8);
+      const sanitize = (v: string | undefined) => (v ?? "USD").toUpperCase().slice(0, 8);
       expect(sanitize("usd")).toBe("USD");
       expect(sanitize(undefined)).toBe("USD");
       expect(sanitize("abcdefghijk")).toBe("ABCDEFGH");
@@ -121,7 +121,7 @@ describe("Rate Limiting", () => {
 });
 
 describe("Safe URL validation", () => {
-  const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : "#");
+  const safeUrl = (u: string | null | undefined) => (/^https?:\/\//i.test(u ?? "") ? u ?? "#" : "#");
 
   it("should allow https URLs", () => {
     expect(safeUrl("https://example.com")).toBe("https://example.com");
@@ -147,7 +147,7 @@ describe("Safe URL validation", () => {
 });
 
 describe("HTML escaping", () => {
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c: string) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? ""));
 
   it("should escape ampersands", () => {
     expect(esc("a&b")).toBe("a&amp;b");
