@@ -246,7 +246,7 @@ async function revealPostback(){
   $('pbUrl').onclick = ()=>{ navigator.clipboard.writeText(r.postback_url); toast('Postback URL copied'); };
 }
 async function upgrade(tier){
-  const r = await api('/billing/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({plan:tier}));
+  const r = await api('/billing/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({plan:tier})});
   if (r.error) return toast(r.error);
   window.open(r.invoice_link, '_blank');
 }
