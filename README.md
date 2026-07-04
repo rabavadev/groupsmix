@@ -2,8 +2,8 @@
 
 One platform for casino streamers, merged from two products:
 
-- **Leaderboards** — hosted, editable public leaderboard page per streamer at `yourrank.site/<slug>` (was `rankup-saas`).
-- **Telegram bots** — multi-tenant bot engine, promo-code delivery, tracked referral links, click/conversion analytics (was `casino-bot-platform`).
+- **Leaderboards** — hosted, editable public leaderboard page per streamer at `yourrank.site/<slug>`.
+- **Telegram bots** — multi-tenant bot engine, promo-code delivery, tracked referral links, click/conversion analytics.
 
 **One account. One dashboard. Two products.** A streamer signs up once and manages both their leaderboard and their Telegram bot from a single dashboard, backed by one Supabase Postgres database.
 
@@ -120,6 +120,6 @@ See **DEPLOY.md** for first-time Cloudflare setup (routes, KV namespaces, Hyperd
 
 ## Provenance
 
-Merged from `rabavadev/rankup-saas` (leaderboards, D1→Postgres ported) and
-`rabavadev/casino-bot-platform` (bots, already on Workers/Postgres). The
-leaderboard's D1/SQLite data layer was rewritten to share the bot's Postgres.
+Merged from `rabavadev/yourrank` (leaderboards, D1→Postgres ported) and
+the bot engine (already on Workers/Postgres). The leaderboard's D1/SQLite
+data layer was rewritten to share the bot's Postgres.

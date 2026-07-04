@@ -37,7 +37,8 @@ export function loginHtml(botUsername: string, devLogin: boolean, publicBaseUrl:
   .center { min-height:90vh; display:flex; align-items:center; justify-content:center; }
   .card { text-align:center; max-width:380px; }
 </style></head><body>
-<div class="center"><div class="panel card">
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<div class="center"><div class="panel card" id="main-content">
   <h1 style="margin-bottom:8px">🎰 Streamer Dashboard</h1>
   <p class="muted" style="margin-bottom:20px">Manage your bot, offers and click stats.</p>
   ${botUsername
@@ -48,6 +49,7 @@ export function loginHtml(botUsername: string, devLogin: boolean, publicBaseUrl:
   ${devLogin ? `
   <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
     <p class="muted" style="margin-bottom:8px">Dev login</p>
+    <label for="devid" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Telegram User ID</label>
     <input id="devid" type="number" placeholder="Telegram user id">
     <button onclick="devLogin()">Enter</button>
   </div>` : ""}
@@ -70,8 +72,9 @@ export function appHtml(user: { display_name: string; email: string; plan: strin
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Streamer Dashboard</title><style>${SHELL_NAV_CSS}${BASE_CSS}</style></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 ${shellNavHtml({ activePath: "/bot/dashboard", user })}
-<div class="wrap">
+<div class="wrap" id="main-content">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h1>🎰 Streamer Dashboard</h1>
     <div><span id="whoami" class="muted"></span>
@@ -90,7 +93,9 @@ ${shellNavHtml({ activePath: "/bot/dashboard", user })}
   <div class="panel"><h2>Your bot</h2>
     <div id="botList" class="muted">Loading…</div>
     <div style="margin-top:12px">
+      <label for="botToken" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Bot Token</label>
       <input id="botToken" placeholder="Paste bot token from @BotFather (123456:ABC-...)">
+      <label for="botWelcome" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Welcome Message</label>
       <input id="botWelcome" placeholder="Welcome message (optional)">
       <button onclick="connectBot()">Connect bot</button>
     </div>
@@ -98,12 +103,17 @@ ${shellNavHtml({ activePath: "/bot/dashboard", user })}
 
   <div class="panel"><h2>New offer</h2>
     <div class="row">
+      <label for="oCasino" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Casino</label>
       <input id="oCasino" placeholder="Casino (e.g. Stake)">
+      <label for="oLabel" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Label</label>
       <input id="oLabel" placeholder="Label (e.g. 200% deposit bonus)">
     </div>
+    <label for="oUrl" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Affiliate URL</label>
     <input id="oUrl" placeholder="Your affiliate URL (https://...)">
     <div class="row">
+      <label for="oCode" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Promo Code</label>
       <input id="oCode" placeholder="Promo code (optional)">
+      <label for="oBonus" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Bonus Text</label>
       <input id="oBonus" placeholder="Bonus text shown in bot (optional)">
     </div>
     <button onclick="createOffer()">Create offer</button>
@@ -116,6 +126,7 @@ ${shellNavHtml({ activePath: "/bot/dashboard", user })}
 
   <div class="panel"><h2>Broadcast to subscribers</h2>
     <div id="bcGate" class="muted" style="display:none;margin-bottom:10px"></div>
+    <label for="bcBody" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Message</label>
     <textarea id="bcBody" rows="3" placeholder="Message to all your bot's subscribers (Markdown supported)"></textarea>
     <button onclick="sendBroadcast()">Send broadcast</button>
     <table style="margin-top:14px"><thead><tr><th>Message</th><th>Status</th><th>Sent</th><th>Failed</th></tr></thead>
@@ -138,7 +149,7 @@ ${shellNavHtml({ activePath: "/bot/dashboard", user })}
     <div id="planButtons" style="margin-top:12px"></div>
   </div>
 </div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 <script>
 const $ = (id) => document.getElementById(id);
 function toast(msg) { const t=$('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }

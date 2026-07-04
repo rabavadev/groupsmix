@@ -361,7 +361,7 @@ section { width: min(var(--wrap), 100% - 2.5rem); margin-inline: auto; }
     .rank-arrow { display: none; }
   }
 
-/* --- RankUp badge (free plan) --- */
+/* --- YourRank badge (free plan) --- */
 .rk-badge{position:fixed;right:14px;bottom:14px;z-index:60;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;letter-spacing:.02em;color:#cfd3dd;background:rgba(10,10,16,.88);border:1px solid rgba(255,255,255,.14);border-radius:99px;padding:7px 13px;text-decoration:none;backdrop-filter:blur(6px)}
 .rk-badge b{color:#fff}
 .rk-badge:hover{border-color:rgba(255,255,255,.35);color:#fff}

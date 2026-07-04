@@ -77,7 +77,7 @@ export function shellNavHtml(
   return `<header class="gm-shell-nav">
   <div class="gm-shell-inner">
     <a class="gm-brand" href="/dashboard">
-      <span class="gm-brand-mark">GM</span>
+      <span class="gm-brand-mark">YR</span>
       <span class="gm-brand-word">YourRank</span>
     </a>
     <nav class="gm-tabs">${tabs}</nav>
@@ -95,7 +95,7 @@ export function shellNavHtml(
 export const SHELL_NAV_CSS = `
 :root{
   --gm-bg:#0b0b0c; --gm-panel:#0f0f11; --gm-line:#232327; --gm-line-2:#2e2e33;
-  --gm-ink:#ededf0; --gm-ink-soft:#a3a3ab; --gm-ink-mute:#6a6a72;
+  --gm-ink:#ededf0; --gm-ink-soft:#a3a3ab; --gm-ink-mute:#8a8a94;
   --gm-accent:#c8ff00; --gm-accent-ink:#0b0b0c;
   --gm-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --gm-sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;

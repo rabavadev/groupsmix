@@ -1,5 +1,6 @@
 /* Analytics page — load stats, render bar chart with tooltips, heatmap, and top referrers. */
 const $ = (s) => document.getElementById(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function fmt(n) { return n >= 10000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n); }
 
@@ -44,7 +45,7 @@ const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     .map((x, i) => {
       const h = Math.max(2, Math.round((x.views / max) * 100));
       const nice = new Date(x.day + "T00:00:00Z").toUTCString().slice(5, 11);
-      return `<div class="stat-bar" data-idx="${i}" style="height:${h}%" data-day="${nice}" data-views="${x.views}" data-copies="${x.copies}" data-clicks="${x.clicks}"></div>`;
+      return `<div class="stat-bar" data-idx="${i}" style="height:${h}%" data-day="${esc(nice)}" data-views="${x.views}" data-copies="${x.copies}" data-clicks="${x.clicks}"></div>`;
     })
     .join("");
 
@@ -62,7 +63,7 @@ const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const views = bar.dataset.views;
     const copies = bar.dataset.copies;
     const clicks = bar.dataset.clicks;
-    tooltip.innerHTML = `<b>${day}</b><br>${views} views · ${copies} copies · ${clicks} clicks`;
+    tooltip.innerHTML = `<b>${esc(day)}</b><br>${esc(views)} views · ${esc(copies)} copies · ${esc(clicks)} clicks`;
     tooltip.hidden = false;
     const rect = chartBox.getBoundingClientRect();
     const bx = bar.getBoundingClientRect();

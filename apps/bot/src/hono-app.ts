@@ -171,10 +171,14 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
 
   // LEGACY path — key in the URL, unsigned. Kept for integrations already
   // calling GET /pb/:key. See the signed POST /pb above for the upgrade path.
+  // DEPRECATED: migrate to POST /pb with X-Postback-Key + X-Postback-Signature.
   app.on(["GET", "POST"], "/pb/:key", async (c) => {
     const key = c.req.param("key");
-    const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 120, 60);
+    const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 30, 60);
     if (!rl.ok) { c.header("Retry-After", String(rl.retryAfter)); return c.json({ error: "rate limited" }, 429); }
+    c.header("Deprecation", "true");
+    c.header("Sunset", "2026-10-01");
+    c.header("Link", '</pb>; rel="successor-version"');
 
     const owner = await one<{ id: string }>(`SELECT id FROM users WHERE postback_key = $1`, [key]);
     if (!owner) return c.json({ error: "unknown key" }, 404);

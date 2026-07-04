@@ -3,7 +3,7 @@
 // Shared shell for the legal pages — plain, readable, no fluff.
 const legal = (title, updated, body, pagePath) => `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${title} · YourRank</title><link rel="canonical" href="https://yourrank.site/${pagePath}" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<title>${title} · YourRank</title><link rel="canonical" href="https://yourrank.site/${pagePath}" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
 <header class="topbar"><a class="brand" href="/">Your<b>Rank</b></a>
@@ -28,15 +28,16 @@ export const PAGES = {
 <meta name="twitter:title" content="YourRank - Hosted Leaderboards for Streamers" />
 <meta name="twitter:description" content="Create your own branded leaderboard page. Track referrals, manage promo codes, and grow your audience." />
 <!-- og:image removed: no static asset exists; add when a brand image is created -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/assets/landing.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"YourRank","url":"https://yourrank.site","description":"Hosted leaderboard pages for casino streamers","contactPoint":{"@type":"ContactPoint","contactType":"customer service"}}</script>
 </head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <div class="wrap">
 <nav class="top"><div class="brand">Your<b>Rank</b></div>
 <div class="links"><a href="#how">How it works</a><a href="#postbacks">Postbacks</a><a href="#pricing">Pricing</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav>
-<header class="hero"><div>
+<header class="hero" id="main-content"><div>
 <p class="label" style="margin-bottom:18px">Leaderboards for casino streamers</p>
 <h1>Run your leaderboard without touching code.</h1>
 <p class="lead">Your prize pool, referral code and ranked players, on a page you edit from a dashboard. Change a number, hit save, your page updates. That's it.</p>
@@ -87,78 +88,83 @@ export const PAGES = {
   login: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sign in · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/login" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/login" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Your leaderboard, hosted and handled.</h1><p>Edit your prize pool, code and players from one dashboard. Your page updates instantly. No code, no redeploys.</p></div>
 <div class="feat"><div>— Live countdown to every reset</div><div>— Auto-sorted standings from wager</div><div>— Your own public URL</div></div></aside>
-<main class="auth-main"><div class="auth-card"><h2>Sign in</h2><p class="sub">Welcome back.</p>
+<main class="auth-main" id="main-content"><div class="auth-card"><h2>Sign in</h2><p class="sub">Welcome back.</p>
 <form id="form" novalidate><div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required /></div>
 <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required /></div>
-<div class="err" id="err"></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Sign in</button></form>
+<div class="err" id="err" role="alert" aria-live="assertive"></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Sign in</button></form>
 <p class="foot">No account? <a href="/signup">Create one</a> · <a href="/forgot">Forgot password?</a></p></div></main></div>
 <script src="/assets/auth.js?v=2"></script></body></html>`,
 
   forgot: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Reset password · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/forgot" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/forgot" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Locked out? It happens.</h1><p>Tell us the email on your account and we'll send a reset link. If email isn't set up on this deployment yet, contact support and we'll hand you a link directly.</p></div>
 <div class="feat"></div></aside>
-<main class="auth-main"><div class="auth-card"><h2>Reset password</h2><p class="sub">We'll email you a link.</p>
+<main class="auth-main" id="main-content"><div class="auth-card"><h2>Reset password</h2><p class="sub">We'll email you a link.</p>
 <form id="form" novalidate><div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required /></div>
-<div class="err" id="err"></div><div class="msg" id="msg" hidden></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Send reset link</button></form>
+<div class="err" id="err" role="alert" aria-live="assertive"></div><div class="msg" id="msg" hidden role="status" aria-live="polite"></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Send reset link</button></form>
 <p class="foot"><a href="/login">Back to sign in</a></p></div></main></div>
 <script src="/assets/auth.js?v=2"></script></body></html>`,
 
   reset: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>New password · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/reset" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/reset" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Set a new password.</h1><p>Pick something you'll remember this time. At least 8 characters.</p></div>
 <div class="feat"></div></aside>
-<main class="auth-main"><div class="auth-card"><h2>New password</h2><p class="sub">Then you're straight back in.</p>
+<main class="auth-main" id="main-content"><div class="auth-card"><h2>New password</h2><p class="sub">Then you're straight back in.</p>
 <form id="form" novalidate><div class="field"><label for="password">New password</label><input id="password" name="password" type="password" autocomplete="new-password" required />
 <span class="hint">At least 8 characters.</span></div>
-<div class="err" id="err"></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Save & sign in</button></form>
-<p class="foot"><a href="/login">Back to sign in</a></p></div></main></div>
-<script src="/assets/auth.js?v=2"></script></body></html>`,
+  <div class="err" id="err" role="alert" aria-live="assertive"></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Save &amp; sign in</button></form>
+  <p class="foot"><a href="/login">Back to sign in</a></p></div></main></div>
+  <script src="/assets/auth.js?v=2"></script></body></html>`,
 
-  signup: `<!DOCTYPE html><html lang="en"><head>
+    signup:
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Create account · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/signup" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/signup" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Launch your leaderboard in a few minutes.</h1><p>Pick a handle, fill in your prizes and players, and your page goes live at yourrank.site/yourname.</p></div>
 <div class="feat"><div>— Free to set up</div><div>— Your public URL from day one</div><div>— Upgrade to Pro when you're ready</div></div></aside>
-<main class="auth-main"><div class="auth-card"><h2>Create account</h2><p class="sub">Free. Takes a minute.</p>
+<main class="auth-main" id="main-content"><div class="auth-card"><h2>Create account</h2><p class="sub">Free. Takes a minute.</p>
 <form id="form" novalidate>
 <div class="field"><label for="name">Display name</label><input id="name" name="name" type="text" placeholder="ChuckyBTZ" autocomplete="nickname" required />
 <span class="hint">Also becomes your page URL: <span class="mono" id="slugPreview">yourrank.site/…</span></span></div>
 <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required /></div>
 <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="new-password" required />
 <span class="hint">At least 8 characters.</span></div>
-<div class="err" id="err"></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Create account</button></form>
+  <div class="err" id="err" role="alert" aria-live="assertive"></div><button class="btn btn--accent" style="width:100%" type="submit" id="submit">Create account</button></form>
 <p class="foot">Already have one? <a href="/login">Sign in</a></p></div></main></div>
 <script src="/assets/auth.js?v=2"></script></body></html>`,
 
   dashboard: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Dashboard · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><!--GM_NAV_CSS--></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <!--GM_NAV-->
-<div class="wrap" id="app"><div class="skel" id="loading">Loading your leaderboard…</div>
+<div class="wrap" id="main-content"><div class="skel" id="loading">Loading your leaderboard…</div>
 <div id="dash" hidden>
 <div class="dash-head"><div><h1>Your leaderboard</h1><p class="live-link">Live at <a id="liveLink" href="#" target="_blank">…</a></p></div><span class="label" id="planBadge">FREE PLAN</span></div>
 <div class="card" id="boardSwitcher"><h2>Boards</h2><p class="card-sub">Switch between your leaderboards. <span class="hint" id="boardCount"></span></p>
@@ -169,7 +175,7 @@ export const PAGES = {
 <div class="field" style="flex:1;min-width:160px;margin:0"><label for="nb_slug">URL slug</label><input id="nb_slug" placeholder="july-2026" /></div>
 <button class="btn btn--sm btn--accent" id="nb_create" type="button">Create</button>
 <button class="btn btn--sm btn--ghost" id="nb_cancel" type="button">Cancel</button>
-<div class="hint" id="nb_err" style="width:100%"></div>
+<div class="hint" id="nb_err" role="alert" aria-live="assertive" style="width:100%"></div>
 </div></div>
 <div class="card"><h2>Analytics</h2><p class="card-sub">Last 30 days on your page. Views count every visit; copies and clicks are people grabbing your code or hitting Join.</p>
 <div class="stat-tiles">
@@ -231,7 +237,7 @@ export const PAGES = {
 <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
 <button class="btn btn--sm btn--accent" id="domainVerify" type="button">Verify &amp; Provision TLS</button>
 </div>
-<div id="domainStatus" class="hint" style="margin-top:8px;min-height:18px"></div>
+<div id="domainStatus" class="hint" role="status" aria-live="polite" style="margin-top:8px;min-height:18px"></div>
 </div>
 <div class="empty" id="domainLock" hidden>Custom domains are a Pro feature. <a href="#" id="domainUpgrade">Upgrade to unlock it</a>.</div></div>
 <div class="card" id="notifyCard"><h2>Notifications <span class="pill pill--info" style="margin-left:6px">PRO</span></h2><p class="card-sub">Get alerted when your leaderboard resets or a player breaks into the top 3. Discord and Telegram supported.</p>
@@ -246,7 +252,7 @@ export const PAGES = {
 <span class="hint">Create a webhook in your Discord server settings → Integrations → Webhooks. Paste the URL here.</span></div>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:-8px;margin-bottom:16px">
 <button class="btn btn--sm" id="testDiscord" type="button">📨 Test Discord</button>
-<span class="hint" id="testDiscordStatus"></span>
+<span class="hint" id="testDiscordStatus" role="status" aria-live="polite"></span>
 </div>
 <div class="field"><label for="f_tgChatId">Telegram chat/group ID</label>
 <input id="f_tgChatId" placeholder="-1001234567890" />
@@ -254,7 +260,7 @@ export const PAGES = {
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:-8px;margin-bottom:16px">
 <label class="hint chk"><input type="checkbox" id="f_tgNotify" /> Enable Telegram notifications</label>
 <button class="btn btn--sm" id="testTelegram" type="button">📨 Test Telegram</button>
-<span class="hint" id="testTelegramStatus"></span>
+<span class="hint" id="testTelegramStatus" role="status" aria-live="polite"></span>
 </div>
 </div>
 <div class="empty" id="notifyLock" hidden>Notifications are a Pro feature. <a href="#" id="notifyUpgrade">Upgrade to unlock them</a>.</div></div>
@@ -269,17 +275,18 @@ export const PAGES = {
 <div class="plan-row"><div><div class="plan-name" id="planName">Free</div><div class="hint" id="planMeta">Up to 10 players · YourRank badge on your page</div></div>
 <button class="btn btn--accent" id="goPro">Upgrade</button></div>
 <p class="hint" id="planHint">Pay with crypto (BTC, ETH, USDT and 100+ more). Activates automatically once the network confirms — usually a few minutes. <a href="/dashboard/billing">See all plans</a>.</p></div>
-<div class="savebar"><label class="hint chk" style="margin-right:auto"><input type="checkbox" id="pubToggle" checked /> Page published</label><span class="status" id="status"></span><a class="btn btn--ghost" id="viewLive" href="#" target="_blank">View live page</a><button class="btn btn--accent" id="save">Save changes</button></div></div></div>
+<div class="savebar"><label class="hint chk" style="margin-right:auto"><input type="checkbox" id="pubToggle" checked /> Page published</label><span class="status" id="status" role="status" aria-live="polite"></span><a class="btn btn--ghost" id="viewLive" href="#" target="_blank">View live page</a><button class="btn btn--accent" id="save">Save changes</button></div></div></div>
 <script src="/assets/dashboard.js?v=2"></script></body></html>`,
 
 analytics: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Analytics · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/analytics" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/analytics" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><!--GM_NAV_CSS--></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <!--GM_NAV-->
-<div class="wrap" id="app">
+<div class="wrap" id="main-content">
 <div class="dash-head"><div><h1>Analytics</h1><p class="live-link">Performance of <a id="liveLink" href="#" target="_blank">your page</a></p></div></div>
 <div id="an" hidden>
 <div class="card"><h2>Last 30 days</h2><p class="card-sub">Views count every visit to your page. Code copies and Join clicks show real engagement.</p>
@@ -306,18 +313,19 @@ analytics: `<!DOCTYPE html><html lang="en"><head>
 billing: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Billing · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/billing" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/billing" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><!--GM_NAV_CSS--></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <!--GM_NAV-->
-<div class="wrap" id="app">
+<div class="wrap" id="main-content">
 <div class="dash-head"><div><h1>Billing</h1><p class="live-link">Your YourRank plan</p></div><span class="label" id="planBadge">FREE PLAN</span></div>
 <div id="bl" hidden>
 <div class="card" id="currentCard"><h2>Current plan</h2><p class="card-sub"><span id="planLine">Free — up to 10 players, one leaderboard.</span></p>
 <p class="hint" id="expLine" hidden></p></div>
 <div class="card" id="trialCard" hidden><h2>Try Pro free for 7 days</h2><p class="card-sub">Experience all Pro features — unlimited players, custom domain, OBS overlay, notifications — with no commitment.</p>
 <button class="btn btn--accent" id="trialBtn" type="button">Start free trial</button>
-<p class="status" id="trialStatus"></p></div>
+<p class="status" id="trialStatus" role="status" aria-live="polite"></p></div>
 <div class="card" id="trialStatusCard" hidden><h2>Trial active</h2><p class="card-sub" id="trialInfo">Your Pro trial is running.</p>
 <p class="hint">After the trial ends, your plan will revert to Free. Upgrade anytime to keep Pro features.</p></div>
 <div class="card" id="upgradeCard"><h2>Upgrade</h2><p class="card-sub" id="upgradeSub">Choose the plan that fits your needs.</p>
@@ -328,9 +336,9 @@ billing: `<!DOCTYPE html><html lang="en"><head>
 <div class="hint" style="margin-top:4px">Pay once, use forever. All Pro features, no monthly bills. No expiry.</div></div>
 <button class="btn btn--accent" id="lifetimeBtn" type="button">Get Lifetime Pro</button>
 </div>
-<p class="status" id="lifetimeStatus"></p></div>
+<p class="status" id="lifetimeStatus" role="status" aria-live="polite"></p></div>
 <p class="hint">Pay with crypto (BTC, ETH, USDT and 100+ more). Activates automatically once the network confirms — usually a few minutes.</p>
-<p class="status" id="status"></p></div>
+<p class="status" id="status" role="status" aria-live="polite"></p></div>
 <div class="card" id="proCard" hidden><h2>You're on <span id="currentPlanName">Pro</span></h2><p class="card-sub">Thanks for supporting YourRank. Manage everything from the Leaderboard tab.</p>
 <p class="hint" id="proExp"></p>
 <p class="hint" id="lifetimeNotice" hidden style="color:var(--accent);font-weight:600">⭐ Lifetime Pro — no expiry. You own this forever.</p></div></div>
@@ -340,12 +348,14 @@ billing: `<!DOCTYPE html><html lang="en"><head>
 botSetup: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Connect Telegram Bot · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/bot/setup" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/bot/setup" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><!--GM_NAV_CSS--></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <!--GM_NAV-->
-<div class="wrap" id="app">
+<div class="wrap" id="main-content">
 <div class="dash-head"><div><h1>🤖 Connect your Telegram bot</h1><p class="live-link">Walk through the 4 steps below — takes about 2 minutes.</p></div></div>
+<p style="margin:8px 0 0"><a href="/dashboard" style="color:var(--accent);font-size:14px;text-decoration:none;font-weight:600">← Back to Dashboard</a></p>
 
 <div class="card"><h2>Step 1</h2><p class="card-sub">Open @BotFather on Telegram — it's Telegram's official bot for creating bots.</p>
 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -379,7 +389,7 @@ botSetup: `<!DOCTYPE html><html lang="en"><head>
 <p style="margin:0 0 14px;color:var(--ink-soft)">Copy that whole string and paste it in the box below. We'll validate it and set up the webhook automatically.</p>
 <div class="field" style="margin-bottom:10px"><label for="botToken">Bot token</label><input id="botToken" placeholder="123456789:ABCdefGhIjKlMnOpQrStUvWxYz" autocomplete="off" spellcheck="false" /></div>
 <button class="btn btn--accent" id="connectBtn" type="button" disabled>Connect bot</button>
-<div class="hint" id="connectStatus" style="margin-top:8px;min-height:18px"></div></div>
+<div class="hint" id="connectStatus" role="status" aria-live="polite" style="margin-top:8px;min-height:18px"></div></div>
 </div>
 </div>
 
@@ -409,12 +419,13 @@ botSetup: `<!DOCTYPE html><html lang="en"><head>
 admin: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Admin · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/admin" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/admin" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <header class="topbar"><div class="brand">Your<b>Rank</b> <span class="label" style="margin-left:8px">ADMIN</span></div>
 <div class="topbar-right"><span class="muted" id="userEmail"></span><a href="/dashboard" class="btn btn--sm btn--ghost">Dashboard</a><a href="#" id="logout" class="btn btn--sm btn--ghost">Sign out</a></div></header>
-<div class="wrap"><div class="skel" id="loading">Loading…</div>
+<div class="wrap" id="main-content"><div class="skel" id="loading">Loading…</div>
 <div id="panel" hidden>
 <div class="dash-head"><div><h1>Operator panel</h1><p class="live-link">Everything that happens on YourRank, in one place.</p></div></div>
 <div class="stats"><div class="stat"><b id="s_users">–</b><span>accounts</span></div><div class="stat"><b id="s_pro">–</b><span>on Pro</span></div><div class="stat"><b id="s_leads">–</b><span>leads</span></div><div class="stat"><b id="s_rev">–</b><span>revenue (USD)</span></div></div>
@@ -435,7 +446,7 @@ admin: `<!DOCTYPE html><html lang="en"><head>
   admin2fa: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Verify · YourRank Admin</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/admin" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/admin" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" />
 <style>
@@ -452,14 +463,15 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 .tfa-setup .qr-wrap{background:#fff;border-radius:12px;padding:12px;display:inline-block;margin:8px 0}
 .tfa-setup .secret-box{font-family:var(--mono,'JetBrains Mono',monospace);font-size:12px;word-break:break-all;background:var(--panel-2,#161618);border:1px solid var(--line-2,#2a2a30);border-radius:8px;padding:10px 12px;color:var(--accent,#c8ff00);margin:8px 0;display:block}
 </style></head><body>
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
 <header class="topbar"><div class="brand">Your<b>Rank</b> <span class="label" style="margin-left:8px">ADMIN</span></div>
 <div class="topbar-right"><a href="/dashboard" class="btn btn--sm btn--ghost">Dashboard</a><a href="#" id="logout" class="btn btn--sm btn--ghost">Sign out</a></div></header>
-<div class="wrap">
+<div class="wrap" id="main-content">
 <div class="tfa-wrap" id="tfaVerify">
 <h1>🔒 Two-Factor Authentication</h1>
 <p>Enter the 6-digit code from your authenticator app.</p>
 <input class="code-input" id="tfaCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" autofocus />
-<div class="err" id="tfaErr"></div>
+<div class="err" id="tfaErr" role="alert" aria-live="assertive"></div>
 <button class="btn btn--accent" id="tfaSubmit" type="button">Verify</button>
 </div>
 
@@ -471,7 +483,7 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <code class="secret-box" id="tfaSecret"></code>
 <p style="margin-top:16px">After scanning, enter the 6-digit code to verify setup:</p>
 <input class="code-input" id="tfaSetupCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" />
-<div class="err" id="tfaSetupErr"></div>
+<div class="err" id="tfaSetupErr" role="alert" aria-live="assertive"></div>
 <button class="btn btn--accent" id="tfaSetupSubmit" type="button">Enable 2FA</button>
 </div>
 </div>
@@ -524,7 +536,7 @@ document.getElementById("logout").onclick=async(e)=>{e.preventDefault();await fe
   setup: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Setup · YourRank</title>
-<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/setup" /><link rel="preconnect" href="https://fonts.googleapis.com" />
+<meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/dashboard/setup" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><!--GM_NAV_CSS-->
 <style>
@@ -543,7 +555,8 @@ document.getElementById("logout").onclick=async(e)=>{e.preventDefault();await fe
 .btns-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
 .err{color:var(--danger);font-size:13px;min-height:18px;margin:4px 0}
 </style><!--GM_NAV-->
-<div class="gm-shell-main">
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;padding:8px 16px;background:var(--accent,#c8ff00);color:#000;font-weight:700;text-decoration:none" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<div class="gm-shell-main" id="main-content">
 <div class="setup-wrap">
 <h1>Set up your leaderboard</h1>
 <p class="sub">Four quick steps and you're live.</p>
@@ -593,7 +606,7 @@ document.getElementById("logout").onclick=async(e)=>{e.preventDefault();await fe
 <div class="btns-row"><button class="btn" id="wiz4back" type="button">← Back</button><button class="btn btn--accent" id="wiz_finish" type="button">Go to dashboard</button></div>
 </div>
 
-<div class="err" id="wiz_err"></div>
+<div class="err" id="wiz_err" role="alert" aria-live="assertive"></div>
 </div>
 </div>
 <script>
@@ -653,6 +666,7 @@ players:parsePlayers()
 try{
 const res=await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(payload)});
 const data=await res.json();
+if(res.status===401){location.href="/login";return;}
 if(!res.ok||!data.ok){$("wiz_err").textContent=data.error||"Save failed. Try again.";$("wiz_finish").disabled=false;$("wiz_finish").textContent="Go to dashboard";return;}
 location.href="/dashboard";
 }catch(e){$("wiz_err").textContent="Network error. Try again.";$("wiz_finish").disabled=false;$("wiz_finish").textContent="Go to dashboard";}

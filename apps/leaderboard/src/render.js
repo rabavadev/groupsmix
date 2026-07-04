@@ -38,7 +38,7 @@ export function renderLeaderboard(data, opts = {}) {
 <link rel="stylesheet" href="/assets/leaderboard.css" />
 ${tplCss}
 ${themeCss}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":${JSON.stringify(title)},"description":${JSON.stringify(desc)}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":${JSON.stringify(title)},"description":${JSON.stringify(desc)},"numberOfItems":${b.players ? b.players.length : 0}}</script>
 </head><body data-template="${tpl}">
 <a class="skip-link" href="#board">Skip to leaderboard</a>
 <div class="field" aria-hidden="true"></div><div class="watermarks" data-watermarks aria-hidden="true"></div>

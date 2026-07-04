@@ -119,7 +119,9 @@ function renderPlan(){
     $("goPro").textContent = `Upgrade — plans from $12/mo`;
   }
 }
+let checkingOut = false;
 async function checkout(btn){
+  if (checkingOut) return; checkingOut = true;
   btn.disabled = true; const orig = btn.textContent; btn.textContent = "Opening checkout…";
   try {
     const res = await fetch("/api/billing/checkout", { method: "POST", headers: { "x-csrf-token": getCsrf() } });
@@ -127,7 +129,7 @@ async function checkout(btn){
     if (res.ok && d.ok && d.url) { location.href = d.url; return; }
     $("status").textContent = d.error || "Couldn't start checkout.";
   } catch { $("status").textContent = "Network error."; }
-  btn.disabled = false; btn.textContent = orig;
+  btn.disabled = false; btn.textContent = orig; checkingOut = false;
 }
 function playerRow(p={name:"",wagered:"",prize:""}){
   const tr=document.createElement("tr");

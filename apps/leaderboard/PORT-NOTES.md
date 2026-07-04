@@ -1,6 +1,6 @@
 # Leaderboard Worker — D1 → Postgres (Supabase/Hyperdrive) Port Notes
 
-Ported the RankUp leaderboard Worker off Cloudflare D1 (SQLite) onto Postgres,
+Ported the YourRank leaderboard Worker off Cloudflare D1 (SQLite) onto Postgres,
 reusing the same `query()` / `one()` data-layer API the bot Worker uses.
 
 ## Files changed
@@ -9,7 +9,7 @@ reusing the same `query()` / `one()` data-layer API the bot Worker uses.
 |------|--------|
 | `src/db.js` | **NEW.** Tiny `pg` Pool wrapper mirroring the bot's `db.ts`. Exports `query(text, params=[])` → rows[] and `one(text, params=[])` → rows[0]. Pool is created **lazily** on first `query()` so `process.env.DATABASE_URL` is set first. |
 | `src/index.js` | Added `process.env.DATABASE_URL` bootstrap at top of `fetch()` from `env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL` (mirrors bot `worker.ts`). Ported all `env.DB` calls (logo lookup, signup, login, me, forgot, reset, track-copy, lead) to `query()`/`one()`. |
-| `src/auth.js` | **Reconciled to the SHARED session module** (`../../../shared/session.js`) — no hand-rolled session code remains. Session create/destroy/cookie serialize/token read all delegate to the shared module (cookie `gm_session`, `Domain=.groupsmix.com`, shared `SESSIONS` KV, key `sess:<token>`, 30d TTL). PBKDF2 `hashPassword`/`verifyPassword`/`safeEqual` stay here. `currentUser()` resolves the token via `readTokenWithLegacy` (honors old `rk_session` during the cutover) then hydrates the user row through a Postgres `loadUser` using `one()` (epoch-ms timestamps, see below). |
+| `src/auth.js` | **Reconciled to the SHARED session module** (`../../../shared/session.js`) — no hand-rolled session code remains. Session create/destroy/cookie serialize/token read all delegate to the shared module (cookie `gm_session`, `Domain=.yourrank.site`, shared `SESSIONS` KV, key `sess:<token>`, 30d TTL). PBKDF2 `hashPassword`/`verifyPassword`/`safeEqual` stay here. `currentUser()` resolves the token via `readTokenWithLegacy` (honors old `rk_session` during the cutover) then hydrates the user row through a Postgres `loadUser` using `one()` (epoch-ms timestamps, see below). |
 | `src/site.js` | All site/player/archive reads+writes ported. JSONB handling reworked (no `JSON.parse` on read). |
 | `src/stats.js` | Ported to `query()`. Table `stats` → `site_stats`. `day` DATE. `ON CONFLICT ... DO UPDATE` now qualifies `site_stats.<col>`. |
 | `src/billing.js` | `effectivePlan`/`activatePro` reworked for TIMESTAMPTZ expiry; checkout/IPN ported to new `payments` schema (`amount`, JSONB `payload_json`). |
@@ -92,7 +92,7 @@ imports the cross-Worker shared session module at `../../../shared/session.js`
 (the source of truth, delivered by the auth/dashboard agent) and delegates:
 
 - **Cookie name** switched from `rk_session` → **`gm_session`** (Domain=
-  `.groupsmix.com`), so a login on the leaderboard tab is valid on the bot tab
+  `.yourrank.site`), so a login on the leaderboard tab is valid on the bot tab
   and vice-versa. Both Workers bind the **same `SESSIONS` KV namespace** and use
   the same `sess:<token>` key + bare-UUID value + 30d TTL.
 - `createSession` / `destroySession` / `cookieSet` / `cookieClear` / `newToken`
@@ -117,7 +117,7 @@ imports the cross-Worker shared session module at `../../../shared/session.js`
    also clears either cookie.
 
 ### Note on the shared-module import path
-The shared module lives at `groupsmix/shared/session.js`; from
+The shared module lives at `shared/session.js`; from
 `apps/leaderboard/src/auth.js` the correct relative path is
 **`../../../shared/session.js`** (three levels up), not `../../shared/session.js`.
 Wrangler's esbuild bundler follows the import from `src/index.js` → `auth.js` →

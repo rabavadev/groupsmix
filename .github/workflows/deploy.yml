@@ -14,7 +14,7 @@ on:
 
 concurrency:
   group: deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   migrate:
@@ -39,7 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@735343b667d3e6bfb39c11a0c3b3a1ca0a8a8c0e
+        with:
+          bun-version: '1.2.15'
       - run: bun install
       - working-directory: apps/leaderboard
         run: bun install --frozen-lockfile
@@ -58,7 +60,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@735343b667d3e6bfb39c11a0c3b3a1ca0a8a8c0e
+        with:
+          bun-version: '1.2.15'
       - run: bun install
       - working-directory: apps/bot
         run: bun install --frozen-lockfile

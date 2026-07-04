@@ -55,9 +55,9 @@ Sticky top bar, 56px, containing:
 
 ---
 
-## Aesthetic (locked to rankup-saas — anti-slop)
+## Aesthetic (locked to YourRank — anti-slop)
 
-Pulled from `rankup-saas/src/assets/app.css`:
+Pulled from `apps/leaderboard/src/assets/app.css`:
 
 - Background near-black `#0b0b0c`, panels `#0f0f11`, hairlines `#232327`.
 - **One** accent: lime `#c8ff00` (accent-ink `#0b0b0c`). No second accent.
@@ -140,7 +140,7 @@ The user's constraint is "no builds, no babysitting". Two low-friction options:
    into one deploy tree, or a tiny prepublish copy step drops the file into each
    app's `src/`. Since the module is a pure string+function with no deps, copying
    is safe.
-2. **Path import (if both apps live under `/workspace/projects/groupsmix/apps/`):**
+2. **Path import (if both apps live under `/workspace/projects/yourrank/apps/`):**
    import directly with `../../shared/shell-nav.js`. Wrangler bundles it into
    each Worker at deploy. Preferred — one source of truth, no copy drift.
 

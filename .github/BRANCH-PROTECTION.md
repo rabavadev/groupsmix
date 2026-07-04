@@ -1,7 +1,7 @@
 # Branch Protection Rules (CICD-102)
 
 This document describes the recommended branch protection settings for the
-GroupsMix repository. These cannot be set via code — a maintainer must
+YourRank repository. These cannot be set via code — a maintainer must
 configure them in GitHub → Settings → Branches → Branch protection rules.
 
 ## Rules for `main`

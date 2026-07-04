@@ -42,7 +42,7 @@ CF_ZONE_ID = "dd79a3ac13643b94732f2fef6ce3b1f5"
 #   NOWPAYMENTS_IPN_SECRET
 #   RESEND_API_KEY          (optional; transactional email — signup/lead/reset)
 #   MAIL_FROM               (required if RESEND_API_KEY is set; the From: address,
-#                            e.g. "RankUp <hey@yourrank.site>" — Resend rejects
+#                            e.g. "YourRank <hey@yourrank.site>" — Resend rejects
 #                            an empty From)
 #   PRO_PRICE_USD           (optional; defaults to 29)
 #   LEAD_WEBHOOK_URL        (optional; Discord/Slack ping on a new lead)

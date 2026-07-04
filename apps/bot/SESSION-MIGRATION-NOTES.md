@@ -26,7 +26,7 @@ leaderboard Worker and the bot Worker.
   is UNTOUCHED. Only how the session is stored *after* a successful login changed.
 
 ## Session shape now
-- Cookie name: `gm_session` (was `sess`), Domain=`.groupsmix.com`, HttpOnly, Secure, SameSite=Lax
+- Cookie name: `gm_session` (was `sess`), Domain=`.yourrank.site`, HttpOnly, Secure, SameSite=Lax
 - KV: `SESSIONS` namespace (bound in wrangler.toml to id
   `26e47bcce19941839a20bd2cd5879e42`, the SAME id as the leaderboard Worker)
 - KV entry: `sess:<token>` -> bare user UUID, 30-day TTL
@@ -53,6 +53,6 @@ Also update the client-side `fetch()` paths inside the inlined dashboard HTML
 the `hono-app.ts` `app.get("/", () => redirect("/dashboard"))` fallback (the
 routing spec drops the bot's own `/` redirect entirely).
 
-The wrangler.toml already routes `groupsmix.com/bot/*` to this Worker, so once
+The wrangler.toml already routes `yourrank.site/bot/*` to this Worker, so once
 the internal paths are re-prefixed the dashboard is reachable at
-`https://groupsmix.com/bot/dashboard`.
+`https://yourrank.site/bot/dashboard`.

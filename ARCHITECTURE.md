@@ -1,9 +1,9 @@
-# GroupsMix — Unified Architecture
+# YourRank — Unified Architecture
 
 One platform for casino streamers. Two products, one account, one dashboard.
 
-- **Leaderboards** (was `rankup-saas`): hosted, editable public leaderboard page per streamer at `yourrank.site/<slug>`.
-- **Telegram bots** (was `casino-bot-platform`): multi-tenant bot engine, promo-code delivery, tracked referral links, click/conversion analytics.
+- **Leaderboards**: hosted, editable public leaderboard page per streamer at `yourrank.site/<slug>`.
+- **Telegram bots**: multi-tenant bot engine, promo-code delivery, tracked referral links, click/conversion analytics.
 
 A streamer signs up **once**. That single account owns both their leaderboard and their bot.
 
@@ -40,14 +40,14 @@ A streamer signs up **once**. That single account owns both their leaderboard an
                                  ▼
                     ┌───────────────────────────┐
                     │  Supabase Postgres         │
-                    │  project: groupsmix        │
+                    │  project: yourrank          │
                     │  ONE users table +         │
                     │  sites/players/...(LB) +   │
                     │  bots/offers/clicks/...(bot)│
                     └───────────────────────────┘
 
   Billing: NOWPayments (leaderboard Pro) + Telegram Stars (bot plans) → one payments ledger
-  Deploy:  both Workers deploy to the same Cloudflare "Groupsmix" account
+  Deploy:  both Workers deploy to the same Cloudflare "YourRank" account
 ```
 
 ## Why this shape
@@ -74,8 +74,8 @@ Everything else hangs off `user_id`: `sites`/`players`/`archives`/`site_stats` (
 
 ## Deploy targets
 
-- Cloudflare account: **Groupsmix**
-- Supabase project: **groupsmix**
+- Cloudflare account: **YourRank**
+- Supabase project: **yourrank**
 - Domain: **yourrank.site**
 - Two Workers on the one zone, routes as in the diagram.
 - Secrets (per Worker, via `wrangler secret put`): `DATABASE_URL` (or Hyperdrive binding), `TOKEN_ENC_KEY` (bot), `IP_HASH_SALT` (bot), `NOWPAYMENTS_API_KEY` + `NOWPAYMENTS_IPN_SECRET` (leaderboard), `PLATFORM_BOT_TOKEN` + `PLATFORM_WEBHOOK_SECRET` (bot billing), `RESEND_API_KEY` (optional email), `LEAD_WEBHOOK_URL` (optional).

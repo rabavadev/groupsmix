@@ -13,7 +13,15 @@ export function serveRobotsTxt(origin) {
   );
 }
 
+let sitemapCache = { xml: null, ts: 0 };
+const SITEMAP_TTL = 300_000; // 5 minutes
+
 export async function serveSitemapXml(origin) {
+  if (sitemapCache.xml && Date.now() - sitemapCache.ts < SITEMAP_TTL) {
+    return new Response(sitemapCache.xml, {
+      headers: { "content-type": "application/xml", "cache-control": "public, max-age=3600" },
+    });
+  }
   let entries = [
     `<url><loc>${origin}/</loc><priority>1.0</priority></url>`,
     `<url><loc>${origin}/terms</loc><priority>0.3</priority></url>`,
@@ -32,6 +40,7 @@ export async function serveSitemapXml(origin) {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries.join("\n")}
 </urlset>`;
+  sitemapCache = { xml: sitemap, ts: Date.now() };
   return new Response(sitemap, {
     headers: { 
       "content-type": "application/xml", 

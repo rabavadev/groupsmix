@@ -118,9 +118,10 @@ export async function currentUser(req, env) {
 // baseline, allowing more requests than the configured limit during bursts.
 // This is a best-effort rate limiter, not a hard security boundary.
 // 
-// Rate limiting is degraded on KV errors (returns true to allow request)
-// to prevent blocking legitimate auth attempts during KV outages.
-export async function rateLimit(env, key, limit, ttlSeconds, { failClosed = false } = {}) {
+// SEC-104: Rate limiting is fail-closed by default (denies request on KV errors)
+// to preserve brute-force protection. Callers can opt into fail-open with
+// { failClosed: false } for non-critical endpoints.
+export async function rateLimit(env, key, limit, ttlSeconds, { failClosed = true } = {}) {
   try {
     const k = `rl:${key}`;
     const cur = parseInt((await env.SESSIONS.get(k)) || "0", 10);
@@ -131,8 +132,8 @@ export async function rateLimit(env, key, limit, ttlSeconds, { failClosed = fals
     await env.SESSIONS.put(k, String(nextVal), { expirationTtl: ttlSeconds });
     return true;
   } catch (e) {
-    // On KV errors: fail closed for sensitive endpoints (login, signup, reset)
-    // to preserve brute-force protection; fail open for non-critical endpoints.
+    // On KV errors: fail closed by default to preserve brute-force protection.
+    // Non-critical endpoints can opt in with { failClosed: false }.
     if (failClosed) {
       console.error("[rateLimit] KV error, FAILING CLOSED:", String(e?.message || e));
       return false;

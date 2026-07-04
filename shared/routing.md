@@ -41,7 +41,7 @@ Routes are configured per Worker (in each `wrangler.toml`, or in the dashboard �
 Workers Routes). List the **specific** ones on the bot Worker and let the
 leaderboard Worker take the **catch-all**.
 
-### Bot Worker — `casino-bot-platform/wrangler.toml`
+### Bot Worker — `apps/bot/wrangler.toml`
 ```toml
 routes = [
   { pattern = "yourrank.site/bot/*",         zone_name = "yourrank.site" },
@@ -52,7 +52,7 @@ routes = [
 ]
 ```
 
-### Leaderboard Worker — `rankup-saas/wrangler.toml`
+### Leaderboard Worker — `apps/leaderboard/wrangler.toml`
 ```toml
 routes = [
   { pattern = "yourrank.site/*",     zone_name = "yourrank.site" },

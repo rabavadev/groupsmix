@@ -3,6 +3,7 @@ import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS } from "./billing.js";
 import { query, one, exec, getSql } from "../../../shared/db.js";
 import { notifyTop3Change, notifyReset, detectTop3Changes, notifySubscribedPlayers } from "../../../shared/notifications.js";
 import { TEMPLATE_IDS } from "./templates/index.js";
+import { RESERVED } from "./auth.js";
 
 export const DEFAULT_EXTRA = {
   chips: ["Fast Payouts", "Crypto Friendly", "24/7 Support"],
@@ -40,6 +41,15 @@ const siteCache = new Map();       // L1 — per-isolate, no TTL enforcement bey
 const L1_TTL = 25_000;             // L1 entries expire after 25s (must be <= L2_TTL)
 const L2_TTL = 30;                 // KV entries expire after 30s (seconds, for KV expirationTtl)
 const KV_PREFIX_SITE = "sitecache:";
+const SITE_CACHE_MAX = 1000;       // PERF-005: cap L1 entries to prevent unbounded memory growth
+
+function evictOldest(cache, max) {
+  // PERF-005: FIFO eviction — delete oldest entries when cache exceeds max size
+  while (cache.size > max) {
+    const first = cache.keys().next().value;
+    cache.delete(first);
+  }
+}
 
 async function getCached(env, key, dbFetcher) {
   // L1 check (synchronous, per-isolate)
@@ -51,6 +61,7 @@ async function getCached(env, key, dbFetcher) {
     const kvRaw = await env.SESSIONS.get(KV_PREFIX_SITE + key, { type: "json" });
     if (kvRaw !== null) {
       siteCache.set(key, { data: kvRaw, expires: Date.now() + L1_TTL });
+      evictOldest(siteCache, SITE_CACHE_MAX);
       return kvRaw;
     }
   } catch { /* KV miss — fall through to DB */ }
@@ -59,6 +70,7 @@ async function getCached(env, key, dbFetcher) {
   const data = await dbFetcher();
   // Populate both layers
   siteCache.set(key, { data, expires: Date.now() + L1_TTL });
+  evictOldest(siteCache, SITE_CACHE_MAX);
   try {
     await env.SESSIONS.put(KV_PREFIX_SITE + key, JSON.stringify(data), { expirationTtl: L2_TTL });
   } catch { /* non-critical */ }
@@ -163,31 +175,30 @@ export function publicShape(site, players, archives = [], hasLogo = false) {
 export async function getPublicSite(env, slug) {
     const site = await getBySlug(env, slug);
     if (!site || !site.published) return null;
-    const [owner, players, logoRow] = await Promise.all([
+    const [owner, players, logoRow, archives] = await Promise.all([
       one(
         "SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1",
         [site.user_id]
       ),
       getPlayers(env, site.id),
       one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
+      getArchives(env, site.id, 99), // fetch all; trimmed below by plan limit
     ]);
     if (owner && owner.status === "suspended") return { suspended: true };
     const plan = effectivePlan(owner);
     const archiveLimit = ARCHIVE_LIMITS[plan] || 6;
-    const archives = await getArchives(env, site.id, archiveLimit);
-    return { id: site.id, data: publicShape(site, players, archives, !!logoRow?.has_logo), plan };
+    return { id: site.id, data: publicShape(site, players, archives.slice(0, archiveLimit), !!logoRow?.has_logo), plan };
   }
 
 export async function getUserSite(env, uid, plan) {
     const site = await getByUser(env, uid);
     if (!site) return null;
     const archiveLimit = ARCHIVE_LIMITS[plan || "free"] || 6;
-    const [archives, logoRow, extraRow] = await Promise.all([
+    const [archives, logoRow] = await Promise.all([
       getArchives(env, site.id, archiveLimit),
       one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
-      one("SELECT extra_json FROM sites WHERE id=$1", [site.id]),
     ]);
-  const extra = (extraRow?.extra_json && typeof extraRow.extra_json === "object") ? extraRow.extra_json : {};
+  const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
   return {
       id: site.id, slug: site.slug, published: !!site.published,
       data: publicShape(site, await getPlayers(env, site.id), archives.slice(0, 6), !!logoRow?.has_logo),
@@ -223,12 +234,11 @@ export async function getUserSiteById(env, uid, siteId, plan) {
     const site = await getBoardById(env, uid, siteId);
     if (!site) return null;
     const archiveLimit = ARCHIVE_LIMITS[plan || "free"] || 6;
-    const [archives, logoRow, extraRow] = await Promise.all([
+    const [archives, logoRow] = await Promise.all([
       getArchives(env, site.id, archiveLimit),
-    one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
-    one("SELECT extra_json FROM sites WHERE id=$1", [site.id]),
-  ]);
-  const extra = (extraRow?.extra_json && typeof extraRow.extra_json === "object") ? extraRow.extra_json : {};
+      one("SELECT (logo_data IS NOT NULL AND logo_data != '') AS has_logo FROM sites WHERE id=$1", [site.id]),
+    ]);
+  const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
   return {
     id: site.id, slug: site.slug, published: !!site.published,
     data: publicShape(site, await getPlayers(env, site.id), archives.slice(0, 6), !!logoRow?.has_logo),
@@ -257,6 +267,8 @@ export async function createBoard(env, uid, { slug, name } = {}) {
   }
   const existing = await one("SELECT id FROM sites WHERE slug=$1", [slug]);
   if (existing) return { error: "That URL is already taken. Pick another.", code: "slug_taken" };
+  // BIZ-004: Reject reserved slugs (api, login, dashboard, bot, etc.)
+  if (RESERVED.has(slug)) return { error: "That URL is reserved and cannot be used.", code: "slug_reserved" };
   const siteId = crypto.randomUUID();
   await exec(
     "INSERT INTO sites (id,user_id,slug,name,casino,prize_pool,period,published,extra_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)",
@@ -289,8 +301,7 @@ export async function createArchive(env, uid, { label, clear, siteId } = {}) {
   });
   // Send reset notification
   try {
-    const extraRow = await one("SELECT extra_json FROM sites WHERE id=$1", [site.id]);
-    const extra = (extraRow?.extra_json && typeof extraRow.extra_json === "object") ? extraRow.extra_json : {};
+    const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
     if (extra.discord_webhook_url || (extra.telegram_bot_token && extra.telegram_chat_id && extra.telegram_notify)) {
       await notifyReset({ one, query }, env, site.id, site.name || site.slug, players, lab);
     }

@@ -1,6 +1,6 @@
 document.getElementById("yr").textContent = new Date().getFullYear();
 const form = document.getElementById("leadForm"), status = document.getElementById("l_status"), submit = document.getElementById("l_submit");
-form.addEventListener("submit", async (e) => {
+if (form) form.addEventListener("submit", async (e) => {
   e.preventDefault(); status.textContent = "";
   const payload = { handle: document.getElementById("l_handle").value.trim(), casino: document.getElementById("l_casino").value.trim(), contact: document.getElementById("l_contact").value.trim(), note: document.getElementById("l_note").value.trim() };
   if (!payload.handle || !payload.contact) { status.textContent = "Add your handle and how to reach you."; return; }
