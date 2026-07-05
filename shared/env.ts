@@ -15,20 +15,23 @@ export function populateEnv(env: Record<string, any>, options?: { setGlobalEnv?:
   let hdConn: string | null = null;
   try { hdConn = env.HYPERDRIVE?.connectionString ?? null; } catch {}
   pe.DATABASE_URL = hdConn || env.DATABASE_URL;
+  console.log("[populateEnv] DATABASE_URL source:", hdConn ? "hyperdrive" : "secret", "len:", pe.DATABASE_URL?.length ?? 0);
   
-  // Common bindings used by both Workers
-  pe.PUBLIC_BASE_URL = env.PUBLIC_BASE_URL;
-  pe.TOKEN_ENC_KEY = env.TOKEN_ENC_KEY;
-  pe.ADMIN_API_KEY = env.ADMIN_API_KEY;
-  pe.IP_HASH_SALT = env.IP_HASH_SALT;
-  pe.SESSION_COOKIE_DOMAIN = env.SESSION_COOKIE_DOMAIN;
+  // Common bindings used by both Workers.
+  // Only set values that are actually defined — process.env coerces
+  // everything to strings, so `undefined` becomes the literal "undefined".
+  if (env.PUBLIC_BASE_URL !== undefined) pe.PUBLIC_BASE_URL = env.PUBLIC_BASE_URL;
+  if (env.TOKEN_ENC_KEY !== undefined) pe.TOKEN_ENC_KEY = env.TOKEN_ENC_KEY;
+  if (env.ADMIN_API_KEY !== undefined) pe.ADMIN_API_KEY = env.ADMIN_API_KEY;
+  if (env.IP_HASH_SALT !== undefined) pe.IP_HASH_SALT = env.IP_HASH_SALT;
+  if (env.SESSION_COOKIE_DOMAIN !== undefined) pe.SESSION_COOKIE_DOMAIN = env.SESSION_COOKIE_DOMAIN;
   
   // Bot-specific bindings
-  pe.LOGIN_BOT_TOKEN = env.LOGIN_BOT_TOKEN;
-  pe.LOGIN_BOT_USERNAME = env.LOGIN_BOT_USERNAME;
-  pe.ALLOW_DEV_LOGIN = env.ALLOW_DEV_LOGIN;
-  pe.PLATFORM_BOT_TOKEN = env.PLATFORM_BOT_TOKEN;
-  pe.PLATFORM_WEBHOOK_SECRET = env.PLATFORM_WEBHOOK_SECRET;
+  if (env.LOGIN_BOT_TOKEN !== undefined) pe.LOGIN_BOT_TOKEN = env.LOGIN_BOT_TOKEN;
+  if (env.LOGIN_BOT_USERNAME !== undefined) pe.LOGIN_BOT_USERNAME = env.LOGIN_BOT_USERNAME;
+  if (env.ALLOW_DEV_LOGIN !== undefined) pe.ALLOW_DEV_LOGIN = env.ALLOW_DEV_LOGIN;
+  if (env.PLATFORM_BOT_TOKEN !== undefined) pe.PLATFORM_BOT_TOKEN = env.PLATFORM_BOT_TOKEN;
+  if (env.PLATFORM_WEBHOOK_SECRET !== undefined) pe.PLATFORM_WEBHOOK_SECRET = env.PLATFORM_WEBHOOK_SECRET;
   
   // Leaderboard-specific: set global env reference for KV-backed cache invalidation
   if (options?.setGlobalEnv) {
