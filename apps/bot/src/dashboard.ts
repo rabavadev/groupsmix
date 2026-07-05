@@ -61,8 +61,10 @@ export function buildDashboard(): Hono<DashEnv> {
   // text/plain 500 breaks the dashboard's api() JSON parse.
   app.onError((err, c) => {
     const msg = (err as any)?.message ?? String(err);
-    console.error("[dashboard unhandled error]", msg);
-    return c.json({ error: "Internal server error — please try again" }, 500);
+    const stack = (err as any)?.stack ?? "";
+    console.error("[dashboard unhandled error]", msg, stack);
+    // TEMP DEBUG: include error message in response to diagnose 500s
+    return c.json({ error: "Internal server error", debug: msg }, 500);
   });
 
   // CSP header on all dashboard responses (SEC-102, SEC-703)
