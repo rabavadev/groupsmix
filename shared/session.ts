@@ -2,7 +2,7 @@
 //  YourRank — SHARED SESSION (canonical TypeScript source)
 //
 //  ONE session model used identically by BOTH Workers:
-//    * Cookie name:      gm_session
+//    * Cookie name:      yr_session
 //    * Cookie domain:    .yourrank.site (or SESSION_COOKIE_DOMAIN)
 //                        every path on the same host — /bot, /hook, /r, ...)
 //    * KV namespace:     SESSIONS  (BOTH Workers bind the SAME namespace id)
@@ -42,7 +42,11 @@ export interface SessionEnv {
 }
 
 // ---- constants (MUST match session.js) ----
-export const COOKIE_NAME = "gm_session";
+export const COOKIE_NAME = "yr_session";
+// DOC-001: Legacy cookie name from the GroupsMix era. Browsers carrying this
+// cookie get it accepted as a fallback (readToken checks both) and cleared on
+// every response so it naturally migrates to the new name.
+export const LEGACY_COOKIE_NAME2 = "gm_session";
 // SEC-104: Legacy cookie name from the old HMAC-signed session system.
 // Browsers that still carry this cookie get it cleared on every response.
 export const LEGACY_COOKIE_NAME = "sess";
@@ -76,6 +80,10 @@ export const cookieSet = (token: string): string =>
 export const cookieClear = (): string =>
   `${COOKIE_NAME}=; ${cookieAttrs()}; Max-Age=0`;
 
+// DOC-001: Also clear the legacy gm_session cookie so browsers migrate to yr_session.
+export const cookieClearLegacy2 = (): string =>
+  `${LEGACY_COOKIE_NAME2}=; ${cookieAttrs()}; Max-Age=0`;
+
 // SEC-104: Clear the legacy 'sess' cookie that some browsers may still carry
 // from the old HMAC-signed session system.
 export const cookieClearLegacy = (): string =>
@@ -88,19 +96,31 @@ export function hasLegacyCookie(req: Request): boolean {
 }
 
 // ---- read the token from a Request ----
-/** Extract the session token from the Cookie header of a Request. */
+/** Extract the session token from the Cookie header of a Request.
+ *  DOC-001: Checks yr_session first, falls back to legacy gm_session. */
 export function readToken(req: Request): string | null {
   const c = req.headers.get("cookie") || "";
-  const re = new RegExp("(?:^|;\\s*)" + COOKIE_NAME + "=([^;]+)");
-  const m = c.match(re);
+  // Try the canonical cookie name first
+  let re = new RegExp("(?:^|;\\s*)" + COOKIE_NAME + "=([^;]+)");
+  let m = c.match(re);
+  if (m) return m[1];
+  // DOC-001: Fall back to legacy gm_session for migration
+  re = new RegExp("(?:^|;\\s*)" + LEGACY_COOKIE_NAME2 + "=([^;]+)");
+  m = c.match(re);
   return m ? m[1] : null;
 }
 
 // Convenience for Hono handlers that already hold the raw Cookie header string.
+/** DOC-001: Checks yr_session first, falls back to legacy gm_session. */
 export function readTokenFromHeader(cookieHeader: string | undefined): string | null {
   const c = cookieHeader || "";
-  const re = new RegExp("(?:^|;\\s*)" + COOKIE_NAME + "=([^;]+)");
-  const m = c.match(re);
+  // Try the canonical cookie name first
+  let re = new RegExp("(?:^|;\\s*)" + COOKIE_NAME + "=([^;]+)");
+  let m = c.match(re);
+  if (m) return m[1];
+  // DOC-001: Fall back to legacy gm_session for migration
+  re = new RegExp("(?:^|;\\s*)" + LEGACY_COOKIE_NAME2 + "=([^;]+)");
+  m = c.match(re);
   return m ? m[1] : null;
 }
 
@@ -300,8 +320,9 @@ export async function currentUser<T>(
 }
 
 // SEC-104: Legacy rk_session cookie support removed. The migration grace
-// period is over. Only gm_session is accepted. The old 'sess' cookie
-// (HMAC-signed stateless) is detected and cleared on every response.
+// period is over. Only yr_session is accepted (gm_session read as fallback
+// for migration per DOC-001). The old 'sess' cookie (HMAC-signed stateless)
+// is detected and cleared on every response.
 //
 // SEC-107: Session tokens are rotated when older than 24 hours (or on first
 // read of a legacy bare-UUID session). Use resolveSession() to get the

@@ -3,7 +3,7 @@
 // billing.js re-exports them for production code, but tests import from source directly
 // to avoid mock.module issues in bun v1.2.x CI.
 
-import { mock, test, expect, describe } from "bun:test";
+import { mock, test, expect, describe, beforeAll, afterAll, jest } from "bun:test";
 
 // Mock shared/db.js before importing anything else — shared/plans.js is CJS and
 // will load db.js into the module cache, breaking mocks in other test files.
@@ -23,6 +23,11 @@ const {
   PLAN_PRICES,
   PLAN_META,
 } = await import("../../../../shared/plans.js");
+
+// QA-006: Freeze the clock so Date.now()-based tests are deterministic
+const FROZEN_TIME = new Date("2025-06-15T12:00:00Z").getTime();
+beforeAll(() => { jest.setSystemTime(FROZEN_TIME); });
+afterAll(() => { jest.useRealTimers(); });
 
 // ─── effectivePlan ────────────────────────────────────────────────────────
 

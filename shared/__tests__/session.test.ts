@@ -6,12 +6,14 @@ import { describe, it, expect } from 'bun:test';
 import {
   COOKIE_NAME,
   LEGACY_COOKIE_NAME,
+  LEGACY_COOKIE_NAME2,
   COOKIE_DOMAIN,
   SESSION_TTL_S,
   KV_PREFIX,
   newToken,
   cookieSet,
   cookieClear,
+  cookieClearLegacy2,
   readToken,
   readTokenFromHeader,
   createSession,
@@ -44,8 +46,14 @@ const mockEnv = (): SessionEnv => ({
 // ---- Constants ----
 
 describe('COOKIE_NAME', () => {
+  it('is "yr_session"', () => {
+    expect(COOKIE_NAME).toBe('yr_session');
+  });
+});
+
+describe('LEGACY_COOKIE_NAME2', () => {
   it('is "gm_session"', () => {
-    expect(COOKIE_NAME).toBe('gm_session');
+    expect(LEGACY_COOKIE_NAME2).toBe('gm_session');
   });
 });
 
@@ -97,14 +105,14 @@ describe('cookieSet', () => {
     expect(header.length).toBeGreaterThan(0);
   });
 
-  it('contains gm_session', () => {
+  it('contains yr_session', () => {
     const header = cookieSet('test-token');
-    expect(header).toContain('gm_session=');
+    expect(header).toContain('yr_session=');
   });
 
   it('contains the token value', () => {
     const header = cookieSet('test-token');
-    expect(header).toContain('gm_session=test-token');
+    expect(header).toContain('yr_session=test-token');
   });
 
   it('contains Domain=.yourrank.site', () => {
@@ -145,9 +153,9 @@ describe('cookieClear', () => {
     expect(header).toContain('Max-Age=0');
   });
 
-  it('starts with gm_session=', () => {
+  it('starts with yr_session=', () => {
     const header = cookieClear();
-    expect(header.startsWith('gm_session=;')).toBe(true);
+    expect(header.startsWith('yr_session=;')).toBe(true);
   });
 
   it('contains Domain=.yourrank.site', () => {
@@ -161,19 +169,27 @@ describe('cookieClear', () => {
   });
 });
 
+describe('cookieClearLegacy2', () => {
+  it('clears gm_session cookie', () => {
+    const header = cookieClearLegacy2();
+    expect(header.startsWith('gm_session=;')).toBe(true);
+    expect(header).toContain('Max-Age=0');
+  });
+});
+
 // ---- readToken ----
 
 describe('readToken', () => {
-  it('extracts token from valid Cookie header', () => {
+  it('extracts token from valid Cookie header (yr_session)', () => {
     const req = new Request('https://example.com', {
-      headers: { Cookie: 'gm_session=abc123def456' },
+      headers: { Cookie: 'yr_session=abc123def456' },
     });
     expect(readToken(req)).toBe('abc123def456');
   });
 
   it('extracts token among multiple cookies', () => {
     const req = new Request('https://example.com', {
-      headers: { Cookie: 'other=value; gm_session=mytoken; another=val' },
+      headers: { Cookie: 'other=value; yr_session=mytoken; another=val' },
     });
     expect(readToken(req)).toBe('mytoken');
   });
@@ -196,16 +212,31 @@ describe('readToken', () => {
     const req = new Request('https://example.com');
     expect(readToken(req)).toBeNull();
   });
+
+  // DOC-001: Legacy gm_session fallback tests
+  it('falls back to legacy gm_session cookie', () => {
+    const req = new Request('https://example.com', {
+      headers: { Cookie: 'gm_session=legacytoken123' },
+    });
+    expect(readToken(req)).toBe('legacytoken123');
+  });
+
+  it('prefers yr_session over gm_session when both present', () => {
+    const req = new Request('https://example.com', {
+      headers: { Cookie: 'gm_session=oldtoken; yr_session=newtoken' },
+    });
+    expect(readToken(req)).toBe('newtoken');
+  });
 });
 
 // ---- readTokenFromHeader ----
 
 describe('readTokenFromHeader', () => {
-  it('extracts token from a raw cookie header string', () => {
-    expect(readTokenFromHeader('gm_session=abc123')).toBe('abc123');
+  it('extracts token from a raw cookie header string (yr_session)', () => {
+    expect(readTokenFromHeader('yr_session=abc123')).toBe('abc123');
   });
 
-  it('returns null for missing gm_session', () => {
+  it('returns null for missing yr_session', () => {
     expect(readTokenFromHeader('other=value')).toBeNull();
   });
 
@@ -218,7 +249,16 @@ describe('readTokenFromHeader', () => {
   });
 
   it('extracts token among multiple cookies', () => {
-    expect(readTokenFromHeader('a=1; gm_session=xyz; b=2')).toBe('xyz');
+    expect(readTokenFromHeader('a=1; yr_session=xyz; b=2')).toBe('xyz');
+  });
+
+  // DOC-001: Legacy gm_session fallback tests
+  it('falls back to legacy gm_session', () => {
+    expect(readTokenFromHeader('gm_session=legacytoken')).toBe('legacytoken');
+  });
+
+  it('prefers yr_session over gm_session', () => {
+    expect(readTokenFromHeader('gm_session=old; yr_session=new')).toBe('new');
   });
 });
 
@@ -266,14 +306,14 @@ describe('hasLegacyCookie', () => {
 
   it('returns true when legacy "sess" is among other cookies', () => {
     const req = new Request('https://example.com', {
-      headers: { Cookie: 'gm_session=newtoken; sess=oldtoken' },
+      headers: { Cookie: 'yr_session=newtoken; sess=oldtoken' },
     });
     expect(hasLegacyCookie(req)).toBe(true);
   });
 
-  it('returns false when only gm_session is present', () => {
+  it('returns false when only yr_session is present', () => {
     const req = new Request('https://example.com', {
-      headers: { Cookie: 'gm_session=sometoken' },
+      headers: { Cookie: 'yr_session=sometoken' },
     });
     expect(hasLegacyCookie(req)).toBe(false);
   });

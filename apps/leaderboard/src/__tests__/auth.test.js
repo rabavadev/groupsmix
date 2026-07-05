@@ -22,8 +22,8 @@ mock.module(sessionUrl, () => ({
     createSession:          () => Promise.resolve("mock-session-token"),
     destroySession:         () => Promise.resolve(),
     destroyAllUserSessions: () => Promise.resolve(),
-    cookieSet:  (t) => `gm_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
-    cookieClear: ()  => "gm_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+    cookieSet:  (t) => `yr_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+    cookieClear: ()  => "yr_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
     readToken:  (_req) => null,
     KV_PREFIX:  "session:",
     // SEC-104

@@ -3,7 +3,7 @@
 //
 // Run: bun test src/__tests__/scores.test.js
 
-import { mock, test, expect, describe, beforeEach } from "bun:test";
+import { mock, test, expect, describe, beforeEach, beforeAll, afterAll, jest } from "bun:test";
 
 // ── resolve dep paths before any mock.module calls ────────────────────────
 const _sessionUrl = import.meta.resolve("../../../../shared/session.js");
@@ -31,8 +31,8 @@ mock.module(_sessionUrl, () => ({
   createSession:          () => Promise.resolve("mock-token"),
   destroySession:         () => Promise.resolve(),
   destroyAllUserSessions: () => Promise.resolve(),
-  cookieSet:  (t) => `gm_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
-  cookieClear: ()  => "gm_session=; Path=/; Max-Age=0",
+  cookieSet:  (t) => `yr_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+  cookieClear: ()  => "yr_session=; Path=/; Max-Age=0",
   KV_PREFIX:  "session:",
   readToken:  () => null,
 }));
@@ -65,6 +65,11 @@ mock.module("../billing.js", () => ({
 }));
 
 const { handleScores } = await import("../handlers/scores.js");
+
+// QA-006: Freeze the clock so Date.now()-based tests are deterministic
+const FROZEN_TIME = new Date("2025-06-15T12:00:00Z").getTime();
+beforeAll(() => { jest.setSystemTime(FROZEN_TIME); });
+afterAll(() => { jest.useRealTimers(); });
 
 // ── helpers ───────────────────────────────────────────────────────────────
 

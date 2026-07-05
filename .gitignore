@@ -17,5 +17,8 @@ shared/notifications.js
 shared/env.js
 shared/plans.js
 # Auto-generated asset bundle
+# REL-007: This file is gitignored because it's too large to track. The
+# deployed version (bundled at build time) could theoretically differ from
+# what was tested locally. Verify via `bun run build` before deploying.
 apps/leaderboard/src/assets_bundled.js
 .local/

@@ -1,7 +1,7 @@
 // Auth helpers for the Worker.
 import { one, exec } from "../../../shared/db.js";
 import { rateLimit as kvRateLimit } from "../../../shared/ratelimit.js";
-// SHARED cross-Worker session: same cookie (gm_session) + same SESSIONS KV as
+// SHARED cross-Worker session: same cookie (yr_session) + same SESSIONS KV as
 // the bot Worker, so one login works across both. See ../../../shared/session.ts
 // (compiled to session.js for the leaderboard Worker).
 import {
@@ -90,7 +90,7 @@ export async function verifyPassword(password, saltHex, expected) {
 export const uuid = () => crypto.randomUUID();
 export const newToken = () => bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
 
-// Session mechanics delegate to the SHARED module (gm_session + shared KV).
+// Session mechanics delegate to the SHARED module (yr_session + shared KV).
 // These thin wrappers keep the existing call sites in index.js unchanged.
 export const createSession = (env, userId) => _createSession(env, userId);
 export const destroySession = (env, token) => _destroySession(env, token);
@@ -119,7 +119,7 @@ const loadUser = (env, uid) =>
 export { hasLegacyCookie, cookieClearLegacy };
 
 // SEC-104: Resolves the current user from the shared session using the
-// standard readToken (gm_session only; legacy rk_session support removed).
+// standard readToken (yr_session + gm_session fallback; legacy rk_session support removed).
 // SEC-107: Also handles session rotation. When a session is older than 24h
 // (or is a legacy bare-UUID session), a new token is issued. The new
 // Set-Cookie header is attached to req._sessionCookies for the main handler
