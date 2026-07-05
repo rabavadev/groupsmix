@@ -6,7 +6,7 @@
   const _cfg = document.getElementById("ov-config");
   const SLUG = _cfg?.dataset?.slug ?? window.__OVERLAY_SLUG__;
   const TOP_N = 5;
-  const POLL_MS = 15000;
+  const POLL_MS = 30000; // PERF-004: aligned with leaderboard (30s), was 15s
   const TRANSITION_MS = 600;
 
   // --- Format helpers ---
@@ -122,14 +122,31 @@
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // --- Polling ---
+  // --- Polling with exponential backoff on failure ---
+  let pollFailures = 0;
+  const MAX_BACKOFF_MS = 300000; // 5 minutes max
+  let pollTimer = null;
+
   async function poll() {
     try {
       const res = await fetch("/api/public/" + encodeURIComponent(SLUG) + "/players");
-      if (!res.ok) return;
+      if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       if (data.players) renderPlayers(data.players);
-    } catch { /* ignore transient failures */ }
+      pollFailures = 0; // reset on success
+    } catch {
+      pollFailures++;
+    }
+    scheduleNext();
+  }
+
+  function scheduleNext() {
+    if (pollTimer) clearTimeout(pollTimer);
+    // Exponential backoff: POLL_MS * 2^failures, capped at MAX_BACKOFF_MS
+    const delay = pollFailures === 0
+      ? POLL_MS
+      : Math.min(POLL_MS * Math.pow(2, pollFailures), MAX_BACKOFF_MS);
+    pollTimer = setTimeout(poll, delay);
   }
 
   // --- Init ---
@@ -146,8 +163,8 @@
     tickTimer();
     setInterval(tickTimer, 1000);
 
-    // Poll for updates
-    setInterval(poll, POLL_MS);
+    // Poll for updates (with exponential backoff on failure)
+    scheduleNext();
   }
 
   if (document.readyState === "loading") {

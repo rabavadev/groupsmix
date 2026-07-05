@@ -18,7 +18,7 @@ export function serveRobotsTxt(origin) {
 let sitemapCache = { xml: null, ts: 0 };
 const SITEMAP_TTL = 300_000; // 5 minutes L1 TTL
 const SITEMAP_KV_KEY = "sitemap:xml";
-const SITEMAP_KV_TTL = 300; // 5 minutes KV TTL (seconds)
+const SITEMAP_KV_TTL = 3600; // 1 hour KV TTL (seconds) — sitemap changes infrequently
 
 export async function serveSitemapXml(origin, env) {
   // L1: in-memory cache (instant, per-isolate)

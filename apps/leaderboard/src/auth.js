@@ -151,7 +151,7 @@ export async function currentUser(req, env) {
     // Sliding-window TTL refresh (only if we didn't rotate — the old entry is deleted after rotation)
     if (!rotated) {
       try {
-        env.SESSIONS.put(KV_PREFIX + token, raw, { expirationTtl: 60 * 60 * 24 * 30 }).catch(() => {});
+        env.SESSIONS.put(KV_PREFIX + token, raw, { expirationTtl: 60 * 60 * 24 * 30 }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
       } catch { /* best-effort */ }
     }
 

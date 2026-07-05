@@ -141,7 +141,7 @@ async function checkout(btn){
 }
 function playerRow(p={name:"",wagered:"",prize:""}){
   const tr=document.createElement("tr");
-  tr.innerHTML = `<td class="rank"></td><td><input class="p-name" placeholder="*****ess" value="${esc(p.name)}"></td><td class="num"><input class="p-wager" inputmode="decimal" placeholder="0" value="${esc(p.wagered)}"></td><td class="num"><input class="p-prize" inputmode="decimal" placeholder="0" value="${esc(p.prize)}"></td><td class="act"><button class="row-x" title="Remove" type="button">×</button></td>`;
+  tr.innerHTML = `<td class="rank"></td><td><input class="p-name" placeholder="*****ess" value="${esc(p.name)}"></td><td class="num"><input class="p-wager" inputmode="decimal" placeholder="0" value="${esc(p.wagered)}"></td><td class="num"><input class="p-prize" inputmode="decimal" placeholder="0" value="${esc(p.prize)}"></td><td class="act"><button class="row-x" title="Remove" aria-label="Remove player" type="button">×</button></td>`;
   tr.querySelector(".row-x").addEventListener("click",()=>{tr.remove();renumber();toggleEmpty();});
   return tr;
 }
@@ -214,7 +214,9 @@ function renderBranding(br){
   if (br.accentB) $("c_b").value = br.accentB;
   if (br.hasLogo) { $("logoPreview").src = "/logo/" + SLUG + "?t=" + Date.now(); $("logoPreview").hidden = false; $("logoClear").hidden = false; }
 }
+$("logoPick").setAttribute("aria-label", "Upload logo");
 $("logoPick").addEventListener("click",()=>$("logoFile").click());
+$("logoClear").setAttribute("aria-label", "Remove logo");
 $("logoClear").addEventListener("click",()=>{ LOGO = null; $("logoPreview").hidden = true; $("logoClear").hidden = true; $("status").textContent = "Logo will be removed when you save."; });
 $("logoFile").addEventListener("change",()=>{
   const f = $("logoFile").files[0]; if (!f) return;
@@ -436,7 +438,9 @@ $("save").addEventListener("click", async ()=>{
     const d=await res.json();
     if(res.ok&&d.ok){ status.textContent="Saved. Your page is updated."; _dirty=false; } else status.textContent=d.error||"Save failed.";
   } catch{ status.textContent="Network error."; }
-  btn.disabled=false;btn.textContent="Save changes"; setTimeout(()=>status.textContent="",6000);
+  btn.disabled=false;btn.textContent="Save changes";
+  // FE-004: Only auto-clear success messages; errors stay until next action.
+  if(status.textContent==="Saved. Your page is updated.") setTimeout(()=>{ if(status.textContent==="Saved. Your page is updated.") status.textContent=""; },6000);
 });
 async function loadStats(){
   let s; try { const r = await fetch("/api/site/stats"); const d = await r.json(); if(!r.ok||!d.ok) return; s = d.stats; } catch { return; }

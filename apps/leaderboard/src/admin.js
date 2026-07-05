@@ -5,19 +5,22 @@ import { query, one, exec } from "../../../shared/db.js";
 import { generateSecret, verifyCode, generateOtpauthUri } from "./totp.js";
 import { encrypt, decrypt } from "../../../shared/crypto.js";
 
-// SEC-106: Strip sensitive tokens from audit log details before persisting.
-// Prevents reset tokens, session tokens, or TOTP secrets from being stored
-// in the admin_audit table (which could be exposed via future audit log views).
+// SEC-106: Only keep known-safe keys in audit log details before persisting.
+// Whitelist approach: any key not in the safe set is dropped. This prevents
+// reset tokens, session tokens, TOTP secrets, passwords, or any future
+// sensitive field from leaking into the admin_audit table.
+const AUDIT_SAFE_KEYS = new Set([
+  "email", "plan", "slug", "action", "details", "ip", "amount",
+  "provider", "label", "board_name", "board_id", "boards", "players",
+  "old_plan", "new_plan", "expires_at", "reason", "disabled", "message",
+]);
 function sanitizeAuditDetails(details) {
   if (!details || typeof details !== "object") return details;
-  const redacted = { ...details };
-  for (const key of Object.keys(redacted)) {
-    const lk = key.toLowerCase();
-    if (lk.includes("token") || lk.includes("secret") || lk.includes("password") || lk.includes("reset") || lk === "link" || lk === "otp") {
-      redacted[key] = "[REDACTED]";
-    }
+  const safe = {};
+  for (const [k, v] of Object.entries(details)) {
+    if (AUDIT_SAFE_KEYS.has(k)) safe[k] = v;
   }
-  return redacted;
+  return safe;
 }
 
 // Log admin action to database for persistent audit trail

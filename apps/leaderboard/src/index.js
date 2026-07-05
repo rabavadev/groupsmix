@@ -370,10 +370,10 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
 <h2>🎬 OBS Overlay</h2>
 <p>This is a Pro feature.<br/>Upgrade at <a href="/" target="_blank">yourrank.site</a> to unlock the live stream overlay with animated rankings.</p>
 </body></html>`;
-          return new Response(upsell, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" } });
+          return new Response(upsell, { headers: { ...HTML, "cache-control": "public, max-age=300" } });
         }
         const overlayHtml = PAGES.overlay(r.data, { slug });
-        return new Response(overlayHtml, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=30" } });
+        return new Response(overlayHtml, { headers: { ...HTML, "cache-control": "public, max-age=30" } });
       }
 
       // --- public leaderboard at /<slug> ---
