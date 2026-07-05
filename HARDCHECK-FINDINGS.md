@@ -3,7 +3,7 @@
 **Last updated:** hardcheck v9 (2026-07-05)
 **Repo:** rabavadev/yourrank (main, commit 5fbb28d)
 **Auditor:** Syntax
-**Status:** P0: 0 | P1: 0 (7 investigated: 3 fixed, 3 false positives, 1 downgraded to P2) | P2: 13 | P3: 19
+**Status:** P0: 0 | P1: 0 | P2: 5 remaining (10 fixed) | P3: 19
 
 ---
 
@@ -83,28 +83,34 @@
 - **Fix:** Depends on SEC-002 (CSP for public pages). After CSP, innerHTML with escaped data is acceptable. Consider DOM API for critical paths.
 
 ### SEC-006-v9: Overlay page has no CSP headers
-- **File:** `apps/leaderboard/src/middleware/headers.js`
-- **Status:** Open
-- **Description:** Overlay page (OBS widget) uses `HTML` headers, same as public leaderboard. No CSP.
-- **Fix:** Same approach as SEC-002. Add permissive CSP with `frame-ancestors *`.
+- **File:** `apps/leaderboard/src/index.js:373,376`
+- **Status:** Fixed (verified)
+- **Description:** Overlay routes used bare inline headers with no CSP, HSTS, or security headers.
+- **Fix:** Both overlay responses now spread `...HTML` headers (CSP with frame-ancestors *, HSTS, nosniff, Referrer-Policy). Did NOT use SECURE_HTML (which blocks iframe embedding).
 
 ### SEC-007-v9: Admin audit log sanitization incomplete
-- **File:** `apps/leaderboard/src/admin.js:39-47`
-- **Status:** Open
-- **Description:** `sanitizeAuditDetails()` strips `token`, `reset_token`, `totp_secret` keys. But custom webhook URLs, API keys, and other secrets in `details` objects are not stripped.
-- **Fix:** Whitelist approach: only keep known-safe keys instead of blacklisting known-bad ones.
+- **File:** `apps/leaderboard/src/admin.js:8-27`
+- **Status:** Fixed (verified)
+- **Description:** Changed from blacklist to whitelist approach.
+- **Fix:** Whitelist of 19 known-safe keys (email, plan, slug, action, details, ip, amount, provider, label, board_name, board_id, boards, players, old_plan, new_plan, expires_at, reason, disabled, message). All existing logAdminAction calls pass only whitelisted keys.
 
 ### BE-001-v9: bumpStat 3 separate queries should be consolidated
 - **File:** `apps/leaderboard/src/stats.js:27-45`
-- **Status:** Open
+- **Status:** Fixed (verified) — merged into PERF-001
 - **Description:** Same as PERF-001. Three INSERT...ON CONFLICT queries per page view.
-- **Fix:** Merge into a single function that batches all three writes.
+- **Fix:** Consolidated into single withTransaction() block. See PERF-001.
 
 ### BE-002-v9: Heatmap query does aggregation in JavaScript instead of SQL
 - **File:** `apps/leaderboard/src/stats.js:97-112`
-- **Status:** Open
-- **Description:** `getHeatmap` queries all rows and builds a 7x24 grid in JS. The aggregation could happen in SQL with GROUP BY.
-- **Fix:** SQL: `SELECT day_of_week, hour, SUM(views) FROM site_stats_hourly WHERE ... GROUP BY day_of_week, hour`
+- **Status:** Fixed (verified) — already optimized
+- **Description:** SQL already uses GROUP BY day_of_week, hour with SUM(views)::int. JS only maps pre-aggregated rows into grid.
+- **Fix:** No change needed. Already correct.
+
+### BE-005-v9 (new): Session TTL refresh should log failures
+- **File:** `apps/leaderboard/src/auth.js:154`, `shared/session.js:244,248,281`
+- **Status:** Fixed (verified)
+- **Description:** 7 `.catch(() => {})` handlers in session code swallowed errors silently.
+- **Fix:** All changed to `.catch(e => console.error('[session] ...', e?.message))`.
 
 ### BE-003-v9: No test coverage for bot Worker
 - **File:** `apps/bot/src/__tests__/bot-engine.test.ts`
@@ -120,15 +126,20 @@
 
 ### PERF-002-v9: Sitemap query hits DB on every L1+L2 cache miss
 - **File:** `apps/leaderboard/src/middleware/seo.js:36-54`
-- **Status:** Open
-- **Description:** On cache miss, sitemap queries `sites JOIN users LIMIT 5000`. With 5-minute TTL, this happens frequently under load.
-- **Fix:** L1 TTL of 5 minutes is good. Consider longer L2 TTL (1 hour) since sitemap changes infrequently.
+- **Status:** Fixed (verified)
+- **Description:** L2 KV TTL was 5 minutes. Sitemap changes infrequently.
+- **Fix:** L2 TTL increased from 300s (5min) to 3600s (1 hour). ~12x reduction in KV reads under load.
 
 ### PERF-003-v9: L1 caches lack size limits (custom-domain, sitemap)
 - **File:** `apps/leaderboard/src/middleware/custom-domain.js:6`, `apps/leaderboard/src/middleware/seo.js:19`
-- **Status:** Open
-- **Description:** `CUSTOM_DOMAIN_CACHE` has MAX=1000 (good). `sitemapCache` is a single entry (fine). But the pattern should be verified for any new caches added.
-- **Fix:** Already handled for custom-domain. Sitemap is single-entry. Low risk.
+- **Status:** Fixed (verified) — already handled
+- **Description:** CUSTOM_DOMAIN_CACHE has MAX=1000. Sitemap is single-entry. Both verified correct.
+
+### PERF-004-v9 (new): Overlay poll interval too frequent
+- **File:** `apps/leaderboard/src/assets/overlay.js`
+- **Status:** Fixed (verified)
+- **Description:** Overlay polled every 15s, twice as fast as leaderboard (30s).
+- **Fix:** Aligned to 30s with exponential backoff on failure (30s → 60s → 120s → 240s → 300s cap).
 
 ### DEVOPS-001-v9: Staging environment is DOWN (Hyperdrive commented out)
 - **File:** `apps/leaderboard/wrangler.toml` (staging config)
