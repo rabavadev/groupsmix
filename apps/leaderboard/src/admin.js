@@ -226,6 +226,12 @@ export async function handle2faVerify(request, env) {
   const code = String(body.code).trim();
   if (!/^\d{6}$/.test(code)) return bad("Invalid code format");
 
+  // Per-user TOTP rate limit: 5 attempts per 5 minutes (SEC-710)
+  const totpKey = `totp:admin:${admin.id}`;
+  if (!(await rateLimit(env, totpKey, 5, 300))) {
+    return json({ ok: false, error: "Too many verification attempts. Try again in a few minutes." }, 429);
+  }
+
   const user = await one("SELECT totp_secret FROM users WHERE id=$1", [admin.id]);
   if (!user?.totp_secret) return bad("2FA is not enabled", 400);
 
@@ -241,7 +247,10 @@ export async function handle2faVerify(request, env) {
   }
 
   const valid = await verifyCode(secret, code);
-  if (!valid) return bad("Invalid code. Check your authenticator and try again.", 401);
+  if (!valid) {
+    console.error(JSON.stringify({ level: "warn", ctx: "admin-totp", outcome: "fail", adminId: admin.id, ip: request.headers.get("cf-connecting-ip") || "unknown" }));
+    return bad("Invalid code. Check your authenticator and try again.", 401);
+  }
 
   // Mark 2FA verified in KV for this session token
   const token = readToken(request);
