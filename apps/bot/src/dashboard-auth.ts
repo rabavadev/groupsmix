@@ -17,7 +17,24 @@ interface TgLogin {
 // tokenless layer: reject state-changing requests whose Origin isn't us.
 export function sameOrigin(req: Request, publicBaseUrl: string): boolean {
   const origin = req.headers.get("origin");
-  if (!origin) return true; // no browser Origin -> not a cross-site form/fetch
+  // Require Origin header for state-changing methods. Browsers always send
+  // Origin on cross-origin POST/PATCH. Missing Origin = non-browser client,
+  // which should include its own CSRF token if it wants to make changes.
+  if (!origin) {
+    const method = req.method.toUpperCase();
+    if (method === "POST" || method === "PATCH" || method === "PUT" || method === "DELETE") {
+      // Allow POST without Origin only for the Telegram auth endpoint (widget
+      // sends form-encoded data without Origin in some embed contexts) and
+      // postback endpoints (server-to-server callbacks).
+      const url = new URL(req.url);
+      const path = url.pathname;
+      if (path.endsWith("/auth/telegram") || path.startsWith("/pb") || path.startsWith("/billing/hook")) {
+        return true;
+      }
+      return false;
+    }
+    return true; // GET/HEAD/OPTIONS are safe (no state change)
+  }
   try {
     return new URL(origin).host === new URL(publicBaseUrl).host;
   } catch {

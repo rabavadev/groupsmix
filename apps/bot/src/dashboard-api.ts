@@ -114,6 +114,11 @@ export function buildDashboardApi(): Hono<{ Variables: { uid: string } }> {
     }>();
     if (!b.casino || !b.label || !b.referral_url)
       return c.json({ error: "casino, label, referral_url required" }, 400);
+    if (b.casino.length > 100) return c.json({ error: "casino name too long (max 100)" }, 400);
+    if (b.label.length > 200) return c.json({ error: "label too long (max 200)" }, 400);
+    if (b.referral_url.length > 2048) return c.json({ error: "referral_url too long (max 2048)" }, 400);
+    if (b.bonus_text && b.bonus_text.length > 500) return c.json({ error: "bonus_text too long (max 500)" }, 400);
+    if (b.promo_code && b.promo_code.length > 100) return c.json({ error: "promo_code too long (max 100)" }, 400);
     try {
       const parsed = new URL(b.referral_url);
       if (!/^https?:$/.test(parsed.protocol)) return c.json({ error: "referral_url must use http or https" }, 400);
@@ -180,6 +185,8 @@ export function buildDashboardApi(): Hono<{ Variables: { uid: string } }> {
   api.post("/bots", async (c) => {
     const { token, welcome_message } = await c.req.json<{ token: string; welcome_message?: string }>();
     if (!token) return c.json({ error: "token required" }, 400);
+    if (token.length > 200) return c.json({ error: "token too long" }, 400);
+    if (welcome_message && welcome_message.length > 500) return c.json({ error: "welcome_message too long (max 500)" }, 400);
     // Validate the token with Telegram BEFORE taking a DB lock/transaction —
     // don't hold a Postgres advisory lock across an external HTTP call.
     let me;
@@ -301,13 +308,23 @@ export function buildDashboardApi(): Hono<{ Variables: { uid: string } }> {
     const uid = c.get("uid");
     const gateErr = await checkFeature(uid, "postbacks");
     if (gateErr) return c.json({ error: gateErr }, 402);
-    const existing = await one<{ postback_key: string | null }>(
-      `SELECT postback_key FROM users WHERE id = $1`, [uid]
+    const existing = await one<{ postback_key_enc: Buffer | null; postback_key: string | null }>(
+      `SELECT postback_key_enc, postback_key FROM users WHERE id = $1`, [uid]
     );
-    let key = existing?.postback_key;
-    if (!key) {
+    let key: string;
+    if (existing?.postback_key_enc) {
+      // Decrypt the encrypted key
+      key = await decryptToken(Buffer.from(existing.postback_key_enc));
+    } else if (existing?.postback_key) {
+      // Legacy plaintext key — encrypt it now (lazy migration)
+      key = existing.postback_key;
+      const enc = await encryptToken(key);
+      await query(`UPDATE users SET postback_key_enc = $1 WHERE id = $2`, [enc, uid]);
+    } else {
+      // New key — generate, encrypt, store hash for lookups
       key = newPostbackKey();
-      await query(`UPDATE users SET postback_key = $1 WHERE id = $2`, [key, uid]);
+      const enc = await encryptToken(key);
+      await query(`UPDATE users SET postback_key_enc = $1 WHERE id = $2`, [enc, uid]);
     }
     return c.json({ postback_url: `${config.publicBaseUrl}/pb/${key}` });
   });

@@ -36,7 +36,7 @@ export async function sendDiscordWebhook(
       signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
         username: "YourRank",
-        avatar_url: "https://yourrank.site/favicon.ico",
+        avatar_url: (typeof process !== "undefined" && process.env.PUBLIC_BASE_URL || "https://yourrank.site") + "/favicon.ico",
         embeds: [embed],
       }),
     });

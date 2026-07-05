@@ -14,7 +14,11 @@ export const config = {
     return (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
   },
   get tokenEncKey() {
-    return Buffer.from(process.env.TOKEN_ENC_KEY || "", "hex");
+    const hex = process.env.TOKEN_ENC_KEY || "";
+    if (hex && hex.length !== 64) {
+      throw new Error("TOKEN_ENC_KEY must be 64 hex characters (32 bytes), got " + hex.length);
+    }
+    return Buffer.from(hex, "hex");
   },
   get adminApiKey() {
     return process.env.ADMIN_API_KEY || "";

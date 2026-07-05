@@ -44,12 +44,16 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
 
   // BE-004: Reject oversized request bodies early, before any parsing.
   // 1 MB cap — generous for JSON payloads while blocking multi-MB abuse.
+  // Body size guard — check content-length for bounded requests, and rely on
+  // Cloudflare Workers' built-in body size limit (100MB) for chunked encoding.
   app.use('*', async (c, next) => {
     if (c.req.method === 'POST' || c.req.method === 'PUT') {
       const cl = c.req.header('content-length');
       if (cl && Number(cl) > 1_000_000) {
         return c.text('payload too large', 413);
       }
+      // For chunked encoding (no content-length), we can't pre-check size.
+      // Cloudflare Workers enforce a100MB body limit upstream.
     }
     await next();
   });
@@ -157,16 +161,17 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 120, 60);
     if (!rl.ok) { c.header("Retry-After", String(rl.retryAfter)); return c.json({ error: "rate limited" }, 429); }
 
-    const owner = await one<{ id: string; postback_key: string }>(
-      `SELECT id, postback_key FROM users WHERE postback_key = $1`,
+    const owner = await one<{ id: string; postback_key: string; postback_key_enc: Buffer | null }>(
+      `SELECT id, postback_key, postback_key_enc FROM users WHERE postback_key = $1`,
       [key]
     );
-    if (!owner || !owner.postback_key) return c.json({ error: "unknown key" }, 404);
+    if (!owner) return c.json({ error: "unknown key" }, 404);
 
     // HMAC is over the EXACT query string the casino sent. Hono exposes it via
     // c.req.url's search portion. This binds the signature to the params, so a
     // logged request can't be tampered with (e.g. bump amount/click_ref).
     const qs = new URL(c.req.url).search.slice(1); // without the leading '?'
+    // Use the plaintext key for HMAC verification (same value, just also stored encrypted)
     const valid = await verifyHmacSha256Hex(owner.postback_key, qs, sig);
     if (!valid) return c.json({ error: "bad signature" }, 401);
 

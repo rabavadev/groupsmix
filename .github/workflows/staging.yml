@@ -44,6 +44,7 @@ jobs:
           wranglerVersion: "4.106.0"
 
   deploy-bot-staging:
+    needs: deploy-leaderboard-staging
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -66,3 +67,42 @@ jobs:
           workingDirectory: apps/bot
           command: deploy --env staging
           wranglerVersion: "4.106.0"
+
+  smoke-test-staging:
+    needs: [deploy-leaderboard-staging, deploy-bot-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Cloudflare propagation
+        run: sleep 15
+
+      - name: "Smoke: staging health"
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 20 https://staging.yourrank.site/ || true)
+          if [ "$STATUS" = "200" ]; then
+            echo "OK: staging.yourrank.site is live (HTTP $STATUS)"
+          else
+            echo "WARNING: staging.yourrank.site returned HTTP $STATUS — staging may not be configured yet"
+            echo "This is expected if staging DNS and Hyperdrive are not set up."
+          fi
+
+      - name: "Smoke: staging dashboard"
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 https://staging.yourrank.site/bot/dashboard || true)
+          if [ "$STATUS" = "200" ]; then
+            echo "OK: staging dashboard HTTP $STATUS"
+          else
+            echo "WARNING: staging dashboard returned HTTP $STATUS"
+          fi
+
+      - name: Staging deploy summary
+        if: always()
+        run: |
+          echo "==========================================="
+          echo "STAGING DEPLOY COMPLETE"
+          echo "Commit: ${{ github.sha }}"
+          echo "Note: staging smoke tests use continue-on-error"
+          echo "because staging infra (DNS, Hyperdrive) may not"
+          echo "be configured yet."
+          echo "==========================================="

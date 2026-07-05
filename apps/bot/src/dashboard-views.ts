@@ -200,7 +200,7 @@ async function load() {
   '</tr>').join('') || '<tr><td colspan="6" class="muted">No offers yet.</td></tr>';
 }
 function esc(s){ return (s??'').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
-function escJsAttr(s){ return (s??'').replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'").replace(/\\n/g,'n').replace(/\\r/g,'r'); }
+function escJsAttr(s){ return (s??'').replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'").replace(/\\n/g,'\\\\n').replace(/\\r/g,'\\\\r'); }
 function copyLink(slug){ navigator.clipboard.writeText(location.origin+'/r/'+slug); toast('Link copied'); }
 async function toggleOffer(id, on){ await api('/offers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({is_active:on})}); load(); }
 async function createOffer(){
@@ -273,13 +273,13 @@ async function upgrade(tier){
   window.open(r.invoice_link, '_blank');
 }
 load(); loadExtras();
-window.addEventListener('error', (e) => {
-  const bl = $('botList'); if (bl) bl.textContent = 'Error: ' + (e.error?.message || e.message || 'unknown');
-  const pi = $('planInfo'); if (pi) pi.textContent = 'Error: ' + (e.error?.message || e.message || 'unknown');
+window.addEventListener('error', () => {
+  const bl = $('botList'); if (bl) bl.textContent = 'Something went wrong. Please reload the page.';
+  const pi = $('planInfo'); if (pi) pi.textContent = 'Something went wrong. Please reload the page.';
 });
-window.addEventListener('unhandledrejection', (e) => {
-  const pi = $('planInfo'); if (pi) pi.textContent = 'Error: ' + (e.reason?.message || e.reason || 'unknown');
-  const bl = $('botList'); if (bl) bl.textContent = 'Error: ' + (e.reason?.message || e.reason || 'unknown');
+window.addEventListener('unhandledrejection', () => {
+  const pi = $('planInfo'); if (pi) pi.textContent = 'Something went wrong. Please reload the page.';
+  const bl = $('botList'); if (bl) bl.textContent = 'Something went wrong. Please reload the page.';
 });
 </script></body></html>`;
 }

@@ -137,31 +137,25 @@ bot job deploys `src/worker.ts` directly (wrangler bundles the TS).
 
 ## 8. Auto-migrate the database (optional, recommended)
 
-`.github/workflows/migrate.yml` keeps the live Supabase Postgres in sync with
-the repo. When you change anything under `supabase/migrations/` and push to
-`main`, it runs the migrations against the live database — idempotently
-(everything uses `IF NOT EXISTS` / `DO $$` guards, so re-running is safe
-and just no-ops).
+The `Deploy` workflow (`.github/workflows/deploy.yml`) runs database migrations
+automatically as the first step of every deploy. The `migrate` job links to the
+Supabase project and runs `supabase db push` before any Worker is deployed.
 
-It needs **one** GitHub repo secret (set at repo → Settings → Secrets and
+It needs **two** GitHub repo secrets (set at repo → Settings → Secrets and
 variables → Actions → New repository secret):
 
-| Repo secret        | Value                                   |
-|--------------------|-----------------------------------------|
-| `SUPABASE_DB_URL`  | Supabase **direct** connection string   |
+| Repo secret             | Value                                   |
+|-------------------------|-----------------------------------------|
+| `SUPABASE_ACCESS_TOKEN` | Supabase personal access token          |
+| `SUPABASE_DB_PASSWORD`  | Database password for supabase link      |
 
-Use the **direct** string (host `db.<ref>.supabase.co`, port 5432) — the same
-one you used for `wrangler hyperdrive create` — NOT the pooler (6543). DDL via
-the transaction pooler is unreliable.
+If `SUPABASE_DB_PASSWORD` is missing, the deploy will **fail** (not skip) to
+prevent shipping new code against an old schema. Migrations are idempotent
+(most use `IF NOT EXISTS` / `DO $$` guards), so re-running is safe.
 
-Get it from Supabase → Project Settings → Database → Connection string →
-"Direct connection". If it shows `[YOUR-PASSWORD]`, substitute your DB password.
+The two phases are:
+- **Migrate** — runs `supabase db push` to sync the schema.
+- **Deploy** — ships Worker code to Cloudflare (only after migrations succeed).
 
-The two workflows are independent and complementary:
-- **Deploy** (section 7) ships the Worker **code** to Cloudflare.
-- **Migrate DB** (this section) ships the **schema** to Supabase.
-
-Both trigger on push to `main`; Migrate DB only fires when files under `supabase/migrations/` or
-`.github/workflows/migrate.yml` change, so it doesn't run on every code push.
-You can also trigger either manually from repo → Actions.
+Both trigger on push to `main`. You can also trigger manually from repo → Actions.
 

@@ -39,15 +39,15 @@ jobs:
         run: |
           set -e
           if [ -z "$SUPABASE_DB_PASSWORD" ]; then
-            echo "SKIP: SUPABASE_DB_PASSWORD not set — skipping migrations"
-            exit 0
+            echo "::error::SUPABASE_DB_PASSWORD not set — cannot run migrations. Set it in repo secrets."
+            exit 1
           fi
           if supabase link --project-ref lygcqzjxlqbvymkfjvel --password "$SUPABASE_DB_PASSWORD"; then
             supabase db push
             echo "Migrations applied successfully"
           else
-            echo "SKIP: supabase link failed — skipping migrations"
-            exit 0
+            echo "::error::supabase link failed — check SUPABASE_DB_PASSWORD and project ref"
+            exit 1
           fi
 
   deploy-leaderboard:
@@ -97,7 +97,7 @@ jobs:
           wranglerVersion: "4.106.0"
 
   deploy-bot:
-    needs: migrate
+    needs: [migrate, deploy-leaderboard]
     runs-on: ubuntu-latest
     environment: production
     outputs:

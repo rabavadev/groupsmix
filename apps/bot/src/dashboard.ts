@@ -88,7 +88,7 @@ export function buildDashboard(): Hono<DashEnv> {
   // signature forgery attempts (60 req/min per IP).
   app.post("/auth/telegram", async (c) => {
     const ip = c.req.header("cf-connecting-ip") || "0.0.0.0";
-    const rlResult = await rateLimit(c.env.SESSIONS, `bot-dash:${ip}`, 60, 60);
+    const rlResult = await rateLimit(c.env.SESSIONS, `bot-dash:${ip}`, 20, 60);
     if (!rlResult.ok) return c.json({ error: "rate limit exceeded", retryAfter: rlResult.retryAfter }, 429);
     if (!sameOrigin(c.req.raw, config.publicBaseUrl)) return c.json({ error: "cross-origin request rejected" }, 403);
     const loginBotToken = process.env.LOGIN_BOT_TOKEN;

@@ -299,7 +299,7 @@ export function wireHandlers(bot: Bot, botRow: BotRow, kv?: RateLimitKV): void {
         WHERE bot_id = $1 AND command = $2 AND is_enabled`,
       [botRow.id, cmd]
     );
-    if (custom?.response) await ctx.reply(custom.response);
+    if (custom?.response) await ctx.reply(custom.response, { parse_mode: "Markdown" });
   });
 
   bot.catch((err) => {
