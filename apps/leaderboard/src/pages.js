@@ -86,8 +86,8 @@ export const PAGES = {
 <div class="price-card price-card--lifetime"><div class="price-badge price-badge--lifetime">Best Value</div><div class="price-head"><h3>Lifetime Pro</h3><div class="price-amount">$149<span style="font-size:13px;font-weight:400"> one-time</span></div></div><ul class="price-features"><li>All Pro features</li><li>Pay once, use forever</li><li>No monthly bills</li><li>Up to 3 leaderboards</li><li>Unlimited players</li><li>Custom domain &amp; OBS widget</li><li>Priority support</li></ul><a href="/signup" class="btn btn--accent btn--sm price-cta">Get Lifetime Pro</a></div>
 </div></div></section>
 <section id="start"><div class="wrap"><h2 class="sec">Ready to start?</h2><p class="sec-sub">Create your free page in under a minute. No credit card needed.</p>
-<div class="cta" style="text-align:center;margin:32px 0"><a href="/signup" class="btn btn--accent" style="font-size:18px;padding:16px 36px">Create your free page</a></div></div></section>
-<footer><div class="wrap" style="display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:12px">
+<div class="cta cta-wrap"><a href="/signup" class="btn btn--accent btn--cta-lg">Create your free page</a></div></div></section>
+<footer><div class="wrap footer-wrap">
 <span>© <span id="yr"></span> YourRank</span>
 <span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/responsible">Responsible play</a></span>
 <span>18+ · Gambling can be addictive. Play responsibly.</span></div></footer>

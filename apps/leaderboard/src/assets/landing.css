@@ -65,8 +65,11 @@ table.pricing tr td:last-child,table.pricing tr th:last-child{text-align:right}.
 @media(max-width:640px){.lead{grid-template-columns:1fr}}
 footer{border-top:1px solid var(--line);padding:32px 0;color:var(--ink-mute);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
 
-/* --- UX-002: lifetime pricing card --- */
+/* --- UX-002: lifetime pricing card & CTA cleanup --- */
 .price-card--lifetime{border:2px solid #c8ff00;position:relative}
 .price-badge--lifetime{background:#c8ff00;color:#000;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700}
+.cta-wrap{text-align:center;margin:32px 0}
+.btn--cta-lg{font-size:18px;padding:16px 36px}
+.footer-wrap{display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:12px}
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
