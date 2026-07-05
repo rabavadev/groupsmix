@@ -37,7 +37,7 @@ function fmtExp(ms) {
     const mr = await fetch("/api/auth/me");
     const md = await mr.json();
     if (mr.ok && md.ok) meData = md.user;
-  } catch {}
+  } catch { /* me fetch */ }
 
   const plan = site.plan || "free";
   const planNames = { free: "FREE", starter: "STARTER", pro: "PRO", agency: "AGENCY" };

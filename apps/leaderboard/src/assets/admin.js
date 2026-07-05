@@ -88,7 +88,7 @@ async function action(btn) {
     const d = await api("/api/admin/action", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     if (!d.ok) { alert(d.error || "Failed"); btn.disabled = false; return; }
     if (act === "reset-link") {
-      try { await navigator.clipboard.writeText(d.link); } catch {}
+      try { await navigator.clipboard.writeText(d.link); } catch { /* clipboard unavailable */ }
       prompt(`Reset link for ${d.email} (valid 24h, copied to clipboard):`, d.link);
       btn.disabled = false;
       return;

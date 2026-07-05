@@ -6,8 +6,10 @@
 import { mock, test, expect, describe, beforeEach, beforeAll, afterAll, jest } from "bun:test";
 
 // ── resolve dep paths before any mock.module calls ────────────────────────
-const _sessionUrl = import.meta.resolve("../../../../shared/session.js");
-const _dbUrl      = import.meta.resolve("../../../../shared/db.js");
+const _sessionUrl   = import.meta.resolve("../../../../shared/session.js");
+const _dbUrl        = import.meta.resolve("../../../../shared/db.js");
+const _cryptoUrl    = import.meta.resolve("../../../../shared/crypto.js");
+const _ratelimitUrl = import.meta.resolve("../../../../shared/ratelimit.js");
 
 // ── shared state that individual tests can override ────────────────────────
 let _rateLimitResult = { ok: true };
@@ -28,24 +30,29 @@ mock.module(_dbUrl, () => ({
 }));
 
 mock.module(_sessionUrl, () => ({
-  createSession:          () => Promise.resolve("mock-token"),
-  destroySession:         () => Promise.resolve(),
-  destroyAllUserSessions: () => Promise.resolve(),
-  cookieSet:  (t) => `yr_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
-  cookieClear: ()  => "yr_session=; Path=/; Max-Age=0",
-  KV_PREFIX:  "session:",
-  readToken:  () => null,
+    createSession:          () => Promise.resolve("mock-token"),
+    destroySession:         () => Promise.resolve(),
+    destroyAllUserSessions: () => Promise.resolve(),
+    cookieSet:  (t) => `yr_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+    cookieClear: ()  => "yr_session=; Path=/; Max-Age=0",
+    KV_PREFIX:  "session:",
+    readToken:  () => null,
+    hasLegacyCookie:  () => false,
+    cookieClearLegacy: () => "sess=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+    rotateSession:      () => Promise.resolve("mock-rotated-token"),
+    parseSessionValue:  (raw) => ({ userId: raw, createdAt: Date.now() }),
+    SESSION_ROTATE_AFTER_S: 86400,
+  }));
+
+// Mock crypto.js so HMAC verification always passes in tests
+mock.module(_cryptoUrl, () => ({
+  verifyHmacSha256Hex: async () => true,
 }));
 
-// Mock auth.js to keep rateLimit under test control.
-mock.module("../auth.js", () => ({
-  json: (data, status = 200, headers = {}) =>
-    new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", ...headers } }),
-  bad: (msg, status = 400) =>
-    new Response(JSON.stringify({ ok: false, error: msg }), { status, headers: { "content-type": "application/json" } }),
-  ok: (data = {}) =>
-    new Response(JSON.stringify({ ok: true, ...data }), { status: 200, headers: { "content-type": "application/json" } }),
-  readJson: async (req) => { try { return await req.json(); } catch { return null; } },
+// Mock ratelimit.js to keep rateLimit under test control.
+// This avoids mocking auth.js entirely, which would clobber auth.test.js's
+// access to hashPassword/verifyPassword/safeEqual/isEmail/slugify.
+mock.module(_ratelimitUrl, () => ({
   rateLimit: async () => _rateLimitResult,
 }));
 
@@ -75,6 +82,10 @@ afterAll(() => { jest.useRealTimers(); });
 
 function makeRequest(opts = {}) {
   const headers = new Headers(opts.headers || {});
+  // Include HMAC signature by default when x-postback-key is present
+  if (headers.has("x-postback-key") && !headers.has("x-postback-signature")) {
+    headers.set("x-postback-signature", "test-hmac-signature");
+  }
   return new Request("https://yourrank.site/api/scores", {
     method: "POST",
     headers,
@@ -166,7 +177,7 @@ describe("handleScores — payload validation", () => {
   test("missing JSON body returns 400", async () => {
     const req = new Request("https://yourrank.site/api/scores", {
       method: "POST",
-      headers: { "x-postback-key": "key", "content-type": "text/plain" },
+      headers: { "x-postback-key": "key", "x-postback-signature": "test-sig", "content-type": "text/plain" },
       body: "not json",
     });
     const res = await handleScores(req, {});

@@ -16,7 +16,7 @@ const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       live.href = "/" + d.slug;
       live.textContent = "yourrank.site/" + d.slug;
     }
-  } catch {}
+  } catch { /* stats load */ }
 
   let s;
   try {
@@ -86,7 +86,7 @@ async function loadHeatmapAndReferrers() {
     if (!r.ok || !d.ok) return;
     renderHeatmap(d.heatmap);
     renderReferrers(d.referrers);
-  } catch {}
+  } catch { /* fetch error */ }
 }
 
 function renderHeatmap(grid) {

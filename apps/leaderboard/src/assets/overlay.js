@@ -136,7 +136,7 @@
   function init() {
     // Initial render from SSR data
     let ssr = window.__OVERLAY_DATA__;
-    if (!ssr && _cfg?.dataset?.json) { try { ssr = JSON.parse(_cfg.dataset.json); } catch {} }
+    if (!ssr && _cfg?.dataset?.json) { try { ssr = JSON.parse(_cfg.dataset.json); } catch { /* JSON parse */ } }
     if (ssr) {
       endsAt = ssr.endsAt || null;
       renderPlayers(ssr.players || []);

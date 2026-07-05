@@ -168,7 +168,7 @@ export async function exec(text: string, params: unknown[] = []): Promise<any> {
 
 /** Like exec() but returns the first row (or undefined). NO automatic retry.
  *  NOTE: currently unused — retained for future write-RETURNING queries. */
-function execOne<T = Record<string, unknown>>(
+async function execOne<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = []
 ): Promise<T | undefined> {
