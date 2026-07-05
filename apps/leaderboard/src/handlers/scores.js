@@ -15,13 +15,8 @@ export async function handleScores(request, env) {
     if (!signature) return bad("Missing X-Postback-Signature header.", 401);
     // Rate limit: 10/min per key
     if (!(await rateLimit(env, `scores:${postbackKey}`, 10, 60)).ok) return bad("Rate limit exceeded. Try again shortly.", 429);
-    // Validate key against sites table (using postback_key_hash for lookup, falling back to plaintext)
-    // SEC-006-v7: Currently uses plaintext `postback_key` column for lookup. The
-    // postback_key_enc column exists (migration 20260705000005_encrypt_postback_key.sql)
-    // but this query still reads plaintext. TODO: migrate to hash-based lookup
-    // (store SHA-256(postback_key) in postback_key_hash column, lookup by hash,
-    // then verify plaintext match) so plaintext key is never stored in DB.
-    const site = await one("SELECT id, user_id, postback_key FROM sites WHERE postback_key=$1", [postbackKey]);
+    // DB-004-v8: Single site lookup instead of two (was: SELECT id,user_id,postback_key, then SELECT full row by id)
+    const site = await one("SELECT id, user_id, postback_key, slug, name, tagline, casino, code, cta_url, prize_pool, period, ends_at, reset_note, blurb, extra_json, published, theme_json, updated_at FROM sites WHERE postback_key=$1", [postbackKey]);
     if (!site) return bad("Invalid postback key.", 401);
     // Verify HMAC-SHA256 signature of the raw request body
     const rawBody = await request.text();
@@ -39,14 +34,11 @@ export async function handleScores(request, env) {
     // Plan gate: player count
     const validPlayers = players.filter(p => p && p.name);
     if (validPlayers.length > PLAN_LIMITS[plan]) return bad(`Your plan allows up to ${PLAN_LIMITS[plan]} players.`, 400);
-    // Fetch existing site data to preserve brand settings
-    const existingSite = await one("SELECT id, slug, name, tagline, casino, code, cta_url, prize_pool, period, ends_at, reset_note, blurb, extra_json, published, theme_json, updated_at FROM sites WHERE id=$1", [site.id]);
-    if (!existingSite) return bad("Site not found.", 404);
     // Reuse saveSite with just the players update — pass minimal payload
     const user = owner;
     const savePayload = {
-      brand: { name: existingSite.name, tagline: existingSite.tagline, casino: existingSite.casino, code: existingSite.code, ctaUrl: existingSite.cta_url, prizePool: existingSite.prize_pool, period: existingSite.period, resetNote: existingSite.reset_note },
-      partner: { blurb: existingSite.blurb },
+      brand: { name: site.name, tagline: site.tagline, casino: site.casino, code: site.code, ctaUrl: site.cta_url, prizePool: site.prize_pool, period: site.period, resetNote: site.reset_note },
+      partner: { blurb: site.blurb },
       players: validPlayers.map(p => ({ name: String(p.name).slice(0, 40), wagered: Number(p.wagered) || 0, prize: Number(p.prize) || 0 })),
     };
     const r = await saveSite(env, user, savePayload, site.id);

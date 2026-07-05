@@ -129,7 +129,7 @@ async function handleRequest(request, env, ctx) {
           result.kv = false;
           result.status = result.db ? "degraded" : "down";
         }
-        const status = result.status === "ok" ? 200 : result.status === "degraded" ? 200 : 503;
+        const status = result.status === "ok" ? 200 : 503;
         return new Response(JSON.stringify(result), {
           status,
           headers: { "content-type": "application/json", "cache-control": "no-store" },
@@ -248,9 +248,15 @@ async function handleRequest(request, env, ctx) {
         const site = await findSiteLogoData(slug);
         const m = (site?.logo_data || "").match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
         if (!m) return new Response("not found", { status: 404 });
+        // PERF-005-v8: ETag based on content hash, support If-None-Match for 304
+        const encoder = new TextEncoder();
+        const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(site.logo_data));
+        const etag = '"' + [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16) + '"';
+        const ifNoneMatch = request.headers.get("if-none-match");
+        if (ifNoneMatch === etag) return new Response(null, { status: 304, headers: { etag, "cache-control": "public, max-age=86400" } });
         let bytes;
         try { bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0)); } catch { return new Response("not found", { status: 404 }); }
-        return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=3600" } });
+        return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=86400", etag } });
       }
 
       // --- API routing ---

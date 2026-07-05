@@ -506,7 +506,8 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <button class="btn btn--accent" id="tfaSetupSubmit" type="button">Enable 2FA</button>
 </div>
 </main>
-<script src="/assets/admin2fa.js?v=2"></script></body></html>`,
+<script src="/assets/qrcode.js"></script>
+<script src="/assets/admin2fa.js?v=3"></script></body></html>`,
 
   setup: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />

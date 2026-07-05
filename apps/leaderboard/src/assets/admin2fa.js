@@ -19,9 +19,8 @@ document.getElementById("tfaSetupSubmit").disabled=true;
 const enRes=await fetch("/api/admin/2fa/enable",{method:"POST",headers:{"x-csrf-token":getCsrf()}});
 const enData=await enRes.json();
 if(!enData.ok){document.getElementById("tfaSetupErr").textContent=enData.error||"Failed to enable 2FA.";document.getElementById("tfaSetupSubmit").disabled=false;return;}
-// Show QR code
-var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data="+encodeURIComponent(enData.uri);
-document.getElementById("tfaQr").src=qrUrl;
+// Show QR code (FE-001-v8: client-side generation — TOTP secret never leaves the browser)
+document.getElementById("tfaQr").src=QRCode.toDataURL(enData.uri,200);
 document.getElementById("tfaSecret").textContent=enData.secret;
 // Verify the code
 const vRes=await fetch("/api/admin/2fa/verify",{method:"POST",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify({code})});

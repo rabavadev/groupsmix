@@ -99,8 +99,11 @@ export async function handleLogin(request, env) {
       const { hash, salt } = await hashPassword(password);
       exec("UPDATE users SET password_hash=$1, password_salt=$2, updated_at=now() WHERE id=$3", [hash, salt, user.id]).catch(() => {});
     }
-    const site = await one("SELECT slug FROM sites WHERE user_id=$1", [user.id]);
-    const token = await createSession(env, user.id);
+    // PERF-003-v8: Parallelize site lookup + session creation (were sequential)
+    const [site, token] = await Promise.all([
+      one("SELECT slug FROM sites WHERE user_id=$1", [user.id]),
+      createSession(env, user.id),
+    ]);
     return json({ ok: true, user: { id: user.id, email: user.email, slug: site?.slug || null } }, 200, { "set-cookie": cookieSet(token) });
   } catch (e) {
     console.error("login failed:", String(e?.message || e));

@@ -4,7 +4,7 @@
 // stale cache issues after deploys. This requires a build pipeline change: hash each file,
 // inject hashes into HTML templates, and serve with immutable cache-control. Currently
 // mitigated by short max-age (24h) — acceptable tradeoff until build infra is set up.
-import { leaderboard_css, leaderboard_js, app_css, auth_js, dashboard_js, admin_js, landing_css, landing_js, analytics_js, billing_js, bot_setup_js, overlay_js, admin2fa_js, setup_wizard_js, admin2fa_styles_css, setup_styles_css, shell_nav_css } from "../assets_bundled.js";
+import { leaderboard_css, leaderboard_js, app_css, auth_js, dashboard_js, admin_js, landing_css, landing_js, analytics_js, billing_js, bot_setup_js, overlay_js, admin2fa_js, setup_wizard_js, admin2fa_styles_css, setup_styles_css, shell_nav_css, qrcode_js } from "../assets_bundled.js";
 
 const MIME = {
   ".css": "text/css; charset=utf-8", 
@@ -31,6 +31,7 @@ const ASSET_MAP = {
     "/assets/admin2fa-styles.css": [admin2fa_styles_css, ".css"],
     "/assets/setup-styles.css": [setup_styles_css, ".css"],
     "/assets/shell-nav.css": [shell_nav_css, ".css"],
+    "/assets/qrcode.js": [qrcode_js, ".js"],
   };
 
 export function serveStaticAsset(path) {

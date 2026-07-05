@@ -17,11 +17,14 @@ export async function handleTrial(request, env) {
     const current = effectivePlan(user);
     if (current !== "free") return bad("You're already on a paid plan.", 400);
 
+    // PROD-006-v8: Atomic has_trial flip — UPDATE ... WHERE has_trial=FALSE
+    // prevents concurrent double-grant (race condition where two requests
+    // both pass the has_trial check before either writes).
+    const { rowCount } = await exec("UPDATE users SET has_trial=TRUE, updated_at=now() WHERE id=$1 AND has_trial=FALSE", [user.id]);
+    if (rowCount === 0) return bad("You've already used your free trial.", 400);
+
     // Activate 7-day Pro trial
     await activatePro(env, user.id, 7, { provider: "trial" });
-
-    // Mark has_trial = true so they can never trial again
-    await exec("UPDATE users SET has_trial=TRUE, updated_at=now() WHERE id=$1", [user.id]);
 
     // Calculate expiry for the response
     const expiresMs = Date.now() + 7 * 86400000;

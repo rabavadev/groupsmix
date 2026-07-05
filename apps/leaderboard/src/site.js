@@ -203,18 +203,19 @@ export async function getPublicSite(env, slug) {
     // PERF-005: has_logo is now part of SITE_COLUMNS (computed from logo_data).
     // Eliminated redundant re-query of sites table. Owner query remains separate
     // since it's from the users table (indexed by id, ~0.1ms).
-    const [owner, players, archives] = await Promise.all([
-      one(
-        "SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1",
-        [site.user_id]
-      ),
-      getPlayers(env, site.id),
-      getArchives(env, site.id, 99), // fetch all; trimmed below by plan limit
-    ]);
+    // DB-003-v8: Resolve plan first, then fetch only needed archives
+    const owner = await one(
+      "SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1",
+      [site.user_id]
+    );
     if (owner && owner.status === "suspended") return { suspended: true };
     const plan = effectivePlan(owner);
     const archiveLimit = ARCHIVE_LIMITS[plan] || 6;
-    return { id: site.id, data: publicShape(site, players, archives.slice(0, archiveLimit), !!site.has_logo), plan };
+    const [players, archives] = await Promise.all([
+      getPlayers(env, site.id),
+      getArchives(env, site.id, archiveLimit), // DB-003-v8: fetch only what plan allows
+    ]);
+    return { id: site.id, data: publicShape(site, players, archives, !!site.has_logo), plan };
   }
 
 export async function getUserSite(env, uid, plan) {
