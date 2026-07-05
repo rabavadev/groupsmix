@@ -10,6 +10,7 @@
 // scheduled — they MUST populate the same set, or a binding set in only one
 import { sendErrorToDiscord, sendCronSummaryToDiscord } from "../../../shared/monitoring.js";
 import { populateEnv } from "../../../shared/env.js";
+import { exec as dbExec } from "../../../shared/db.js";
 import { Toucan } from "toucan-js";
 
 // Cache the Hono app instance so it's built once per isolate, not per request.
@@ -154,12 +155,23 @@ export default {
               throw err;
             }
           })(),
+          // DB-101: Data retention — delete click_daily rows older than 90 days
+          (async () => {
+            try {
+              const result = await dbExec("SELECT cleanup_old_clicks()");
+              const deleted = result?.[0]?.deleted_count ?? 0;
+              console.log(`[cron 0 3 * * *] cleanup_old_clicks: deleted ${deleted} click_daily rows`);
+            } catch (err) {
+              console.error("[cron] click cleanup failed:", err);
+              // Non-critical — don't fail the whole cron batch
+            }
+          })(),
         ]);
 
         // Log any rejections and alert via Discord — allSettled never throws
         const failures = results.filter(r => r.status === "rejected");
         if (failures.length > 0) {
-          const failedTasks = ["rollupClicks", "ensureCurrentMonthPartition", "ensureNextMonthPartition", "downgradeExpired"]
+          const failedTasks = ["rollupClicks", "ensureCurrentMonthPartition", "ensureNextMonthPartition", "downgradeExpired", "cleanupOldClicks"]
             .filter((_, i) => results[i].status === "rejected");
           const reasons = failures.map(f => String((f as PromiseRejectedResult).reason?.message || f.reason)).join("; ");
           console.error(`[cron 0 3 * * *] ${failures.length} task(s) failed: ${failedTasks.join(", ")} — ${reasons}`);
