@@ -1,7 +1,7 @@
 import { destroySession, cookieSet, cookieClear, readToken, handleAccountDelete, requireUser, RESERVED, slugify, clientIp, rateLimit, json, bad, currentUser } from "./auth.js";
 import { sendErrorToDiscord } from "../../../shared/monitoring.js";
 import { populateEnv } from "../../../shared/env.js";
-import Toucan from "toucan-js";
+import { Toucan } from "toucan-js";
 import { getPublicSite, getByUser, getAllBoards, invalidateSiteCache, invalidateUserCache } from "./site.js";
 import { renderLeaderboard } from "./render.js";
 import { PAGES } from "./pages.js";

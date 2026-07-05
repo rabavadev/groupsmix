@@ -10,7 +10,7 @@
 // scheduled — they MUST populate the same set, or a binding set in only one
 import { sendErrorToDiscord, sendCronSummaryToDiscord } from "../../../shared/monitoring.js";
 import { populateEnv } from "../../../shared/env.js";
-import Toucan from "toucan-js";
+import { Toucan } from "toucan-js";
 
 // Cache the Hono app instance so it's built once per isolate, not per request.
 let cachedApp: any = null;
