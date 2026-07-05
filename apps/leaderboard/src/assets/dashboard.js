@@ -4,6 +4,7 @@ function getCsrf() { const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)
 const $ = (id) => document.getElementById(id);
 let SLUG = null, EXTRA = {}, ME = null, ACTIVE_SITE_ID = null, BOARDS = [];
 let LOGO; // undefined = unchanged, null = remove, string = new data URI
+let _dirty = false; // FE-002-v9: track unsaved changes for beforeunload warning
 const DEFAULT_A = "#5ad9ff", DEFAULT_B = "#7b8cff";
 function toLocalInput(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return ""; const p=(n)=>String(n).padStart(2,"0"); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
 function fromLocalInput(v){ if(!v) return ""; const d = new Date(v); return isNaN(d) ? "" : d.toISOString(); }
@@ -48,6 +49,10 @@ async function init(){
   $("a_label").placeholder = new Date().toLocaleString("en-US",{month:"long",year:"numeric",timeZone:"UTC"});
   $("liveLink").textContent = location.host + "/" + SLUG; $("liveLink").href = "/" + SLUG; $("viewLive").href = "/" + SLUG;
   $("loading").hidden=true; $("dash").hidden=false;
+  // FE-002-v9: track unsaved changes
+  $("dash").addEventListener("input", ()=>{ _dirty = true; });
+  $("dash").addEventListener("change", ()=>{ _dirty = true; });
+  window.addEventListener("beforeunload", (e)=>{ if(_dirty){ e.preventDefault(); e.returnValue=""; } });
   if (urlParams.get("upgraded")) {
     $("status").textContent = "Payment received — Pro activates once the network confirms (usually minutes).";
   }
@@ -429,7 +434,7 @@ $("save").addEventListener("click", async ()=>{
     const payload = collect();
     const res=await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(payload)});
     const d=await res.json();
-    if(res.ok&&d.ok) status.textContent="Saved. Your page is updated."; else status.textContent=d.error||"Save failed.";
+    if(res.ok&&d.ok){ status.textContent="Saved. Your page is updated."; _dirty=false; } else status.textContent=d.error||"Save failed.";
   } catch{ status.textContent="Network error."; }
   btn.disabled=false;btn.textContent="Save changes"; setTimeout(()=>status.textContent="",6000);
 });

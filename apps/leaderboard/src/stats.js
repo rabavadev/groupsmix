@@ -1,5 +1,5 @@
 // Per-site daily analytics. Cheap upsert counters in Postgres — no external service.
-import { query, exec } from "../../../shared/db.js";
+import { query, exec, withTransaction } from "../../../shared/db.js";
 const FIELDS = new Set(["views", "copies", "clicks"]);
 
 export function todayUTC() {
@@ -17,57 +17,49 @@ function extractDomain(ref) {
 
 // Fire-and-forget increment. Callers wrap in ctx.waitUntil so it never blocks a response.
 // `refererHeader` is optional — only views pass it.
+// PERF-001-v9: Consolidated 3 separate DB round-trips into a single transaction.
 export async function bumpStat(env, siteId, field, refererHeader) {
   if (!siteId || !FIELDS.has(field)) return;
-    const day = todayUTC();
-    try {
-      // Main daily counter — static SQL per field to prevent any SQL injection.
-      if (field === "views") {
-        await exec(
-          `INSERT INTO site_stats (site_id, day, views) VALUES ($1, $2, 1)
-           ON CONFLICT (site_id, day) DO UPDATE SET views = site_stats.views + 1`,
-          [siteId, day]
-        );
-      } else if (field === "copies") {
-        await exec(
-          `INSERT INTO site_stats (site_id, day, copies) VALUES ($1, $2, 1)
-           ON CONFLICT (site_id, day) DO UPDATE SET copies = site_stats.copies + 1`,
-          [siteId, day]
-        );
-      } else if (field === "clicks") {
-        await exec(
-          `INSERT INTO site_stats (site_id, day, clicks) VALUES ($1, $2, 1)
-           ON CONFLICT (site_id, day) DO UPDATE SET clicks = site_stats.clicks + 1`,
-          [siteId, day]
-        );
-      }
-    } catch (err) { console.error("[bumpStat]: operation failed", err); }
+  const day = todayUTC();
+  const viewsInc = field === "views" ? 1 : 0;
+  const copiesInc = field === "copies" ? 1 : 0;
+  const clicksInc = field === "clicks" ? 1 : 0;
 
-  // Hourly heatmap — only for views (the most granular metric).
-  if (field === "views") {
-    try {
-      const now = new Date();
-      const hour = now.getUTCHours();
-      const dow = now.getUTCDay(); // 0=Sun … 6=Sat
-      await exec(
-        `INSERT INTO site_stats_hourly (site_id, day, hour, day_of_week, views) VALUES ($1, $2, $3, $4, 1)
-         ON CONFLICT (site_id, day, hour) DO UPDATE SET views = site_stats_hourly.views + 1`,
-        [siteId, day, hour, dow]
+  try {
+    await withTransaction(async (tx) => {
+      // Main daily counter — single upsert for all three fields
+      await tx.query(
+        `INSERT INTO site_stats (site_id, day, views, copies, clicks) VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (site_id, day) DO UPDATE SET
+           views = site_stats.views + $3,
+           copies = site_stats.copies + $4,
+           clicks = site_stats.clicks + $5`,
+        [siteId, day, viewsInc, copiesInc, clicksInc]
       );
-    } catch (err) { console.error("[bumpStat/hourly]: failed", err); }
 
-    // Referrer tracking.
-    const domain = extractDomain(refererHeader);
-    if (domain) {
-      try {
-        await exec(
-          `INSERT INTO site_referrers (site_id, day, domain, count) VALUES ($1, $2, $3, 1)
-           ON CONFLICT (site_id, day, domain) DO UPDATE SET count = site_referrers.count + 1`,
-          [siteId, day, domain]
+      // Hourly heatmap — only for views
+      if (field === "views") {
+        const now = new Date();
+        const hour = now.getUTCHours();
+        const dow = now.getUTCDay();
+        await tx.query(
+          `INSERT INTO site_stats_hourly (site_id, day, hour, day_of_week, views) VALUES ($1, $2, $3, $4, 1)
+           ON CONFLICT (site_id, day, hour) DO UPDATE SET views = site_stats_hourly.views + 1`,
+          [siteId, day, hour, dow]
         );
-      } catch (err) { console.error("[bumpStat/referrer]: failed", err); }
-    }
-  }
+
+        // Referrer tracking
+        const domain = extractDomain(refererHeader);
+        if (domain) {
+          await tx.query(
+            `INSERT INTO site_referrers (site_id, day, domain, count) VALUES ($1, $2, $3, 1)
+             ON CONFLICT (site_id, day, domain) DO UPDATE SET count = site_referrers.count + 1`,
+            [siteId, day, domain]
+          );
+        }
+      }
+    });
+  } catch (err) { console.error("[bumpStat]: operation failed", err); }
 }
 
 // Last 30 days of rows plus rolled-up totals for the dashboard.

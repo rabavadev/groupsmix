@@ -189,20 +189,46 @@ function updateLeaderboard(players) {
   }
 }
 
+let pollFailCount = 0;
+
 async function pollPlayers() {
-  const slug = window.__SLUG__;
-  if (!slug) return;
-  try {
-    const resp = await fetch(`/api/public/${encodeURIComponent(slug)}/players`);
-    if (!resp.ok) return;
-    const json = await resp.json();
-    if (json.players && Array.isArray(json.players)) {
-      updateLeaderboard(json.players);
-      const ann = document.getElementById("lb-announce"); if(ann) ann.textContent = "Leaderboard updated.";
+    const slug = window.__SLUG__;
+    if (!slug) return;
+    try {
+      const resp = await fetch(`/api/public/${encodeURIComponent(slug)}/players`);
+      if (!resp.ok) { onPollFail(); return; }
+      const json = await resp.json();
+      if (json.players && Array.isArray(json.players)) {
+        pollFailCount = 0;
+        hidePollBanner();
+        updateLeaderboard(json.players);
+        const ann = document.getElementById("lb-announce"); if(ann) ann.textContent = "Leaderboard updated.";
+      }
+    } catch (_) {
+      onPollFail();
     }
-  } catch (_) {
-    // Silently ignore poll failures — next poll will retry
   }
+
+function onPollFail() {
+  pollFailCount++;
+  if (pollFailCount >= 3) showPollBanner();
+}
+
+function showPollBanner() {
+  let banner = document.getElementById("lb-poll-banner");
+  if (banner) return;
+  banner = document.createElement("div");
+  banner.id = "lb-poll-banner";
+  banner.setAttribute("role", "alert");
+  banner.setAttribute("aria-live", "polite");
+  banner.style.cssText = "position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(220,38,38,.92);color:#fff;padding:8px 18px;border-radius:8px;font:13px/1.4 system-ui,sans-serif;z-index:9999;backdrop-filter:blur(6px)";
+  banner.textContent = "Connection lost. Refresh to get the latest data.";
+  document.body.appendChild(banner);
+}
+
+function hidePollBanner() {
+  const banner = document.getElementById("lb-poll-banner");
+  if (banner) banner.remove();
 }
 
 function boot() {
