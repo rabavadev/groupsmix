@@ -76,7 +76,7 @@ jobs:
         working-directory: apps/leaderboard
         run: |
           bun test --coverage 2>&1 | tee /tmp/coverage.txt || true
-          COVERAGE=$(grep "All files" /tmp/coverage.txt | head -1 | awk '{gsub(/[^0-9.]/, "", $3); print $3}')
+          COVERAGE=$(grep "All files" /tmp/coverage.txt | head -1 | awk -F'|' '{gsub(/[^0-9.]/, "", $3); print $3}')
           if [ -z "$COVERAGE" ]; then
             echo "::error::Could not parse coverage percentage from test output"
             exit 1
