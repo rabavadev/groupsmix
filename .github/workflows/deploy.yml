@@ -108,7 +108,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for Cloudflare propagation
-        run: sleep 15
+        run: |
+          MAX_RETRIES=6
+          for i in $(seq 1 $MAX_RETRIES); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://yourrank.site/ || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "OK: yourrank.site is live (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i/$MAX_RETRIES: HTTP $STATUS — retrying in 10s…"
+            sleep 10
+          done
+          echo "FAIL: yourrank.site not reachable after $MAX_RETRIES attempts"
+          exit 1
 
       - name: "Smoke: leaderboard (yourrank.site)"
         run: |
@@ -140,6 +152,16 @@ jobs:
             exit 1
           fi
           echo "OK: bot dashboard HTTP $STATUS"
+
+      - name: "Smoke: DB connectivity (yourrank.site/health)"
+        run: |
+          BODY=$(curl -s -L --max-time 20 https://yourrank.site/health || true)
+          if echo "$BODY" | grep -qi 'ok'; then
+            echo "OK: /health returned ok"
+          else
+            echo "FAIL: /health did not contain 'ok' — response: $BODY"
+            exit 1
+          fi
 
       - name: Summarise failure
         if: failure()

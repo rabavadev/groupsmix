@@ -1,6 +1,6 @@
 name = "yourrank-bot"
 main = "src/worker.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
@@ -47,7 +47,7 @@ id = "9e5b625bfdd84cd691b44c4780bdaf13"
 # ---------------------------------------------------------------------------
 [env.staging]
 name = "yourrank-bot-staging"
-compatibility_date = "2025-01-01"
+compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
 [env.staging.triggers]
