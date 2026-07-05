@@ -19,7 +19,7 @@ before they hit production.
 ### Prerequisites
 
 1. **Separate Supabase project** — create a second Supabase project for staging
-   data. Run the same migrations from `db/migrations/` against it. This ensures
+   data. Run the same migrations from `supabase/migrations/` against it. This ensures
    staging never touches production users, payments, or sites.
 
 2. **Hyperdrive config for staging** — point a new Hyperdrive config at the

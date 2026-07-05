@@ -60,6 +60,8 @@ wrangler secret put MAIL_FROM             # REQUIRED if RESEND_API_KEY is set;
 wrangler secret put LEAD_WEBHOOK_URL      # optional (Discord/Slack ping on a new lead)
 wrangler secret put PRO_PRICE_USD         # optional (defaults to 29)
 wrangler secret put DATABASE_URL          # REQUIRED — direct Supabase Postgres connection string
+wrangler secret put SENTRY_DSN           # optional (Sentry error tracking)
+wrangler secret put ENCRYPTION_KEY       # REQUIRED for postback encryption (32-byte hex)
 ```
 Bot Worker (`cd apps/bot`):
 ```
@@ -70,6 +72,8 @@ wrangler secret put LOGIN_BOT_TOKEN       # @BotFather token for the Telegram Lo
 wrangler secret put LOGIN_BOT_USERNAME    # that login bot's @username (the widget needs it)
 wrangler secret put PLATFORM_BOT_TOKEN    # a SEPARATE @BotFather bot for Telegram Stars billing
 wrangler secret put PLATFORM_WEBHOOK_SECRET
+wrangler secret put SENTRY_DSN            # optional (Sentry error tracking)
+wrangler secret put ALLOW_DEV_LOGIN       # optional, NEVER set in prod (enables /auth/dev)
 # DATABASE_URL only as fallback if Hyperdrive is removed
 ```
 Two distinct bots are needed: the **login** bot (powers "Login with Telegram" on
@@ -99,11 +103,9 @@ so Stars payments flow back to the app.
 ## Notes
 - Streamer bots are BYO-token: each streamer pastes their BotFather token in the
   Bot tab; the platform sets that bot's webhook to `https://yourrank.site/hook/<secret>`.
-- Both Workers communicate with Supabase only as a SQL database — the
-  bot Worker via Hyperdrive (connection pooling), the leaderboard Worker
-  via the `DATABASE_URL` secret (direct connection). No Supabase REST API
-  is used — the `SUPABASE_URL` / `SUPABASE_SERVICE_ROLES_KEY` secrets are
-  not needed.
+- Both Workers connect to Postgres via Hyperdrive. `DATABASE_URL` exists as a
+  fallback. No Supabase REST API is used — the `SUPABASE_URL` /
+  `SUPABASE_SERVICE_ROLES_KEY` secrets are not needed.
 
 ## 7. CI auto-deploy (optional, recommended)
 

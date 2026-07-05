@@ -189,6 +189,19 @@ table.ref-table td{padding:8px 8px;border-bottom:1px solid var(--line);color:var
 .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink-mute);cursor:pointer;padding:4px;display:flex;align-items:center}
 .pw-toggle:hover{color:var(--ink)}
 
+/* --- UX-001: domain status colors --- */
+.domain-ok{color:#4ade80}
+.domain-pending{color:#fbbf24}
+.domain-error{color:#ff6b6b}
+.domain-saved{color:#5ad9ff}
+
+/* --- UX-003: bot setup change link --- */
+.change-bot-link{display:inline-block;margin-top:8px;font-size:13px;color:var(--ink-mute,#999);text-decoration:underline;cursor:pointer}
+
+/* --- UX-007: dashboard error state --- */
+.error-state{text-align:center;padding:48px 22px;color:var(--ink-soft)}
+.error-state .error-icon{font-size:32px;display:block;margin-bottom:12px}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

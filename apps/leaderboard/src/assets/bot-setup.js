@@ -65,7 +65,7 @@ connectBtn.addEventListener("click", async () => {
         changeLink.id = "changeBotLink";
         changeLink.href = "#";
         changeLink.textContent = "Change bot";
-        changeLink.style.cssText = "display:inline-block;margin-top:8px;font-size:13px;color:var(--ink-mute,#999);text-decoration:underline;cursor:pointer";
+        changeLink.className = "change-bot-link";
         connectBtn.parentNode.insertBefore(changeLink, connectBtn.nextSibling);
       }
       changeLink.hidden = false;

@@ -67,7 +67,7 @@ This document tracks legacy compatibility paths that still exist in the codebase
 ### SEC-104: Legacy Session Cookie Support
 **Status:** ✅ Removed (Grace period over)
 
-**Description:** Previously supported both `gm_session` (new) and `rk_session` (legacy) cookies for backward compatibility during migration.
+**Description:** Previously supported `gm_session` (GroupsMix era) and `sess` (old HMAC-signed) cookies. Replaced by `yr_session`.
 
 **Removal Date:** 2026-Q1
 

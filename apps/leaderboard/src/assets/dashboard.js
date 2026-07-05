@@ -6,7 +6,7 @@ let SLUG = null, EXTRA = {}, ME = null, ACTIVE_SITE_ID = null, BOARDS = [];
 let LOGO; // undefined = unchanged, null = remove, string = new data URI
 const DEFAULT_A = "#5ad9ff", DEFAULT_B = "#7b8cff";
 function toLocalInput(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return ""; const p=(n)=>String(n).padStart(2,"0"); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
-function fromLocalInput(v){ if(!v) return ""; return v.length===16 ? `${v}:00Z` : new Date(v).toISOString(); }
+function fromLocalInput(v){ if(!v) return ""; const d = new Date(v); return isNaN(d) ? "" : d.toISOString(); }
 const slugify=(s)=>String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
 
 async function init(){
@@ -23,7 +23,7 @@ async function init(){
   const res = await fetch(apiUrl); const p = await res.json();
   if (!p.ok) {
     if (ME.isAdmin) { location.href = "/admin"; return; }
-    $("loading").textContent = "Couldn't load your site."; return;
+    $("loading").innerHTML = '<div class="error-state"><span class="error-icon">⚠</span><p>Couldn\'t load your site.</p><button class="btn btn--sm" onclick="location.reload()">Try again</button></div>'; return;
   }
   SLUG = p.slug; ACTIVE_SITE_ID = p.siteId || null;
   BOARDS = p.boards || [];
@@ -60,10 +60,13 @@ function renderBoardSwitcher(){
     const el = document.createElement("div");
     const isActive = b.id === ACTIVE_SITE_ID;
     el.className = "board-item" + (isActive ? " board-item--active" : "");
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
     el.innerHTML = `<span class="board-slug">/${esc(b.slug)}</span><span class="board-name">${esc(b.name)}</span>${isActive ? '<span class="board-badge">editing</span>' : ''}`;
     if (!isActive) {
       el.style.cursor = "pointer";
       el.addEventListener("click", () => { location.href = "/dashboard?board=" + encodeURIComponent(b.id); });
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } });
     }
     list.appendChild(el);
   });
@@ -344,10 +347,10 @@ function renderDomain(){
         if (d.ok) {
           renderDomainStatus(d.status, d.message);
         } else {
-          $("domainStatus").innerHTML = `<span style="color:#ff6b6b">${esc(d.error || "Verification failed.")}</span>`;
+          $("domainStatus").innerHTML = `<span class="domain-error">${esc(d.error || "Verification failed.")}</span>`;
         }
       } catch {
-        $("domainStatus").innerHTML = `<span style="color:#ff6b6b">Network error.</span>`;
+        $("domainStatus").innerHTML = `<span class="domain-error">Network error.</span>`;
       }
       verifyBtn.disabled = false;
     };
@@ -358,13 +361,13 @@ function renderDomainStatus(status, message) {
   const el = $("domainStatus");
   if (!el) return;
   if (status === "active") {
-    el.innerHTML = `<span style="color:#4ade80">✅ ${esc(message || "TLS active")}</span>`;
-  } else if (status === "pending") {
-    el.innerHTML = `<span style="color:#fbbf24">⏳ ${esc(message || "TLS provisioning in progress")}</span>`;
-  } else if (status === "error") {
-    el.innerHTML = `<span style="color:#ff6b6b">❌ ${esc(message || "Error")}</span>`;
-  } else if (status === "saved") {
-    el.innerHTML = `<span style="color:#5ad9ff">💾 ${esc(message || "Domain saved")}</span>`;
+    el.innerHTML = `<span class="domain-ok">✅ ${esc(message || "TLS active")}</span>`;
+    } else if (status === "pending") {
+      el.innerHTML = `<span class="domain-pending">⏳ ${esc(message || "TLS provisioning in progress")}</span>`;
+    } else if (status === "error") {
+      el.innerHTML = `<span class="domain-error">❌ ${esc(message || "Error")}</span>`;
+    } else if (status === "saved") {
+      el.innerHTML = `<span class="domain-saved">💾 ${esc(message || "Domain saved")}</span>`;
   } else {
     el.textContent = "";
   }

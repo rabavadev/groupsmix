@@ -103,7 +103,7 @@ function fmtExp(ms) {
           const badge = document.createElement("span");
           badge.className = "plan-opt-btn";
           badge.textContent = isCurrent && isTrial ? "Trial" : "Current";
-          badge.style.cssText = "font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)";
+          badge.className = "label plan-opt-btn";
           el.appendChild(badge);
         }
         opts.appendChild(el);
@@ -134,7 +134,7 @@ function fmtExp(ms) {
           const badge = document.createElement("span");
           badge.className = "plan-opt-btn";
           badge.textContent = "Current plan";
-          badge.style.cssText = "font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)";
+          badge.className = "label plan-opt-btn";
           el.appendChild(badge);
         }
         opts.appendChild(el);

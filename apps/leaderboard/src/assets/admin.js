@@ -32,7 +32,20 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
     document.querySelectorAll(".tabpane").forEach((p) => (p.hidden = p.id !== "tab-" + t.dataset.tab));
   }));
 
-function pill(text, tone) { return `<span class="pill pill--${tone}">${esc(text)}</span>`; }
+  // A11Y-003: Arrow-key navigation for tablist
+  document.querySelector('[role="tablist"]')?.addEventListener('keydown', (e) => {
+    const tabs = [...document.querySelectorAll('.tab')];
+    const idx = tabs.indexOf(document.activeElement);
+    if (idx === -1) return;
+    let next;
+    if (e.key === 'ArrowRight') next = tabs[(idx + 1) % tabs.length];
+    else if (e.key === 'ArrowLeft') next = tabs[(idx - 1 + tabs.length) % tabs.length];
+    else if (e.key === 'Home') next = tabs[0];
+    else if (e.key === 'End') next = tabs[tabs.length - 1];
+    if (next) { e.preventDefault(); next.click(); next.focus(); }
+  });
+
+  function pill(text, tone)
 
 async function loadUsers(page) {
   page = page || 1;

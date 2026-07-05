@@ -26,7 +26,7 @@ leaderboard Worker and the bot Worker.
   is UNTOUCHED. Only how the session is stored *after* a successful login changed.
 
 ## Session shape now
-- Cookie name: `gm_session` (was `sess`), Domain=`.yourrank.site`, HttpOnly, Secure, SameSite=Lax
+- Cookie name: `yr_session` (was `sess`), Domain=`.yourrank.site`, HttpOnly, Secure, SameSite=Lax
 - KV: `SESSIONS` namespace (bound in wrangler.toml to id
   `26e47bcce19941839a20bd2cd5879e42`, the SAME id as the leaderboard Worker)
 - KV entry: `sess:<token>` -> bare user UUID, 30-day TTL
