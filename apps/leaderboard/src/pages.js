@@ -33,6 +33,7 @@ export const PAGES = {
 <!-- og:image removed: no static asset exists; add when a brand image is created -->
 <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/landing.css" />
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"YourRank","url":"https://yourrank.site","description":"Hosted leaderboard pages for casino streamers","contactPoint":{"@type":"ContactPoint","contactType":"customer service"}}</script>
 </head><body>
 <noscript><div style="max-width:640px;margin:40px auto;padding:24px;background:#101012;border:1px solid #212125;border-radius:12px;color:#ededf0;font-family:system-ui,sans-serif;text-align:center">
@@ -513,51 +514,7 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <button class="btn btn--accent" id="tfaSetupSubmit" type="button">Enable 2FA</button>
 </div>
 </div>
-<script>
-function getCsrf(){const m=document.cookie.match(/(?:^|;\\s*)__csrf=([^;]+)/);return m?m[1]:"";}
-(async function(){
-// Check 2FA status
-const res=await fetch("/api/admin/2fa/status");
-const data=await res.json();
-if(!data.ok){location.href="/login";return;}
-
-if(!data.enabled){
-// Show setup flow
-document.getElementById("tfaVerify").hidden=true;
-document.getElementById("tfaSetup").hidden=false;
-document.getElementById("tfaSetupSubmit").onclick=async()=>{
-const code=document.getElementById("tfaSetupCode").value.trim();
-if(!/^\\d{6}$/.test(code)){document.getElementById("tfaSetupErr").textContent="Enter a 6-digit code.";return;}
-document.getElementById("tfaSetupErr").textContent="";
-document.getElementById("tfaSetupSubmit").disabled=true;
-// Enable 2FA
-const enRes=await fetch("/api/admin/2fa/enable",{method:"POST",headers:{"x-csrf-token":getCsrf()}});
-const enData=await enRes.json();
-if(!enData.ok){document.getElementById("tfaSetupErr").textContent=enData.error||"Failed to enable 2FA.";document.getElementById("tfaSetupSubmit").disabled=false;return;}
-// Show QR code
-var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data="+encodeURIComponent(enData.uri);
-document.getElementById("tfaQr").src=qrUrl;
-document.getElementById("tfaSecret").textContent=enData.secret;
-// Verify the code
-const vRes=await fetch("/api/admin/2fa/verify",{method:"POST",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify({code})});
-const vData=await vRes.json();
-if(vData.ok&&vData.verified){location.href="/admin";}else{document.getElementById("tfaSetupErr").textContent=vData.error||"Verification failed. Try the code from your authenticator.";document.getElementById("tfaSetupSubmit").disabled=false;}
-};
-}else if(!data.verified){
-// Show verify flow
-document.getElementById("tfaSubmit").onclick=async()=>{
-const code=document.getElementById("tfaCode").value.trim();
-if(!/^\\d{6}$/.test(code)){document.getElementById("tfaErr").textContent="Enter a 6-digit code.";return;}
-document.getElementById("tfaErr").textContent="";
-document.getElementById("tfaSubmit").disabled=true;
-const vRes=await fetch("/api/admin/2fa/verify",{method:"POST",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify({code})});
-const vData=await vRes.json();
-if(vData.ok&&vData.verified){location.href="/admin";}else{document.getElementById("tfaErr").textContent=vData.error||"Invalid code.";document.getElementById("tfaSubmit").disabled=false;}
-};
-}
-})();
-document.getElementById("logout").onclick=async(e)=>{e.preventDefault();await fetch("/api/auth/logout",{method:"POST",headers:{"x-csrf-token":getCsrf()}});location.href="/login";};
-</script></body></html>`,
+<script src="/assets/admin2fa.js?v=2"></script></body></html>`,
 
   setup: `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -635,71 +592,7 @@ document.getElementById("logout").onclick=async(e)=>{e.preventDefault();await fe
 <div class="err" id="wiz_err" role="alert" aria-live="assertive"></div>
 </div>
 </div>
-<script>
-(function(){
-const slugify=(s)=>String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
-const $=id=>document.getElementById(id);
-const origin=location.origin;
-const TOTAL=4;
-let step=1, slug="";
-
-// Step indicators
-const ind=$("stepsInd");
-for(let i=0;i<TOTAL;i++){const d=document.createElement("div");d.className="step-dot";ind.appendChild(d);}
-function updateDots(){ind.querySelectorAll(".step-dot").forEach((d,i)=>{d.className="step-dot"+(i<step-1?" done":"")+(i===step-1?" active":"");});}
-function showStep(n){step=n;document.querySelectorAll(".wiz-step").forEach((s,i)=>{s.classList.toggle("active",i===n-1);});updateDots();}
-
-// Step 1: name → slug auto-gen
-const nameIn=$("wiz_name"), slugIn=$("wiz_slug"), preview=$("wiz_preview");
-let userEditedSlug=false;
-nameIn.addEventListener("input",()=>{if(!userEditedSlug){const s=slugify(nameIn.value);slugIn.value=s;preview.textContent=s?"yourrank.site/"+s:"yourrank.site/…";}});
-slugIn.addEventListener("input",()=>{userEditedSlug=true;const s=slugify(slugIn.value);preview.textContent=s?"yourrank.site/"+s:"yourrank.site/…";});
-
-// Step 3: player count
-const pta=$("wiz_players"), pcount=$("wiz_pcount");
-pta.addEventListener("input",()=>{
-const lines=pta.value.split("\\n").filter(l=>{const t=l.trim();return t&&!t.startsWith("#")&&!t.startsWith("//");});
-pcount.textContent=lines.length+" player"+(lines.length===1?"":"s")+" detected";
-});
-
-// Nav buttons
-$("wiz1next").onclick=()=>{if(!slugify(nameIn.value)&&!slugIn.value.trim()){$("wiz_err").textContent="Enter your name or a custom slug.";return;}if(!slugIn.value.trim()){slugIn.value=slugify(nameIn.value);}slug=slugify(slugIn.value);if(!slug){$("wiz_err").textContent="Invalid slug — letters, numbers, dashes only.";return;}$("wiz_err").textContent="";showStep(2);};
-$("wiz2next").onclick=()=>{$("wiz_err").textContent="";showStep(3);};
-$("wiz2back").onclick=()=>{$("wiz_err").textContent="";showStep(1);};
-$("wiz3next").onclick=()=>{$("wiz_err").textContent="";$("wiz_finalUrl").textContent="yourrank.site/"+slug;$("wiz_view").href=origin+"/"+slug;showStep(4);};
-$("wiz3back").onclick=()=>{$("wiz_err").textContent="";showStep(2);};
-$("wiz4back").onclick=()=>{$("wiz_err").textContent="";showStep(3);};
-
-// Copy button
-$("wiz_copy").onclick=async()=>{const url=origin+"/"+slug;try{await navigator.clipboard.writeText(url);$("wiz_copy").textContent="✓ Copied!";setTimeout(()=>$("wiz_copy").textContent="📋 Copy link",2000);}catch(e){$("wiz_copy").textContent="Copy failed";setTimeout(()=>$("wiz_copy").textContent="📋 Copy link",2000);}};
-
-// Parse players textarea
-function parsePlayers(){
-const lines=pta.value.split("\\n").filter(l=>{const t=l.trim();return t&&!t.startsWith("#")&&!t.startsWith("//");});
-return lines.map(l=>{const parts=l.split(/[\\t,]+/).map(s=>s.trim());return{name:parts[0]||"",wagered:parseInt(parts[1],10)||0,prize:0};}).filter(p=>p.name);
-}
-
-// CSRF helper
-function getCsrf(){const m=document.cookie.match(/(?:^|;\\s*)__csrf=([^;]+)/);return m?m[1]:"";}
-
-// Finish: save and redirect
-$("wiz_finish").onclick=async()=>{
-$("wiz_finish").disabled=true;$("wiz_finish").textContent="Saving…";$("wiz_err").textContent="";
-const payload={
-brand:{name:nameIn.value.trim()||slug,casino:$("wiz_casino").value.trim()||"Stake",code:$("wiz_code").value.trim()||"",ctaUrl:$("wiz_cta").value.trim()||"",prizePool:"$0",period:"Monthly",tagline:"",resetNote:"",blurb:""},
-players:parsePlayers()
-};
-try{
-const res=await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(payload)});
-const data=await res.json();
-if(res.status===401){location.href="/login";return;}
-if(!res.ok||!data.ok){$("wiz_err").textContent=data.error||"Save failed. Try again.";$("wiz_finish").disabled=false;$("wiz_finish").textContent="Go to dashboard";return;}
-location.href="/dashboard";
-}catch(e){$("wiz_err").textContent="Network error. Try again.";$("wiz_finish").disabled=false;$("wiz_finish").textContent="Go to dashboard";}
-};
-updateDots();
-})();
-</script></body></html>`,
+<script src="/assets/setup-wizard.js?v=2"></script></body></html>`,
 
   overlay: (data, opts = {}) => {
   const b = data.brand || {};
@@ -778,8 +671,8 @@ ${endsAt ? `<p class="ov-timer-label">${esc(b.prizePool || "")} resets in</p>
 <span class="ov-powered">YourRank</span>
 </div>
 </div>
-<script>window.__OVERLAY_SLUG__=${JSON.stringify(opts.slug || "")};window.__OVERLAY_DATA__=${dataJson};</script>
-<script src="/assets/overlay.js?v=2"></script>
+<div id="ov-config" data-slug="${esc(opts.slug || "")}" data-json='${dataJson.replace(/'/g, "&#39;")}' hidden></div>
+<script src="/assets/overlay.js?v=3"></script>
 </body></html>`;
 },
 

@@ -2,7 +2,9 @@
 (function () {
   "use strict";
 
-  const SLUG = window.__OVERLAY_SLUG__;
+  // Read config from data attributes (CSP-safe) or window globals (legacy).
+  const _cfg = document.getElementById("ov-config");
+  const SLUG = _cfg?.dataset?.slug ?? window.__OVERLAY_SLUG__;
   const TOP_N = 5;
   const POLL_MS = 15000;
   const TRANSITION_MS = 600;
@@ -133,7 +135,8 @@
   // --- Init ---
   function init() {
     // Initial render from SSR data
-    const ssr = window.__OVERLAY_DATA__;
+    let ssr = window.__OVERLAY_DATA__;
+    if (!ssr && _cfg?.dataset?.json) { try { ssr = JSON.parse(_cfg.dataset.json); } catch {} }
     if (ssr) {
       endsAt = ssr.endsAt || null;
       renderPlayers(ssr.players || []);

@@ -7,7 +7,18 @@ export type { BotPlanDef, PlanTier } from "../../../shared/plans.js";
 export const PLANS = BOT_PLANS;
 
 export async function getUserPlan(userId: string): Promise<BotPlanDef> {
-  const row = await one<{ plan: PlanTier }>(`SELECT plan FROM users WHERE id = $1`, [userId]);
+  const row = await one<{ plan: PlanTier; plan_expires_at: string | null }>(
+    `SELECT plan, plan_expires_at FROM users WHERE id = $1`, [userId]
+  );
+  // BIZ-001: If the plan has expired, downgrade to free immediately instead of
+  // waiting for the nightly cron. This closes the ~24h window where expired
+  // users could still access premium features.
+  if (row?.plan && row.plan !== "free" && row.plan_expires_at) {
+    const expiresAt = new Date(row.plan_expires_at).getTime();
+    if (expiresAt <= Date.now()) {
+      return PLANS.free;
+    }
+  }
   return PLANS[row?.plan ?? "free"] ?? PLANS.free;
 }
 
@@ -72,8 +83,17 @@ export async function withPlanLimit<R>(
     // the module-level one(). The db pool is max:1 and begin() holds the only
     // connection; a module-level query would queue for that same connection and
     // deadlock (circular wait) — permanently hanging every create endpoint.
-    const planRow = await tx.one<{ plan: PlanTier }>(`SELECT plan FROM users WHERE id = $1`, [userId]);
-    const plan = PLANS[planRow?.plan ?? "free"] ?? PLANS.free;
+    const planRow = await tx.one<{ plan: PlanTier; plan_expires_at: string | null }>(
+      `SELECT plan, plan_expires_at FROM users WHERE id = $1`, [userId]
+    );
+    // BIZ-001: Check plan expiry inside the transaction too.
+    let planTier: PlanTier = planRow?.plan ?? "free";
+    if (planTier !== "free" && planRow?.plan_expires_at) {
+      if (new Date(planRow.plan_expires_at).getTime() <= Date.now()) {
+        planTier = "free";
+      }
+    }
+    const plan = PLANS[planTier] ?? PLANS.free;
     const table = kind === "bots" ? "bots" : "offers";
     const max = kind === "bots" ? plan.maxBots : plan.maxOffers;
     const row = await tx.one<{ n: number }>(

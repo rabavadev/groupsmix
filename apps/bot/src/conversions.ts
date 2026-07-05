@@ -39,11 +39,14 @@ export async function recordConversion(ownerId: string, q: PostbackQuery): Promi
   // BE-006: Idempotency guard — check for an existing conversion with the same
   // click_ref + event + amount to prevent duplicate postbacks from creating
   // duplicate rows (e.g. casino retries, webhook replays).
+  // DB-002: Added explicit parentheses around the OR for correct NULL handling,
+  // and also rely on the unique index conversions_idempotency_idx as the
+  // authoritative dedup layer (this SELECT is the fast-path early return).
   if (clickRef) {
     const existing = await one<{ id: string }>(
       `SELECT id FROM conversions
        WHERE owner_id = $1 AND click_ref = $2 AND event = $3
-         AND ($4::numeric IS NULL AND amount IS NULL OR amount = $4)
+         AND (($4::numeric IS NULL AND amount IS NULL) OR amount = $4)
        LIMIT 1`,
       [ownerId, clickRef, event, amount]
     );
