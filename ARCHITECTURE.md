@@ -80,4 +80,4 @@ Everything else hangs off `user_id`: `sites`/`players`/`archives`/`site_stats` (
 - Two Workers on the one zone, routes as in the diagram.
 - Secrets (per Worker, via `wrangler secret put`): `DATABASE_URL` (or Hyperdrive binding), `TOKEN_ENC_KEY` (bot), `IP_HASH_SALT` (bot), `NOWPAYMENTS_API_KEY` + `NOWPAYMENTS_IPN_SECRET` (leaderboard), `PLATFORM_BOT_TOKEN` + `PLATFORM_WEBHOOK_SECRET` (bot billing), `RESEND_API_KEY` (optional email), `LEAD_WEBHOOK_URL` (optional).
 
-See `db/schema.sql` (run once in Supabase), `db/partitions.sql` (seed click partitions), and each app's `wrangler.toml`.
+Apply migrations in `supabase/migrations/` via `supabase db push` (see DEPLOY.md), and check each app's `wrangler.toml` for route config.

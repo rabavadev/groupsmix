@@ -22,7 +22,14 @@ import { one } from "../../../shared/db.js";
 
 export default {
   async fetch(request, env, ctx) {
-    const sentry = env.SENTRY_DSN ? new Toucan({ dsn: env.SENTRY_DSN, request, context: ctx }) : null;
+    const sentry = env.SENTRY_DSN ? new Toucan({
+      dsn: env.SENTRY_DSN,
+      request,
+      context: ctx,
+      environment: "production",
+      release: "yourrank@1.0.0",
+      tags: { worker: "leaderboard" },
+    }) : null;
     try {
       // BE-004: Reject oversized request bodies early, before any parsing.
       // 1 MB is generous for JSON payloads (site data, auth forms, etc.)

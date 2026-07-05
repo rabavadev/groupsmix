@@ -198,6 +198,7 @@ async function pollPlayers() {
     const json = await resp.json();
     if (json.players && Array.isArray(json.players)) {
       updateLeaderboard(json.players);
+      const ann = document.getElementById("lb-announce"); if(ann) ann.textContent = "Leaderboard updated.";
     }
   } catch (_) {
     // Silently ignore poll failures — next poll will retry
@@ -222,6 +223,7 @@ function boot() {
 
   const cc = $("[data-copy-code]");
   if (cc) cc.addEventListener("click", async () => { try { await navigator.clipboard.writeText(b.code || ""); cc.classList.add("copied"); const p = cc.textContent; cc.textContent = "Copied!"; setTimeout(() => { cc.classList.remove("copied"); cc.textContent = p; }, TOAST_DURATION_MS); } catch (_) {}
+    try { const cs = document.querySelector("[data-copy-status]"); if(cs) cs.textContent = "Code copied to clipboard"; } catch (_) {}
     try { if (window.__SLUG__) navigator.sendBeacon("/api/track/copy", new Blob([JSON.stringify({ slug: window.__SLUG__ })], { type: "application/json" })); } catch (_) {} });
 
   const p = data.partner || {};

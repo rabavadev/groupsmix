@@ -13,9 +13,8 @@ One platform for casino streamers, merged from two products:
 yourrank/
 ├── ARCHITECTURE.md          how the two halves fit together + why
 ├── DEPLOY.md                one-time setup, then two `wrangler deploy`s
-├── db/
-│   ├── schema.sql           unified Postgres schema (run once in Supabase)
-│   └── partitions.sql       seed monthly click partitions
+├── supabase/
+│   └── migrations/          SQL migrations (applied via `supabase db push`)
 ├── shared/                  code + specs shared by both Workers
 │   ├── session.js / .ts     ONE cross-Worker session (gm_session + shared KV)
 │   ├── shell-nav.js / .ts   shared dashboard nav (Leaderboard | Bot | ...)
@@ -80,14 +79,14 @@ Each file is commented with what's required vs optional. Key variables:
 
 ### Database Setup
 
-Run the schema and partition scripts against your Supabase database:
+Apply migrations via Supabase CLI:
 
 ```bash
-psql "$DATABASE_URL" -f db/schema.sql
-psql "$DATABASE_URL" -f db/partitions.sql
+supabase link --project-ref <your-project-ref>
+supabase db push
 ```
 
-Then apply any migrations in `supabase/migrations/` (in timestamp order).
+This runs all migrations in `supabase/migrations/` (in timestamp order) against your Supabase database.
 
 ### Local Development
 

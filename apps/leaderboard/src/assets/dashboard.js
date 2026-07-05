@@ -174,6 +174,11 @@ function collect(){
   if (domainEl && (ME.plan === "pro" || ME.plan === "agency")) {
     out.customDomain = domainEl.value.trim().toLowerCase();
   }
+  out.notify = {
+    discord_webhook_url: $("f_webhook")?.value.trim() || null,
+    telegram_chat_id: $("f_tgChatId")?.value.trim() || null,
+    telegram_notify: $("f_tgNotify")?.checked || false,
+  };
   return out;
 }
 
@@ -307,7 +312,7 @@ function renderNotifications(n){
     $("notifyUpgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); location.href="/dashboard/billing"; });
     return;
   }
-  const wh = $("f_webhook"); if (wh && n.discord_webhook_url) wh.value = ""; // boolean from API, don't expose URL
+  const wh = $("f_webhook"); if (wh && n.discord_webhook_url) { wh.value = ""; wh.placeholder = "Webhook configured ✓ (enter new URL to change)"; }
   const tg = $("f_tgNotify"); if (tg) tg.checked = !!n.telegram_notify;
   const tgChat = $("f_tgChatId"); if (tgChat) tgChat.value = n.telegram_chat_id || "";
 }
@@ -447,4 +452,21 @@ $("logout")?.addEventListener("click", async (e)=>{ e.preventDefault(); await fe
 $("upgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); checkout($("goPro")); });
 $("goPro")?.addEventListener("click",()=>checkout($("goPro")));
 $("domainUpgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); checkout($("goPro")); });
+$("overlayUpgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); checkout($("goPro")); });
+$("testDiscord")?.addEventListener("click", async () => {
+  const s = $("testDiscordStatus"); if(s) s.textContent = "Sending…";
+  try {
+    const r = await fetch("/api/site/notify/test", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ channel: "discord" }) });
+    const d = await r.json();
+    if(s) s.textContent = d.ok ? "✅ Sent!" : (d.error || "Failed");
+  } catch(e) { if(s) s.textContent = "Network error."; }
+});
+$("testTelegram")?.addEventListener("click", async () => {
+  const s = $("testTelegramStatus"); if(s) s.textContent = "Sending…";
+  try {
+    const r = await fetch("/api/site/notify/test", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ channel: "telegram" }) });
+    const d = await r.json();
+    if(s) s.textContent = d.ok ? "✅ Sent!" : (d.error || "Failed");
+  } catch(e) { if(s) s.textContent = "Network error."; }
+});
 init();

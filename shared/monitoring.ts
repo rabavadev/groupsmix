@@ -5,6 +5,31 @@
 // The webhook is optional — if the env var is not set, this is a silent no-op.
 // The caller's try/catch should still console.error regardless.
 
+import type { Toucan } from "toucan-js";
+
+/**
+ * SRE-102: Factory that returns a lightweight error-reporting function.
+ *
+ * The returned `reportError` logs structured JSON to stdout AND forwards to
+ * Sentry (if a Toucan instance was provided). Callers import this once at the
+ * top of their handler and use it inside catch blocks:
+ *
+ *   const report = createReporter(sentry);
+ *   try { ... } catch (err) { report(err, "checkout", { userId }); }
+ *
+ * Wiring into every catch block is deferred — for now this module just exists
+ * so incremental adoption is possible.
+ */
+export function createReporter(sentry: Toucan | null) {
+  return function reportError(err: unknown, context: string, extra?: Record<string, unknown>) {
+    console.error(JSON.stringify({ level: "error", ctx: context, error: String(err), ...extra, ts: new Date().toISOString() }));
+    if (sentry) {
+      sentry.setTags({ context });
+      sentry.captureException(err);
+    }
+  };
+}
+
 interface ErrorEmbedOpts {
   webhookUrl: string;
   title?: string;

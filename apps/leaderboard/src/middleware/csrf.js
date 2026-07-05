@@ -1,3 +1,5 @@
+import { safeEqual } from "../../../../shared/crypto.js";
+
 // SEC-108: CSRF token helpers. Tokens are stored in a __csrf cookie (readable
 // by JS) and must be echoed in a X-CSRF-Token header on every state-changing
 // POST/PUT/DELETE. SameSite=Lax already blocks cross-site POST forms, but
@@ -22,11 +24,7 @@ export function verifyCsrf(req) {
   const cookie = readCsrfToken(req);
   const header = req.headers.get("x-csrf-token");
   if (!cookie || !header) return false;
-  // Constant-time comparison
-  if (cookie.length !== header.length) return false;
-  let diff = 0;
-  for (let i = 0; i < cookie.length; i++) diff |= cookie.charCodeAt(i) ^ header.charCodeAt(i);
-  return diff === 0;
+  return safeEqual(cookie, header);
 }
 
 // CSRF-exempt paths (no session yet or public endpoints)

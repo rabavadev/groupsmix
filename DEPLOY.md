@@ -13,9 +13,12 @@ Everything runs on managed edge infra: Cloudflare Workers (stateless, auto-scale
 - `wrangler` authed to the account.
 
 ## 1. Database (once)
-In the Supabase SQL editor for project **yourrank**, run in order:
-1. `db/schema.sql`      — all tables, one `users` table, + the Stars idempotency index.
-2. `db/partitions.sql`  — seed current + next 2 monthly click partitions.
+Apply migrations via Supabase CLI:
+```bash
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
+This runs all migrations in `supabase/migrations/` (in timestamp order) against your Supabase database. The schema includes all tables (one `users` table, Stars idempotency index, click partitions, etc.).
 
 Grab the **direct** connection string from Supabase → Project Settings → Database
 → Connection string → "Direct connection" (host `db.<ref>.supabase.co`, port 5432).
@@ -135,10 +138,10 @@ bot job deploys `src/worker.ts` directly (wrangler bundles the TS).
 ## 8. Auto-migrate the database (optional, recommended)
 
 `.github/workflows/migrate.yml` keeps the live Supabase Postgres in sync with
-the repo. When you change anything under `db/` and push to `main`, it runs the
-one-time setup SQL (`db/schema.sql`, `db/partitions.sql`) and every file in
-`db/migrations/` against the live database — idempotently (everything uses
-`IF NOT EXISTS` / `DO $$` guards, so re-running is safe and just no-ops).
+the repo. When you change anything under `supabase/migrations/` and push to
+`main`, it runs the migrations against the live database — idempotently
+(everything uses `IF NOT EXISTS` / `DO $$` guards, so re-running is safe
+and just no-ops).
 
 It needs **one** GitHub repo secret (set at repo → Settings → Secrets and
 variables → Actions → New repository secret):
@@ -158,7 +161,7 @@ The two workflows are independent and complementary:
 - **Deploy** (section 7) ships the Worker **code** to Cloudflare.
 - **Migrate DB** (this section) ships the **schema** to Supabase.
 
-Both trigger on push to `main`; Migrate DB only fires when files under `db/` or
+Both trigger on push to `main`; Migrate DB only fires when files under `supabase/migrations/` or
 `.github/workflows/migrate.yml` change, so it doesn't run on every code push.
 You can also trigger either manually from repo → Actions.
 

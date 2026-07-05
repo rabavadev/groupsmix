@@ -296,18 +296,34 @@ export async function createArchive(env, uid, { label, clear, siteId } = {}) {
     const owner = await one("SELECT plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status FROM users WHERE id=$1", [uid]);
     const plan = effectivePlan(owner);
     const maxArchives = ARCHIVE_LIMITS[plan] || 6;
-    const count = await one("SELECT COUNT(*) n FROM archives WHERE site_id=$1", [site.id]);
-    if (maxArchives < 999 && (Number(count?.n) || 0) >= maxArchives) return { error: `Archive limit reached (${maxArchives}). Delete an old one first. Upgrade for more.` };
   const lab = String(label || "").trim().slice(0, 60) ||
     new Date().toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  const archiveId = crypto.randomUUID();
+  const snapshotJson = JSON.stringify(players).slice(0, 200000);
+  // QA-005: Atomic limit check — the count + INSERT happen in a single
+  // statement so two concurrent archive-creation requests can't both pass
+  // the count check and exceed the plan limit.
+  let limitReached = false;
   await getSql().begin(async (tx) => {
-    await tx.unsafe(
-      "INSERT INTO archives (id,site_id,label,snapshot_json,created_at) VALUES ($1,$2,$3,$4::jsonb,now())",
-      [crypto.randomUUID(), site.id, lab, JSON.stringify(players).slice(0, 200000)]
-    );
+    if (maxArchives < 999) {
+      const rows = await tx.unsafe(
+        `INSERT INTO archives (id,site_id,label,snapshot_json,created_at)
+         SELECT $1,$2,$3,$4::jsonb,now()
+           WHERE (SELECT COUNT(*) FROM archives WHERE site_id=$2) < $5
+         RETURNING id`,
+        [archiveId, site.id, lab, snapshotJson, maxArchives]
+      );
+      if (!rows || rows.length === 0) { limitReached = true; return; }
+    } else {
+      await tx.unsafe(
+        "INSERT INTO archives (id,site_id,label,snapshot_json,created_at) VALUES ($1,$2,$3,$4::jsonb,now())",
+        [archiveId, site.id, lab, snapshotJson]
+      );
+    }
     if (clear === "players") await tx.unsafe("DELETE FROM players WHERE site_id=$1", [site.id]);
     else if (clear === "wagers") await tx.unsafe("UPDATE players SET wagered=0 WHERE site_id=$1", [site.id]);
   });
+  if (limitReached) return { error: `Archive limit reached (${maxArchives}). Delete an old one first. Upgrade for more.` };
   // Send reset notification
   try {
     const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
@@ -413,6 +429,10 @@ export async function saveSite(env, user, payload, siteId) {
   const oldTop3 = oldPlayers.slice().sort((a, b2) => (b2.wagered || 0) - (a.wagered || 0)).slice(0, 3);
 
   await getSql().begin(async (tx) => {
+    // QA-004: Lock the site row to serialize concurrent saves on the same
+    // board. Without this, two concurrent saveSite() calls could interleave
+    // their DELETE + INSERT players, leaving orphaned or missing rows.
+    await tx.unsafe("SELECT id FROM sites WHERE id=$1 FOR UPDATE", [site.id]);
     const publishedVal = typeof payload.published === "boolean" ? payload.published : site.published;
     await tx.unsafe(
       `UPDATE sites SET name=$1, tagline=$2, casino=$3, code=$4, cta_url=$5, prize_pool=$6, period=$7, ends_at=$8, reset_note=$9, blurb=$10, extra_json=$11::jsonb, logo_data=$12, theme_json=$13::jsonb, published=$14, updated_at=now() WHERE id=$15`,

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Update } from "grammy/types";
 import { config } from "./config.js";
 import { exec, one, query } from "../../../shared/db.js";
+import { safeEqual } from "../../../shared/crypto.js";
 import { encryptToken, decryptToken, reencryptToken, isCurrentVersion, newClickRef, newLinkSlug, newWebhookSecret, verifyHmacSha256Hex } from "./crypto.js";
 import { getBotBySecret, handleUpdateForBot } from "./botEngine.js";
 import { getMe, setWebhook } from "./telegram.js";
@@ -11,19 +12,6 @@ import { billingEnabled, handleBillingUpdate, setupBillingWebhook } from "./bill
 import { withPlanLimit } from "./plans.js";
 import { rateLimit, type RateLimitKV } from "./ratelimit.js";
 import { recordConversion, type PostbackQuery } from "./conversions.js";
-
-// Constant-time string compare for secrets (webhook tokens, API keys). A plain
-// !== short-circuits on the first differing byte, leaking how close a guess is
-// via timing. safeEqual always compares the full expected length.
-function safeEqual(a: string, b: string): boolean {
-  const sa = String(a ?? "");
-  const sb = String(b ?? "");
-  let diff = sa.length ^ sb.length;
-  for (let i = 0; i < Math.max(sa.length, sb.length); i++) {
-    diff |= (sa.charCodeAt(i) ?? 0) ^ (sb.charCodeAt(i) ?? 0);
-  }
-  return diff === 0;
-}
 
 type Bindings = {
   PUBLIC_BASE_URL: string;

@@ -194,7 +194,35 @@ export async function decrypt(blobHex: string, hexKey: string): Promise<string> 
   return new TextDecoder().decode(pt);
 }
 
-function hexToBytes(hex: string): Uint8Array {
+// ----------------------------------------------------------------------------
+// Constant-time comparison
+// ----------------------------------------------------------------------------
+
+/**
+ * Constant-time string comparison. A plain !== short-circuits on the first
+ * differing byte, leaking how close a guess is via timing.  safeEqual always
+ * compares the full expected length.
+ */
+export function safeEqual(a: string, b: string): boolean {
+  const sa = new TextEncoder().encode(a);
+  const sb = new TextEncoder().encode(b);
+  if (sa.length !== sb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < sa.length; i++) diff |= sa[i] ^ sb[i];
+  return diff === 0;
+}
+
+// ----------------------------------------------------------------------------
+// Hex encoding helpers
+// ----------------------------------------------------------------------------
+
+/** Convert a Uint8Array to a lowercase hex string. */
+export function bytesToHex(bytes: Uint8Array): string {
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Convert a hex string to a Uint8Array. */
+export function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < bytes.length; i++) {
     bytes[i] = parseInt(hex.substr(i * 2, 2), 16);

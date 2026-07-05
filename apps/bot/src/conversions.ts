@@ -54,9 +54,14 @@ export async function recordConversion(ownerId: string, q: PostbackQuery): Promi
   }
 
   // exec() — semantically a write/mutation, not a read query.
+  // QA-003: ON CONFLICT DO NOTHING makes the INSERT idempotent — if the
+  // SELECT fast-path above races with a concurrent request, the unique
+  // index (conversions_idempotency_idx) prevents a duplicate row and we
+  // return success instead of a 500 error.
   await exec(
     `INSERT INTO conversions (owner_id, offer_id, click_ref, event, amount, currency, raw)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT DO NOTHING`,
     [ownerId, offerId, clickRef, event, amount, currency, JSON.stringify(q)]
   );
 }

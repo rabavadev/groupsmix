@@ -24,6 +24,7 @@ These live in the encrypted vault attached to the Worker, not in the repo.
 | `NOWPAYMENTS_API_KEY` | 🟡 | NOWPayments crypto billing. Without it, checkout is disabled (manual activation still works). |
 | `NOWPAYMENTS_IPN_SECRET` | 🟡 | Verifies NOWPayments payment-webhook (IPN) callbacks. Without it, IPN verification fails and payments won't auto-activate. |
 | `RESEND_API_KEY` | 🟡 | Password-reset emails via Resend. Without it, admin-generated reset links still work (they don't need email). |
+| `MAIL_FROM` | 🟡 | Required when RESEND_API_KEY is set. From address for transactional emails (e.g. 'YourRank <hey@yourrank.site>'). |
 | `PRO_PRICE_USD` | ⚪ | Pro plan price in USD. Defaults to 29 if unset. |
 | `LEAD_WEBHOOK_URL` | ⚪ | Discord/Telegram webhook to ping on each new lead. |
 

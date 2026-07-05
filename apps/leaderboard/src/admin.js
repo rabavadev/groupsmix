@@ -66,8 +66,10 @@ export async function requireAdminWith2fa(request, env, requireFresh = false) {
 }
 
 export async function handleOverview(request, env) {
-  const { res } = await requireAdminWith2fa(request, env);
+  const { admin, res } = await requireAdminWith2fa(request, env);
   if (res) return res;
+  // QA-012: Audit-log admin page views
+  await logAdminAction(env, admin.id, "overview", null, null, request);
   const [users, pro, leads, revenue] = await Promise.all([
     one("SELECT COUNT(*) n FROM users"),
     one("SELECT COUNT(*) n FROM users WHERE plan IN ('pro','agency','starter') AND status!='suspended'"),
@@ -78,9 +80,11 @@ export async function handleOverview(request, env) {
 }
 
 export async function handleUsers(request, env) {
-    const { res } = await requireAdminWith2fa(request, env);
-    if (res) return res;
-    const url = new URL(request.url);
+      const { admin, res } = await requireAdminWith2fa(request, env);
+      if (res) return res;
+      // QA-012: Audit-log admin page views
+      await logAdminAction(env, admin.id, "users", null, null, request);
+      const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
     const pageSize = 50;
     const offset = (page - 1) * pageSize;
@@ -103,8 +107,10 @@ export async function handleUsers(request, env) {
   }
 
 export async function handleLeads(request, env) {
-  const { res } = await requireAdminWith2fa(request, env);
+  const { admin, res } = await requireAdminWith2fa(request, env);
   if (res) return res;
+  // QA-012: Audit-log admin page views
+  await logAdminAction(env, admin.id, "leads", null, null, request);
   const rows = await query(
     "SELECT id, handle, casino, contact, note, (EXTRACT(EPOCH FROM created_at) * 1000)::double precision AS created_at FROM leads ORDER BY created_at DESC LIMIT 500"
   );
@@ -112,8 +118,10 @@ export async function handleLeads(request, env) {
 }
 
 export async function handlePayments(request, env) {
-  const { res } = await requireAdminWith2fa(request, env);
+  const { admin, res } = await requireAdminWith2fa(request, env);
   if (res) return res;
+  // QA-012: Audit-log admin page views
+  await logAdminAction(env, admin.id, "payments", null, null, request);
   const rows = await query(
     `SELECT p.id, p.user_id, p.provider, p.amount AS amount_usd, p.currency, p.invoice_id, p.tx_ref, p.status,
             (EXTRACT(EPOCH FROM p.created_at) * 1000)::double precision AS created_at,
