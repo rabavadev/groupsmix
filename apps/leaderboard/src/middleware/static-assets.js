@@ -1,4 +1,9 @@
 // Static asset server for bundled CSS/JS files
+// PERF-007: Asset URLs don't include content hashes (e.g., /assets/leaderboard.a1b2c3.js).
+// Content-hash filenames would enable immutable caching (max-age=31536000) and eliminate
+// stale cache issues after deploys. This requires a build pipeline change: hash each file,
+// inject hashes into HTML templates, and serve with immutable cache-control. Currently
+// mitigated by short max-age (24h) — acceptable tradeoff until build infra is set up.
 import { leaderboard_css, leaderboard_js, app_css, auth_js, dashboard_js, admin_js, landing_css, landing_js, analytics_js, billing_js, bot_setup_js, overlay_js, admin2fa_js, setup_wizard_js, admin2fa_styles_css, setup_styles_css, shell_nav_css } from "../assets_bundled.js";
 
 const MIME = {

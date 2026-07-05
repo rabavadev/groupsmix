@@ -30,7 +30,7 @@ export function renderLeaderboard(data, opts = {}) {
   const logo = opts.logoUrl ? esc(opts.logoUrl) : null;
   const navLogo = logo ? `<img class="nav-logo" src="${logo}" alt="" />` : "";
   const heroLogo = logo ? `<img class="hero-logo" src="${logo}" alt="${esc(b.name)} logo" />` : "";
-  const ogImage = logo ? `<meta property="og:image" content="${logo}" /><meta name="twitter:image" content="${logo}" />` : "";
+  const ogImage = logo ? `<meta property="og:image" content="${logo}" /><meta name="twitter:image" content="${logo}" />` : `<meta property="og:image" content="https://yourrank.site/og-image.png" /><meta name="twitter:image" content="https://yourrank.site/og-image.png" />`;
   const title = `${esc(b.name)} | ${esc(b.casino || "Stake")} Leaderboard`;
   const desc = `${esc(b.name)} x ${esc(b.casino || "Stake")}. Use code ${esc(b.code)} and compete in the ${esc(b.prizePool)} ${esc((b.period || "monthly").toLowerCase())} leaderboard.`;
   const dataJson = JSON.stringify(data).replace(/</g, "\\u003c");
@@ -42,7 +42,8 @@ export function renderLeaderboard(data, opts = {}) {
 <link rel="canonical" href="${esc(opts.homeUrl || "https://yourrank.site")}/${esc(opts.slug || "")}" />
 <meta name="twitter:card" content="summary" /><meta name="twitter:title" content="${esc(b.name)} | ${esc(b.casino || "Stake")}" /><meta name="twitter:description" content="${desc}" />${ogImage}
 <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<noscript><link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" /></noscript>
 <link rel="stylesheet" href="/assets/leaderboard.css" />
 ${tplCss}
 ${themeCss}

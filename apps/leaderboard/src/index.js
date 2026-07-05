@@ -107,7 +107,7 @@ async function handleRequest(request, env, ctx) {
 
       // --- SEO endpoints ---
       if (path === "/robots.txt") return serveRobotsTxt(url.origin);
-      if (path === "/sitemap.xml") return await serveSitemapXml(url.origin);
+      if (path === "/sitemap.xml") return await serveSitemapXml(url.origin, env);
       if (path === "/favicon.ico") return serveFavicon();
 
       // --- health check ---

@@ -141,6 +141,10 @@ async function getPlayers(env, siteId) {
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+// PERF-003: Logos are stored as base64 data URIs (up to 180KB) in the logo_data
+// column. This means every /logo/:slug request fetches the blob from Postgres,
+// decodes base64 in-memory, and sends it. Deferred: migrate to R2 bucket storage
+// with signed URLs. Requires R2 bucket provisioning (not yet available in infra).
 const LOGO_RE = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_LOGO = 250000; // chars of data URI (~180KB image)
 
