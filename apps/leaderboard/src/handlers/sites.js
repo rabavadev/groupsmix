@@ -66,7 +66,7 @@ export async function handleCreateBoard(request, env) {
   const { user, res } = await requireUser(request, env);
   if (res) return res;
   if (user.status === "suspended") return bad("This account is suspended.", 403);
-  if (!(await rateLimit(env, `createboard:${user.id}`, 5, 3600))) return bad("Too many requests. Try again later.", 429);
+  if (!(await rateLimit(env, `createboard:${user.id}`, 5, 3600)).ok) return bad("Too many requests. Try again later.", 429);
   const body = await readJson(request);
   if (!body) return bad("Invalid request");
   let slug = slugify(body.slug || "");
@@ -81,7 +81,7 @@ export async function handleArchive(request, env) {
   const { user, res } = await requireUser(request, env);
   if (res) return res;
   if (user.status === "suspended") return bad("This account is suspended.", 403);
-  if (!(await rateLimit(env, `archive:${user.id}`, 10, 3600))) return bad("Too many archive actions. Try again later.", 429);
+  if (!(await rateLimit(env, `archive:${user.id}`, 10, 3600)).ok) return bad("Too many archive actions. Try again later.", 429);
   const body = (await readJson(request)) || {};
   const r = await createArchive(env, user.id, { label: body.label, clear: body.clear });
   return r.error ? bad(r.error, 400) : json({ ok: true, label: r.label });
@@ -102,7 +102,7 @@ export async function handlePutSite(request, env) {
   if (res) return res;
   if (user.status === "suspended") return bad("This account is suspended.", 403);
   // BE-008: Rate-limit site saves (30 req/min per user) to prevent abuse.
-  if (!(await rateLimit(env, `save-site:${user.id}`, 30, 60))) return bad("Too many saves. Try again shortly.", 429);
+  if (!(await rateLimit(env, `save-site:${user.id}`, 30, 60)).ok) return bad("Too many saves. Try again shortly.", 429);
   const payload = await readJson(request);
   if (!payload) return bad("Invalid request");
   const r = await saveSite(env, user, payload, payload.siteId || null);

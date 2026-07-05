@@ -47,14 +47,13 @@ async function notifyCronFailure(env: Record<string, any>, cron: string, task: s
 
 export default {
   async fetch(req: Request, env: Record<string, any>, ctx: { waitUntil: (p: Promise<unknown>) => void }): Promise<Response> {
-    const sentry = env.SENTRY_DSN ? new Toucan({
+    const sentry = env.SENTRY_DSN ? (() => { const s = new Toucan({
       dsn: env.SENTRY_DSN,
       request: req,
       context: ctx,
       environment: "production",
       release: "yourrank@1.0.0",
-      tags: { worker: "bot" },
-    }) : null;
+    }); s.setTag("worker", "bot"); return s; })() : null;
     try {
       populateEnv(env);
       // Ensure current month partition exists on first request (idempotent)
@@ -96,13 +95,12 @@ export default {
   //   * * * * *  — broadcast worker: one rate-limited batch per tick
   //   0 3 * * *  — nightly: click rollup, partitions, expired plans
   async scheduled(event: { cron: string }, env: Record<string, any>, ctx: { waitUntil: (p: Promise<unknown>) => void }): Promise<void> {
-    const sentry = env.SENTRY_DSN ? new Toucan({
+    const sentry = env.SENTRY_DSN ? (() => { const s = new Toucan({
       dsn: env.SENTRY_DSN,
       context: ctx,
       environment: "production",
       release: "yourrank@1.0.0",
-      tags: { worker: "bot" },
-    }) : null;
+    }); s.setTag("worker", "bot"); return s; })() : null;
     populateEnv(env);
     try {
       if (event.cron === "0 3 * * *") {

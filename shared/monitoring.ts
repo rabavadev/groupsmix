@@ -5,7 +5,18 @@
 // The webhook is optional — if the env var is not set, this is a silent no-op.
 // The caller's try/catch should still console.error regardless.
 
-import type { Toucan } from "toucan-js";
+/**
+ * Minimal interface for the Toucan Sentry client.
+ * We define this locally instead of importing from "toucan-js" because
+ * toucan-js@4.x lacks an `exports` field in package.json, which breaks
+ * TypeScript's moduleResolution: "NodeNext" resolution.
+ */
+interface ToucanClient {
+  setTag(key: string, value: string): void;
+  setTags(tags: Record<string, string>): void;
+  captureException(err: unknown): void;
+}
+type Toucan = ToucanClient;
 
 /**
  * SRE-102: Factory that returns a lightweight error-reporting function.

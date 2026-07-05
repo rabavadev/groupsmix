@@ -52,6 +52,8 @@ jobs:
     needs: migrate
     runs-on: ubuntu-latest
     environment: production
+    outputs:
+      lb-version: ${{ steps.capture-lb.outputs.version }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
@@ -70,6 +72,20 @@ jobs:
           done
       - working-directory: apps/leaderboard
         run: node build.js
+      - name: Capture current leaderboard version
+        id: capture-lb
+        continue-on-error: true
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          CURRENT=$(curl -sf \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/services/yourrank-site/environments/production" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            | jq -r '.result.default_environment.script.hash // "none"')
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Current leaderboard version: $CURRENT"
+
       - uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -95,6 +111,20 @@ jobs:
         run: bun test
       - working-directory: apps/bot
         run: bun run typecheck
+      - name: Capture current bot version
+        id: capture-bot
+        continue-on-error: true
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          CURRENT=$(curl -sf \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/services/yourrank-bot/environments/production" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            | jq -r '.result.default_environment.script.hash // "none"')
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Current bot version: $CURRENT"
+
       - uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -169,5 +199,60 @@ jobs:
           echo "==========================================="
           echo "SMOKE TEST FAILED — deploy may be broken."
           echo "Commit: ${{ github.sha }}"
-          echo "Check https://yourrank.site manually."
+          echo "Rollback job will attempt automatic recovery."
+          echo "==========================================="
+
+  # -----------------------------------------------------------------
+  # Auto-rollback: triggered ONLY when smoke-test fails.
+  # Uses `wrangler rollback` to revert each Worker to its previous
+  # Cloudflare deployment — no manual intervention needed.
+  # -----------------------------------------------------------------
+  rollback:
+    needs: [deploy-leaderboard, deploy-bot, smoke-test]
+    if: always() && needs.smoke-test.result == 'failure'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Rollback leaderboard worker
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/leaderboard
+          command: rollback
+          wranglerVersion: "4.106.0"
+
+      - name: Rollback bot worker
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/bot
+          command: rollback
+          wranglerVersion: "4.106.0"
+
+      - name: Verify rollback health
+        run: |
+          echo "Waiting 15s for Cloudflare propagation…"
+          sleep 15
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 20 https://yourrank.site/ || true)
+          if [ "$STATUS" = "200" ]; then
+            echo "OK: yourrank.site healthy after rollback (HTTP $STATUS)"
+          else
+            echo "WARNING: yourrank.site returned HTTP $STATUS after rollback"
+            echo "Manual intervention may be required."
+          fi
+
+      - name: Rollback summary
+        if: always()
+        run: |
+          echo "==========================================="
+          echo "AUTO-ROLLBACK EXECUTED"
+          echo "Smoke test failed on commit: ${{ github.sha }}"
+          echo "Both Workers reverted to previous deployment."
+          echo "Pre-deploy leaderboard version: ${{ needs.deploy-leaderboard.outputs.lb-version || 'unknown' }}"
+          echo "Pre-deploy bot version:         ${{ needs.deploy-bot.outputs.bot-version || 'unknown' }}"
+          echo "Verify: https://yourrank.site"
           echo "==========================================="

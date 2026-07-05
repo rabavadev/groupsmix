@@ -1,5 +1,6 @@
 // Auth helpers for the Worker.
 import { one, exec } from "../../../shared/db.js";
+import { rateLimit as kvRateLimit } from "../../../shared/ratelimit.js";
 // SHARED cross-Worker session: same cookie (gm_session) + same SESSIONS KV as
 // the bot Worker, so one login works across both. See ../../../shared/session.ts
 // (compiled to session.js for the leaderboard Worker).
@@ -122,35 +123,12 @@ export async function currentUser(req, env) {
     return loadUser(env, uid);
   }
 
-// Cheap KV counter rate limit. Returns true while under the limit.
-// NOTE: Due to KV's eventual consistency and lack of atomic increment,
-// concurrent requests may read stale values and all increment from the same
-// baseline, allowing more requests than the configured limit during bursts.
-// This is a best-effort rate limiter, not a hard security boundary.
-// 
-// SEC-104: Rate limiting is fail-closed by default (denies request on KV errors)
-// to preserve brute-force protection. Callers can opt into fail-open with
-// { failClosed: false } for non-critical endpoints.
-export async function rateLimit(env, key, limit, ttlSeconds, { failClosed = true } = {}) {
-  try {
-    const k = `rl:${key}`;
-    const cur = parseInt((await env.SESSIONS.get(k)) || "0", 10);
-    if (cur >= limit) return false;
-    // Use a slight randomization to reduce thundering herd on concurrent increments
-    const jitter = Math.random() * 0.1; // 10% jitter
-    const nextVal = Math.floor(cur + 1 + jitter);
-    await env.SESSIONS.put(k, String(nextVal), { expirationTtl: ttlSeconds });
-    return true;
-  } catch (e) {
-    // On KV errors: fail closed by default to preserve brute-force protection.
-    // Non-critical endpoints can opt in with { failClosed: false }.
-    if (failClosed) {
-      console.error("[rateLimit] KV error, FAILING CLOSED:", String(e?.message || e));
-      return false;
-    }
-    console.error("[rateLimit] KV error, allowing request:", String(e?.message || e));
-    return true;
-  }
+// Rate limit wrapper — delegates to the shared KV-based rate limiter.
+// Accepts `env` for backward compatibility with existing callers; extracts
+// env.SESSIONS and forwards to the shared implementation.
+// Returns { ok, remaining, limit, retryAfter } — callers should destructure { ok }.
+export async function rateLimit(env, key, limit, ttlSeconds) {
+  return kvRateLimit(env.SESSIONS, key, limit, ttlSeconds);
 }
 export const clientIp = (req) => req.headers.get("cf-connecting-ip") || "0.0.0.0";
 

@@ -4,7 +4,7 @@ import { exec } from "../../../../shared/db.js";
 
 export async function handleLead(request, env) {
   try {
-    if (!(await rateLimit(env, `lead:${clientIp(request)}`, 5, 3600))) return bad("Too many requests. Try again later.", 429);
+    if (!(await rateLimit(env, `lead:${clientIp(request)}`, 5, 3600)).ok) return bad("Too many requests. Try again later.", 429);
     const body = await readJson(request);
     if (!body) return bad("Invalid request");
     const handle = String(body.handle || "").slice(0, 120), casino = String(body.casino || "").slice(0, 60);

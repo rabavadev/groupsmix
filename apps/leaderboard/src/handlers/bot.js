@@ -15,7 +15,7 @@ export async function handleBotConnect(request, env) {
     // Basic format check: digits:alphanumeric
     if (!/^\d{8,}:[A-Za-z0-9_-]{30,}$/.test(token)) return bad("That doesn't look like a valid bot token. Copy the full string from BotFather.");
 
-    if (!(await rateLimit(env, `bot-connect:${user.id}`, 5, 3600))) return bad("Too many attempts. Try again later.", 429);
+    if (!(await rateLimit(env, `bot-connect:${user.id}`, 5, 3600)).ok) return bad("Too many attempts. Try again later.", 429);
 
     // Step 1: Validate the token by calling Telegram getMe
     let meData;

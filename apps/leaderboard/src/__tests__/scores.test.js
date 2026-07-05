@@ -10,7 +10,7 @@ const _sessionUrl = import.meta.resolve("../../../../shared/session.js");
 const _dbUrl      = import.meta.resolve("../../../../shared/db.js");
 
 // ── shared state that individual tests can override ────────────────────────
-let _rateLimitResult = true;
+let _rateLimitResult = { ok: true };
 let _siteRow = null;
 let _ownerRow = null;
 let _existingSiteRow = null;
@@ -99,11 +99,11 @@ describe("handleScores — auth", () => {
   });
 
   test("rate limit exceeded returns 429", async () => {
-    _rateLimitResult = false;
+    _rateLimitResult = { ok: false };
     const req = makeRequest({ headers: { "x-postback-key": "valid-key" }, body: { slug: "test", players: [] } });
     const res = await handleScores(req, {});
     expect(res.status).toBe(429);
-    _rateLimitResult = true;
+    _rateLimitResult = { ok: true };
   });
 
   test("unknown postback key returns 401", async () => {

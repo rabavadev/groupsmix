@@ -8,7 +8,7 @@ import { rateLimit, clientIp, json, bad } from "../auth.js";
  */
 export async function handlePublicStandings(request, env, ctx) {
   const slug = ctx.slug;
-  if (!(await rateLimit(env, `pub-standings:${clientIp(request)}`, 100, 60))) {
+  if (!(await rateLimit(env, `pub-standings:${clientIp(request)}`, 100, 60)).ok) {
     return bad("Rate limit exceeded. Try again shortly.", 429);
   }
   const r = await getPublicSite(env, slug);
@@ -58,7 +58,7 @@ export async function handlePublicRank(request, env, ctx) {
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=30" }
     });
   }
-  if (!(await rateLimit(env, `pub-rank:${clientIp(request)}`, 60, 60))) {
+  if (!(await rateLimit(env, `pub-rank:${clientIp(request)}`, 60, 60)).ok) {
     return new Response("Rate limit exceeded.", {
       status: 429,
       headers: { "content-type": "text/plain; charset=utf-8" }

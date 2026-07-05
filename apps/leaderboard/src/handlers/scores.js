@@ -11,7 +11,7 @@ export async function handleScores(request, env) {
     const postbackKey = request.headers.get("x-postback-key");
     if (!postbackKey) return bad("Missing X-Postback-Key header.", 401);
     // Rate limit: 10/min per key
-    if (!(await rateLimit(env, `scores:${postbackKey}`, 10, 60))) return bad("Rate limit exceeded. Try again shortly.", 429);
+    if (!(await rateLimit(env, `scores:${postbackKey}`, 10, 60)).ok) return bad("Rate limit exceeded. Try again shortly.", 429);
     // Validate key against sites table
     const site = await one("SELECT id, user_id FROM sites WHERE postback_key=$1", [postbackKey]);
     if (!site) return bad("Invalid postback key.", 401);

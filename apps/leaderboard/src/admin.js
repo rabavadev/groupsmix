@@ -31,7 +31,7 @@ async function logAdminAction(env, adminId, action, targetUserId = null, details
 export async function requireAdmin(request, env) {
   // BE-007: Rate-limit admin endpoints (120 req/min per IP).
   const ip = clientIp(request);
-  if (!(await rateLimit(env, `admin:${ip}`, 120, 60))) {
+  if (!(await rateLimit(env, `admin:${ip}`, 120, 60)).ok) {
     return { admin: null, res: bad("Too many requests. Try again later.", 429) };
   }
   const u = await currentUser(request, env);
@@ -236,7 +236,7 @@ export async function handle2faVerify(request, env) {
 
   // Per-user TOTP rate limit: 5 attempts per 5 minutes (SEC-710)
   const totpKey = `totp:admin:${admin.id}`;
-  if (!(await rateLimit(env, totpKey, 5, 300))) {
+  if (!(await rateLimit(env, totpKey, 5, 300)).ok) {
     return json({ ok: false, error: "Too many verification attempts. Try again in a few minutes." }, 429);
   }
 
