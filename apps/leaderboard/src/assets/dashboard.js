@@ -1,6 +1,8 @@
 /* Dashboard: load the user's site, edit brand + players, save back, manage plan. */
 // SEC-108: Read CSRF cookie and include it on state-changing requests.
 function getCsrf() { const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/); return m ? m[1] : ""; }
+// E2E-005: Redirect to login on session expiry instead of showing stale "Save failed"
+function guardAuth(res) { if (res.status === 401) { location.href = "/login"; throw new Error("session expired"); } return res; }
 const $ = (id) => document.getElementById(id);
 let SLUG = null, EXTRA = {}, ME = null, ACTIVE_SITE_ID = null, BOARDS = [];
 let LOGO; // undefined = unchanged, null = remove, string = new data URI
@@ -132,7 +134,7 @@ async function checkout(btn){
   if (checkingOut) return; checkingOut = true;
   btn.disabled = true; const orig = btn.textContent; btn.textContent = "Opening checkout…";
   try {
-    const res = await fetch("/api/billing/checkout", { method: "POST", headers: { "x-csrf-token": getCsrf() } });
+    const res = await fetch("/api/billing/checkout", { method: "POST", headers: { "x-csrf-token": getCsrf() } }).then(guardAuth);
     const d = await res.json();
     if (res.ok && d.ok && d.url) { location.href = d.url; return; }
     $("status").textContent = d.error || "Couldn't start checkout.";
@@ -411,7 +413,7 @@ $("a_go").addEventListener("click", async ()=>{
   try {
     // Persist any unsaved edits first so the snapshot matches what's on screen.
     const savePayload = collect();
-    const saveRes = await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(savePayload)});
+    const saveRes = await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(savePayload)}).then(guardAuth);
     const saved = await saveRes.json();
     if (!saveRes.ok || !saved.ok) { status.textContent = saved.error || "Couldn't save before archiving."; btn.disabled=false; btn.textContent="Close out period"; return; }
     const archiveBody = { label:$("a_label").value.trim(), clear };
@@ -434,7 +436,7 @@ $("save").addEventListener("click", async ()=>{
   const limitEl = $("limitMsg"); if (limitEl) limitEl.textContent = "";
   try {
     const payload = collect();
-    const res=await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(payload)});
+    const res=await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(payload)}).then(guardAuth);
     const d=await res.json();
     if(res.ok&&d.ok){ status.textContent="Saved. Your page is updated."; _dirty=false; } else status.textContent=d.error||"Save failed.";
   } catch{ status.textContent="Network error."; }
