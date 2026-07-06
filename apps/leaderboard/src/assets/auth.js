@@ -57,7 +57,7 @@ form.addEventListener("submit", async (e) => {
     if (payload.password.length < 8) { errEl.textContent = "Password must be at least 8 characters"; submit.disabled = false; submit.textContent = orig; return; }
   }
   try {
-    const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+    const res = await fetch(endpoint, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok || !data.ok) { errEl.textContent = data.error || "Something went wrong."; submit.disabled = false; submit.textContent = orig; return; }
     if (mode === "forgot") {

@@ -98,7 +98,7 @@ function renderBoardSwitcher(){
     $("nb_err").textContent = "Creating…";
     createBtn.disabled = true;
     try {
-      const res = await fetch("/api/site/create", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ slug, name }) });
+      const res = await fetch("/api/site/create", { method: "POST", credentials: "include", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ slug, name }) });
       const d = await res.json();
       if (res.ok && d.ok) {
         location.href = "/dashboard?board=" + encodeURIComponent(d.id);
@@ -134,7 +134,7 @@ async function checkout(btn){
   if (checkingOut) return; checkingOut = true;
   btn.disabled = true; const orig = btn.textContent; btn.textContent = "Opening checkout…";
   try {
-    const res = await fetch("/api/billing/checkout", { method: "POST", headers: { "x-csrf-token": getCsrf() } }).then(guardAuth);
+    const res = await fetch("/api/billing/checkout", { method: "POST", credentials: "include", headers: { "x-csrf-token": getCsrf() } }).then(guardAuth);
     const d = await res.json();
     if (res.ok && d.ok && d.url) { location.href = d.url; return; }
     $("status").textContent = d.error || "Couldn't start checkout.";
@@ -349,6 +349,7 @@ function renderDomain(){
         if (ACTIVE_SITE_ID) body.siteId = ACTIVE_SITE_ID;
         const res = await fetch("/api/site/domain/verify", {
           method: "POST",
+          credentials: "include",
           headers: { "content-type": "application/json", "x-csrf-token": getCsrf() },
           body: JSON.stringify(body),
         });
@@ -395,7 +396,7 @@ function renderArchives(list){
       if (!confirm(`Delete the "${a.label}" archive? It disappears from your page too.`)) return;
       const body = { id: a.id };
       if (ACTIVE_SITE_ID) body.siteId = ACTIVE_SITE_ID;
-      const res = await fetch("/api/site/archive/delete",{method:"POST",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(body)});
+      const res = await fetch("/api/site/archive/delete",{method:"POST",credentials:"include",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(body)});
       const d = await res.json();
       if (res.ok && d.ok) { row.remove(); if(!$("archList").children.length) $("archEmpty").hidden=false; $("status").textContent="Archive deleted."; }
       else $("status").textContent = d.error || "Couldn't delete that.";
@@ -413,12 +414,12 @@ $("a_go").addEventListener("click", async ()=>{
   try {
     // Persist any unsaved edits first so the snapshot matches what's on screen.
     const savePayload = collect();
-    const saveRes = await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(savePayload)}).then(guardAuth);
+    const saveRes = await fetch("/api/site",{method:"PUT",credentials:"include",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(savePayload)}).then(guardAuth);
     const saved = await saveRes.json();
     if (!saveRes.ok || !saved.ok) { status.textContent = saved.error || "Couldn't save before archiving."; btn.disabled=false; btn.textContent="Close out period"; return; }
     const archiveBody = { label:$("a_label").value.trim(), clear };
     if (ACTIVE_SITE_ID) archiveBody.siteId = ACTIVE_SITE_ID;
-    const res = await fetch("/api/site/archive",{method:"POST",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(archiveBody)});
+    const res = await fetch("/api/site/archive",{method:"POST",credentials:"include",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(archiveBody)});
     const d = await res.json();
     if (res.ok && d.ok) {
       const apiUrl2 = ACTIVE_SITE_ID ? `/api/site?siteId=${encodeURIComponent(ACTIVE_SITE_ID)}` : "/api/site";
@@ -436,7 +437,7 @@ $("save").addEventListener("click", async ()=>{
   const limitEl = $("limitMsg"); if (limitEl) limitEl.textContent = "";
   try {
     const payload = collect();
-    const res=await fetch("/api/site",{method:"PUT",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(payload)}).then(guardAuth);
+    const res=await fetch("/api/site",{method:"PUT",credentials:"include",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(payload)}).then(guardAuth);
     const d=await res.json();
     if(res.ok&&d.ok){ status.textContent="Saved. Your page is updated."; _dirty=false; } else status.textContent=d.error||"Save failed.";
   } catch{ status.textContent="Network error."; }
@@ -462,7 +463,7 @@ async function loadStats(){
   if (s.last30.views===0 && s.last30.copies===0 && s.last30.clicks===0) $("statsEmpty").hidden = false;
 }
 
-$("logout")?.addEventListener("click", async (e)=>{ e.preventDefault(); await fetch("/api/auth/logout",{method:"POST",headers:{"x-csrf-token":getCsrf()}}); location.href="/login"; });
+$("logout")?.addEventListener("click", async (e)=>{ e.preventDefault(); await fetch("/api/auth/logout",{method:"POST",credentials:"include",headers:{"x-csrf-token":getCsrf()}}); location.href="/login"; });
 $("upgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); checkout($("goPro")); });
 $("goPro")?.addEventListener("click",()=>checkout($("goPro")));
 $("domainUpgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); checkout($("goPro")); });
@@ -470,7 +471,7 @@ $("overlayUpgrade")?.addEventListener("click",(e)=>{ e.preventDefault(); checkou
 $("testDiscord")?.addEventListener("click", async () => {
   const s = $("testDiscordStatus"); if(s) s.textContent = "Sending…";
   try {
-    const r = await fetch("/api/site/notify/test", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ channel: "discord" }) });
+    const r = await fetch("/api/site/notify/test", { method: "POST", credentials: "include", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ channel: "discord" }) });
     const d = await r.json();
     if(s) s.textContent = d.ok ? "✅ Sent!" : (d.error || "Failed");
   } catch(e) { if(s) s.textContent = "Network error."; }
@@ -478,7 +479,7 @@ $("testDiscord")?.addEventListener("click", async () => {
 $("testTelegram")?.addEventListener("click", async () => {
   const s = $("testTelegramStatus"); if(s) s.textContent = "Sending…";
   try {
-    const r = await fetch("/api/site/notify/test", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ channel: "telegram" }) });
+    const r = await fetch("/api/site/notify/test", { method: "POST", credentials: "include", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify({ channel: "telegram" }) });
     const d = await r.json();
     if(s) s.textContent = d.ok ? "✅ Sent!" : (d.error || "Failed");
   } catch(e) { if(s) s.textContent = "Network error."; }

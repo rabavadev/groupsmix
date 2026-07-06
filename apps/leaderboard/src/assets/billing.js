@@ -157,6 +157,7 @@ if (trialBtn) {
     try {
       const r = await fetch("/api/billing/trial", {
         method: "POST",
+        credentials: "include",
         headers: { "x-csrf-token": getCsrf() },
       });
       const d = await r.json();
@@ -180,7 +181,7 @@ async function startCheckout() {
   const status = $("status");
   status.textContent = "Opening checkout…";
   try {
-    const r = await fetch("/api/billing/checkout", { method: "POST", headers: { "x-csrf-token": getCsrf() } });
+    const r = await fetch("/api/billing/checkout", { method: "POST", credentials: "include", headers: { "x-csrf-token": getCsrf() } });
     const d = await r.json();
     if (r.ok && d.url) {
       window.location.href = d.url;
@@ -198,7 +199,7 @@ async function startLifetimeCheckout() {
   if (btn) { btn.disabled = true; btn.textContent = "Opening checkout…"; }
   status.textContent = "";
   try {
-    const r = await fetch("/api/billing/checkout-lifetime", { method: "POST", headers: { "x-csrf-token": getCsrf() } });
+    const r = await fetch("/api/billing/checkout-lifetime", { method: "POST", credentials: "include", headers: { "x-csrf-token": getCsrf() } });
     const d = await r.json();
     if (r.ok && d.url) {
       window.location.href = d.url;

@@ -5,11 +5,11 @@ const when = (ms) => { if (!ms) return "–"; const d = new Date(Number(ms)); re
 function getCsrf() { const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/); return m ? m[1] : ""; }
 
 async function api(path, opts) {
-  const merged = { ...opts };
-  if (merged.method && ["POST","PUT","DELETE","PATCH"].includes(merged.method.toUpperCase())) {
-    merged.headers = { ...(merged.headers || {}), "x-csrf-token": getCsrf() };
-  }
-  const res = await fetch(path, merged);
+    const merged = { ...opts, credentials: "include" };
+    if (merged.method && ["POST","PUT","DELETE","PATCH"].includes(merged.method.toUpperCase())) {
+      merged.headers = { ...(merged.headers || {}), "x-csrf-token": getCsrf() };
+    }
+    const res = await fetch(path, merged);
   const d = await res.json().catch(() => ({}));
   if (res.status === 401) { location.href = "/login"; throw new Error("auth"); }
   if (res.status === 403) { const err = d.error || "forbidden"; if (err === "2fa_required") { location.href = "/admin"; throw new Error("2fa"); } const el = document.getElementById("panel") || document.getElementById("loading") || document.querySelector(".wrap"); if (el) { el.innerHTML = "<p style='padding:24px;font-family:system-ui'>Not an admin account. <a href='/dashboard'>Back to dashboard</a></p>"; el.hidden = false; } throw new Error("forbidden"); }
@@ -148,5 +148,5 @@ function renderPag(containerId, data, page, loadFn) {
   el.querySelectorAll("[data-pag]").forEach(b => b.addEventListener("click", () => loadFn(page + Number(b.dataset.pag))));
 }
 
-$("logout").addEventListener("click", async (e) => { e.preventDefault(); await fetch("/api/auth/logout", { method: "POST", headers: { "x-csrf-token": getCsrf() } }); location.href = "/login"; });
+$("logout").addEventListener("click", async (e) => { e.preventDefault(); await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: { "x-csrf-token": getCsrf() } }); location.href = "/login"; });
 init();
