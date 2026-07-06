@@ -10,10 +10,9 @@ const tsconfigPath = path.join(__dirname, "apps/leaderboard/tsconfig.json");
 console.log("Compiling shared TypeScript to JavaScript for leaderboard Worker...");
 
 try {
-  const cmd = process.versions?.bun
-    ? `bunx tsc --project ${tsconfigPath}`
-    : `npx tsc --project ${tsconfigPath}`;
-  execSync(cmd, {
+  // Resolve tsc from the leaderboard workspace's node_modules
+  const tscBin = path.join(__dirname, "apps/leaderboard/node_modules/.bin/tsc");
+  execSync(`"${tscBin}" --project "${tsconfigPath}"`, {
     cwd: __dirname,
     stdio: "inherit"
   });

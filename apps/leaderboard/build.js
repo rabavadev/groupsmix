@@ -6,7 +6,7 @@ import { execSync } from "node:child_process";
 // Step 1: Compile shared TypeScript to JavaScript
 console.log("Compiling shared TypeScript...");
 try {
-  execSync("node ../../build-shared.js", { stdio: "inherit" });
+  execSync("node ../../build-shared.mjs", { stdio: "inherit" });
   console.log("TypeScript compilation complete");
 } catch (error) {
   console.error("TypeScript compilation failed:", error);

@@ -35,6 +35,16 @@ export function loginHtml(botUsername: string, devLogin: boolean, publicBaseUrl:
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>YourRank Bot — Login</title>
   <style>
+  :root { --bg:#0d1117; --panel:#161b22; --border:#30363d; --fg:#e6edf3; --dim:#8b949e;
+          --accent:#f0b429; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--fg); font:15px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px; }
+  .muted { color:var(--dim); }
+  input { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border);
+          border-radius:6px; padding:8px 10px; margin-bottom:10px; font:inherit; }
+  button { background:var(--accent); color:#000; border:0; border-radius:6px; padding:8px 16px;
+           font:600 14px/1 inherit; cursor:pointer; }
   .center { min-height:90vh; display:flex; align-items:center; justify-content:center; }
   .card { text-align:center; max-width:380px; }
   </style></head><body>

@@ -3,7 +3,7 @@
 //  YourRank — SHARED SESSION (canonical TypeScript source)
 //
 //  ONE session model used identically by BOTH Workers:
-//    * Cookie name:      gm_session
+//    * Cookie name:      yr_session
 //    * Cookie domain:    .yourrank.site (or SESSION_COOKIE_DOMAIN)
 //                        every path on the same host — /bot, /hook, /r, ...)
 //    * KV namespace:     SESSIONS  (BOTH Workers bind the SAME namespace id)
@@ -32,7 +32,7 @@
 //      id      = "<the one shared namespace id>"
 // ============================================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cookieClearLegacy2 = exports.cookieClearLegacy = exports.cookieClear = exports.cookieSet = exports.newToken = exports.SESSION_ROTATE_AFTER_S = exports.KV_PREFIX = exports.SESSION_TTL_S = exports.COOKIE_DOMAIN = exports.LEGACY_COOKIE_NAME = exports.LEGACY_COOKIE_NAME2 = exports.COOKIE_NAME = void 0;
+exports.cookieClearLegacy = exports.cookieClearLegacy2 = exports.cookieClear = exports.cookieSet = exports.newToken = exports.SESSION_ROTATE_AFTER_S = exports.KV_PREFIX = exports.SESSION_TTL_S = exports.COOKIE_DOMAIN = exports.LEGACY_COOKIE_NAME = exports.LEGACY_COOKIE_NAME2 = exports.COOKIE_NAME = void 0;
 exports.hasLegacyCookie = hasLegacyCookie;
 exports.readToken = readToken;
 exports.readTokenFromHeader = readTokenFromHeader;
@@ -58,7 +58,10 @@ exports.LEGACY_COOKIE_NAME = "sess";
 // production domain; override with SESSION_COOKIE_DOMAIN for staging/preview.
 // MUST be a host-wide domain (leading dot) so BOTH Workers (bot + leaderboard)
 // see the cookie — they share one KV session namespace across the zone.
-exports.COOKIE_DOMAIN = (typeof process !== "undefined" && process.env && process.env.SESSION_COOKIE_DOMAIN) || ".yourrank.site";
+exports.COOKIE_DOMAIN = (() => {
+    const v = typeof process !== "undefined" && process.env && process.env.SESSION_COOKIE_DOMAIN;
+    return (v && v !== "undefined") ? v : ".yourrank.site";
+})();
 exports.SESSION_TTL_S = 60 * 60 * 24 * 30; // 30 days
 exports.KV_PREFIX = "sess:";
 // SEC-107: Rotate session tokens older than 24 hours. A stolen token is only
@@ -76,13 +79,13 @@ const cookieSet = (token) => `${exports.COOKIE_NAME}=${token}; ${cookieAttrs()};
 exports.cookieSet = cookieSet;
 const cookieClear = () => `${exports.COOKIE_NAME}=; ${cookieAttrs()}; Max-Age=0`;
 exports.cookieClear = cookieClear;
+// DOC-001: Also clear the legacy gm_session cookie so browsers migrate to yr_session.
+const cookieClearLegacy2 = () => `${exports.LEGACY_COOKIE_NAME2}=; ${cookieAttrs()}; Max-Age=0`;
+exports.cookieClearLegacy2 = cookieClearLegacy2;
 // SEC-104: Clear the legacy 'sess' cookie that some browsers may still carry
 // from the old HMAC-signed session system.
 const cookieClearLegacy = () => `${exports.LEGACY_COOKIE_NAME}=; ${cookieAttrs()}; Max-Age=0`;
 exports.cookieClearLegacy = cookieClearLegacy;
-// DOC-001: Also clear the legacy gm_session cookie so browsers migrate to yr_session.
-const cookieClearLegacy2 = () => `${exports.LEGACY_COOKIE_NAME2}=; ${cookieAttrs()}; Max-Age=0`;
-exports.cookieClearLegacy2 = cookieClearLegacy2;
 // SEC-104: Check whether the request carries the old 'sess' cookie.
 function hasLegacyCookie(req) {
     const c = req.headers.get("cookie") || "";
@@ -96,7 +99,8 @@ function readToken(req) {
     // Try the canonical cookie name first
     let re = new RegExp("(?:^|;\\s*)" + exports.COOKIE_NAME + "=([^;]+)");
     let m = c.match(re);
-    if (m) return m[1];
+    if (m)
+        return m[1];
     // DOC-001: Fall back to legacy gm_session for migration
     re = new RegExp("(?:^|;\\s*)" + exports.LEGACY_COOKIE_NAME2 + "=([^;]+)");
     m = c.match(re);
@@ -109,7 +113,8 @@ function readTokenFromHeader(cookieHeader) {
     // Try the canonical cookie name first
     let re = new RegExp("(?:^|;\\s*)" + exports.COOKIE_NAME + "=([^;]+)");
     let m = c.match(re);
-    if (m) return m[1];
+    if (m)
+        return m[1];
     // DOC-001: Fall back to legacy gm_session for migration
     re = new RegExp("(?:^|;\\s*)" + exports.LEGACY_COOKIE_NAME2 + "=([^;]+)");
     m = c.match(re);
@@ -241,12 +246,12 @@ async function resolveSession(req, env) {
     }
     // Sliding-window TTL refresh — fire-and-forget, never blocks the request.
     try {
-        env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
+        env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
         const idxKey = "userSessions:" + userId;
         env.SESSIONS.get(idxKey).then((cur) => {
             if (cur)
-                env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
-        }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
+                env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
+        }).catch(() => { });
     }
     catch { /* best-effort TTL refresh */ }
     return { uid: userId };
@@ -278,12 +283,12 @@ async function currentUserIdFromHeader(cookieHeader, env) {
     else {
         // Sliding-window TTL refresh
         try {
-            env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
+            env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
             const idxKey = "userSessions:" + userId;
             env.SESSIONS.get(idxKey).then((cur) => {
                 if (cur)
-                    env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
-            }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
+                    env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
+            }).catch(() => { });
         }
         catch { /* best-effort */ }
     }
