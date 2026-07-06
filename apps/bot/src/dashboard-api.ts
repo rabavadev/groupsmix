@@ -321,10 +321,11 @@ export function buildDashboardApi(): Hono<{ Variables: { uid: string } }> {
       const enc = await encryptToken(key);
       await query(`UPDATE users SET postback_key_enc = $1 WHERE id = $2`, [enc, uid]);
     } else {
-      // New key — generate, encrypt, store hash for lookups
+      // New key — generate, encrypt, and store both the plaintext (for lookup
+      // in /pb/:key) and the encrypted version (for secure reveal in the UI)
       key = newPostbackKey();
       const enc = await encryptToken(key);
-      await query(`UPDATE users SET postback_key_enc = $1 WHERE id = $2`, [enc, uid]);
+      await query(`UPDATE users SET postback_key = $1, postback_key_enc = $2 WHERE id = $3`, [key, enc, uid]);
     }
     return c.json({ postback_url: `${config.publicBaseUrl}/pb/${key}` });
   });

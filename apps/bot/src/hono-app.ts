@@ -68,7 +68,8 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   });
 
-  app.get("/health", async (c) => {
+  // Health check — reachable at /bot/health (Cloudflare routes /bot/* to this Worker)
+  app.get("/bot/health", async (c) => {
     try {
       await one('SELECT 1 AS ok');
       return c.json({ ok: true, db: true });
