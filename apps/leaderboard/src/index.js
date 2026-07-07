@@ -224,7 +224,7 @@ async function handleRequest(request, env, ctx) {
       if (path === "/reset") return new Response(PAGES.reset, { headers: { ...SECURE_HTML, ...csrfHeader } });
       if (path === "/admin") {
         const u = await currentUser(request, env);
-        if (!u || !u.is_admin) return new Response('Not found', { status: 404 });
+        if (!u || !u.is_admin) return new Response(notFoundPage("admin"), { status: 404, headers: HTML });
         // Check if 2FA is required but not yet verified
         const tfaRow = await findUserTotpSecret(u.id);
         if (tfaRow?.totp_secret) {
@@ -380,6 +380,9 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
       if (method === "GET" && path.length > 1 && !path.includes(".")) {
         let slug;
         try { slug = decodeURIComponent(path.slice(1).split("/")[0]).toLowerCase(); } catch { return new Response("not found", { status: 404 }); }
+        // BUG-004: Reject paths with extra segments (e.g., /slug/widget).
+        // /<slug>/overlay is handled above; anything else is a 404.
+        if (path !== `/${slug}` && path !== `/${slug}/`) return new Response(notFoundPage(slug), { status: 404, headers: HTML });
         if (RESERVED.has(slug)) return new Response("not found", { status: 404 });
         const r = await getPublicSite(env, slug);
         if (!r) {

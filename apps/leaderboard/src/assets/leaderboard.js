@@ -195,7 +195,7 @@ let pollFailCount = 0;
 
 async function pollPlayers() {
     const slug = window.__SLUG__;
-    if (!slug) return;
+    if (!slug || slug === "demo") return;
     try {
       const resp = await fetch(`/api/public/${encodeURIComponent(slug)}/players`);
       if (!resp.ok) { onPollFail(); return; }

@@ -27,6 +27,16 @@ const mode = { "/signup": "signup", "/forgot": "forgot", "/reset": "reset" }[loc
 const form = document.getElementById("form");
 const errEl = document.getElementById("err");
 const msgEl = document.getElementById("msg");
+// BUG-003: If reset page has no token, show error instead of a form that will fail
+if (mode === "reset" && !new URLSearchParams(location.search).get("token")) {
+  if (form) form.hidden = true;
+  if (errEl) { errEl.hidden = false; errEl.textContent = "This reset link is invalid or expired. Request a new one below."; }
+  const backLink = document.createElement("a");
+  backLink.href = "/forgot";
+  backLink.textContent = "Request a new reset link";
+  backLink.className = "back-link";
+  if (errEl && errEl.parentNode) errEl.parentNode.appendChild(backLink);
+}
 form.querySelectorAll("input").forEach(inp => inp.addEventListener("input", () => { if (errEl.textContent) errEl.textContent = ""; }));
 const submit = document.getElementById("submit");
 const nameInput = document.getElementById("name");
