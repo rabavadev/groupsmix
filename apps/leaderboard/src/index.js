@@ -89,7 +89,7 @@ async function handleRequest(request, env, ctx) {
                 watermark: !pro, homeUrl: `https://${host}`, slug: customSlug, nonce,
                 logoUrl: pro && r.data.branding?.hasLogo ? `https://${host}/logo/${customSlug}` : null,
               }),
-              { headers: { ...HTML_N, "cache-control": "public, max-age=30" } }
+              { headers: { ...HTML_N, "cache-control": "no-store" } }
             );
           }
           if (method === "GET" && path === "/favicon.ico") {
@@ -332,9 +332,9 @@ async function handleRequest(request, env, ctx) {
         };
         return new Response(
           renderLeaderboard(demoData, {
-            watermark: false, homeUrl: url.origin, slug: "demo",
+            watermark: false, homeUrl: url.origin, slug: "demo", nonce,
           }),
-          { headers: { ...HTML_N, "cache-control": "public, max-age=3600" } }
+          { headers: { ...HTML_N, "cache-control": "no-store" } }
         );
       }
 
@@ -373,10 +373,10 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
 <h2>🎬 OBS Overlay</h2>
 <p>This is a Pro feature.<br/>Upgrade at <a href="/" target="_blank">yourrank.site</a> to unlock the live stream overlay with animated rankings.</p>
 </body></html>`;
-          return new Response(upsell, { headers: { ...HTML_N, "cache-control": "public, max-age=300" } });
+          return new Response(upsell, { headers: { ...HTML_N, "cache-control": "no-store" } });
         }
         const overlayHtml = PAGES.overlay(r.data, { slug, nonce });
-        return new Response(overlayHtml, { headers: { ...HTML_N, "cache-control": "public, max-age=30" } });
+        return new Response(overlayHtml, { headers: { ...HTML_N, "cache-control": "no-store" } });
       }
 
       // --- public leaderboard at /<slug> ---
@@ -403,7 +403,7 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
         const viewCookieName = `__v_${slug}`;
         const viewCookies = (request.headers.get("cookie") || "");
         const alreadyViewed = new RegExp(`(?:^|;\\s*)${viewCookieName}=`).test(viewCookies);
-        const respHeaders = { ...HTML_N, "cache-control": "public, max-age=30" };
+        const respHeaders = { ...HTML_N, "cache-control": "no-store" };
         if (r.id && !alreadyViewed) {
           const ref = request.headers.get("referer") || request.headers.get("Referer") || "";
           ctx.waitUntil(bumpStat(env, r.id, "views", ref));

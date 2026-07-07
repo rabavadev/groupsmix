@@ -8,7 +8,7 @@ const legal = (title, updated, body, pagePath, desc) => `<!DOCTYPE html><html la
 <link rel="canonical" href="https://yourrank.site/${pagePath}" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <header class="topbar"><a class="brand" href="/">Your<b>Rank</b></a>
 <div class="topbar-right"><a href="/login" class="btn btn--sm btn--ghost">Sign in</a></div></header>
 <main class="legal" id="main-content"><h1>${title}</h1><p class="legal-updated">Last updated: ${updated}</p>
@@ -41,7 +41,7 @@ export const PAGES = {
 <p>Hosted leaderboards for casino streamers. JavaScript is required for the full experience.</p>
 <a href="/signup">Create your page</a>
 </div></noscript>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <div class="wrap">
 <nav class="top"><div class="brand">Your<b>Rank</b></div>
 <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -100,7 +100,7 @@ export const PAGES = {
 <meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/login" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Your leaderboard, hosted and handled.</h1><p>Edit your prize pool, code and players from one dashboard. Your page updates instantly. No code, no redeploys.</p></div>
 <div class="feat"><div>— Live countdown to every reset</div><div>— Auto-sorted standings from wager</div><div>— Your own public URL</div></div></aside>
@@ -117,7 +117,7 @@ export const PAGES = {
 <meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/forgot" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Locked out? It happens.</h1><p>Tell us the email on your account and we'll send a reset link. If email isn't set up on this deployment yet, contact support and we'll hand you a link directly.</p></div>
 <div class="feat"></div></aside>
@@ -133,7 +133,7 @@ export const PAGES = {
 <meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/reset" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Set a new password.</h1><p>Pick something you'll remember this time. At least 8 characters.</p></div>
 <div class="feat"></div></aside>
@@ -150,7 +150,7 @@ export const PAGES = {
 <meta name="robots" content="noindex, nofollow" /><link rel="canonical" href="https://yourrank.site/signup" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
 <div><h1>Launch your leaderboard in a few minutes.</h1><p>Pick a handle, fill in your prizes and players, and your page goes live at yourrank.site/yourname.</p></div>
 <div class="feat"><div>— Free to set up</div><div>— Your public URL from day one</div><div>— Upgrade to Pro when you're ready</div></div></aside>
@@ -172,7 +172,7 @@ export const PAGES = {
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><link rel="stylesheet" href="/assets/shell-nav.css" /></head><body>
 <noscript><div class="noscript-msg"><p>YourRank requires JavaScript</p><p>Please enable JavaScript in your browser settings to use the dashboard.</p></div></noscript>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <!--GM_NAV-->
 <main class="wrap" id="main-content"><div id="loading" class="py-26">
 <div class="skel-header"><div><div class="skeleton skeleton-text--lg skel-w-180"></div><div class="skeleton skeleton-text--sm skel-w-260 mt-8"></div></div><div class="skeleton skeleton-text skel-w-90"></div></div>
@@ -299,7 +299,7 @@ analytics: `<!DOCTYPE html><html lang="en"><head>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><link rel="stylesheet" href="/assets/shell-nav.css" /></head><body>
 <noscript><div class="noscript-msg"><p>YourRank requires JavaScript</p><p>Please enable JavaScript in your browser settings to view analytics.</p></div></noscript>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <!--GM_NAV-->
 <main class="wrap" id="main-content">
 <div class="dash-head"><div><h1>Analytics</h1><p class="live-link">Performance of <a id="liveLink" href="#" target="_blank">your page</a></p></div></div>
@@ -336,7 +336,7 @@ billing: `<!DOCTYPE html><html lang="en"><head>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><link rel="stylesheet" href="/assets/shell-nav.css" /></head><body>
 <noscript><div class="noscript-msg"><p>YourRank requires JavaScript</p><p>Please enable JavaScript in your browser settings to manage billing.</p></div></noscript>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <!--GM_NAV-->
 <main class="wrap" id="main-content">
 <div class="dash-head"><div><h1>Billing</h1><p class="live-link">Your YourRank plan</p></div><span class="label" id="planBadge">FREE PLAN</span></div>
@@ -376,7 +376,7 @@ botSetup: `<!DOCTYPE html><html lang="en"><head>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /><link rel="stylesheet" href="/assets/shell-nav.css" /></head><body>
 <noscript><div class="noscript-msg"><p>YourRank requires JavaScript</p><p>Please enable JavaScript in your browser settings to set up your Telegram bot.</p></div></noscript>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <!--GM_NAV-->
 <main class="wrap" id="main-content">
 <div class="dash-head"><div><h1>🤖 Connect your Telegram bot</h1><p class="live-link">Walk through the 4 steps below — takes about 2 minutes.</p></div></div>
@@ -448,7 +448,7 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
 <noscript><div class="noscript-msg"><p>YourRank Admin requires JavaScript</p><p>Please enable JavaScript in your browser settings to use the admin panel.</p></div></noscript>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <header class="topbar"><div class="brand">Your<b>Rank</b> <span class="label ml-8">ADMIN</span></div>
 <div class="topbar-right"><span class="muted" id="userEmail"></span><a href="/dashboard" class="btn btn--sm btn--ghost">Dashboard</a><a href="#" id="logout" class="btn btn--sm btn--ghost">Sign out</a></div></header>
 <main class="wrap" id="main-content"><div id="loading" class="py-26">
@@ -484,7 +484,7 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <link rel="stylesheet" href="/assets/app.css" />
 <link rel="stylesheet" href="/assets/admin2fa-styles.css" /></head><body>
 <noscript><div class="noscript-msg"><p>YourRank Admin requires JavaScript</p><p>Please enable JavaScript to verify two-factor authentication.</p></div></noscript>
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <header class="topbar"><div class="brand">Your<b>Rank</b> <span class="label ml-8">ADMIN</span></div>
 <div class="topbar-right"><a href="/dashboard" class="btn btn--sm btn--ghost">Dashboard</a><a href="#" id="logout" class="btn btn--sm btn--ghost">Sign out</a></div></header>
 <main class="wrap" id="main-content">
@@ -520,7 +520,7 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <link rel="stylesheet" href="/assets/setup-styles.css" />
 <noscript><div class="noscript-msg"><p>YourRank requires JavaScript</p><p>Please enable JavaScript in your browser settings to set up your leaderboard.</p></div></noscript>
 <!--GM_NAV-->
-<a href="#main-content" class="sr-only skip-link" onfocus="this.classList.remove('sr-only')" onblur="this.classList.add('sr-only')">Skip to content</a>
+<a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <main class="gm-shell-main" id="main-content">
 <div class="setup-wrap">
 <h1>Set up your leaderboard</h1>

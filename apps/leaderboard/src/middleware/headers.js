@@ -42,12 +42,15 @@ export const SECURE_HTML = {
 // HTML-escape a value for interpolation into text/attribute context
 export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-// Inject nonce into CSP header, replacing 'unsafe-inline' with 'nonce-xxx'.
-// Keeps 'unsafe-inline' as fallback for old browsers (ignored when nonce present).
+// Inject nonce into CSP header for both style-src and script-src.
+// Replaces 'unsafe-inline' with 'nonce-xxx' where present, adds nonce otherwise.
 export function withNonce(headers, nonce) {
   const csp = headers["Content-Security-Policy"];
   if (!nonce || !csp) return headers;
-  return { ...headers, "Content-Security-Policy": csp.replace(/style-src 'self' 'unsafe-inline'/, `style-src 'self' 'nonce-${nonce}'`) };
+  const updated = csp
+    .replace(/style-src 'self' 'unsafe-inline'/, `style-src 'self' 'nonce-${nonce}'`)
+    .replace(/script-src 'self'/, `script-src 'self' 'nonce-${nonce}'`);
+  return { ...headers, "Content-Security-Policy": updated };
 }
 
 export function notFoundPage(slug, nonce) {
