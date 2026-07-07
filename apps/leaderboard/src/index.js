@@ -64,7 +64,7 @@ async function handleRequest(request, env, ctx) {
 
       const url = new URL(request.url);
       const path = url.pathname;
-      const method = request.method;
+      const method = request.method === "HEAD" ? "GET" : request.method;
       const host = (request.headers.get("host") || "").toLowerCase().split(":")[0];
 
       // --- custom domain resolution ---
