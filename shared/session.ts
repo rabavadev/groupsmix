@@ -255,11 +255,11 @@ export async function resolveSession(
 
   // Sliding-window TTL refresh — fire-and-forget, never blocks the request.
   try {
-    env.SESSIONS.put(KV_PREFIX + token, raw, { expirationTtl: SESSION_TTL_S }).catch(() => {});
+    env.SESSIONS.put(KV_PREFIX + token, raw, { expirationTtl: SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
     const idxKey = "userSessions:" + userId;
     env.SESSIONS.get(idxKey).then((cur) => {
-      if (cur) env.SESSIONS.put(idxKey, cur, { expirationTtl: SESSION_TTL_S }).catch(() => {});
-    }).catch(() => {});
+      if (cur) env.SESSIONS.put(idxKey, cur, { expirationTtl: SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
+    }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
   } catch { /* best-effort TTL refresh */ }
 
   return { uid: userId };
@@ -293,11 +293,11 @@ export async function currentUserIdFromHeader(
     } else {
       // Sliding-window TTL refresh
       try {
-        env.SESSIONS.put(KV_PREFIX + token, raw, { expirationTtl: SESSION_TTL_S }).catch(() => {});
+        env.SESSIONS.put(KV_PREFIX + token, raw, { expirationTtl: SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
         const idxKey = "userSessions:" + userId;
         env.SESSIONS.get(idxKey).then((cur) => {
-          if (cur) env.SESSIONS.put(idxKey, cur, { expirationTtl: SESSION_TTL_S }).catch(() => {});
-        }).catch(() => {});
+          if (cur) env.SESSIONS.put(idxKey, cur, { expirationTtl: SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
+        }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
       } catch { /* best-effort */ }
     }
     return userId;

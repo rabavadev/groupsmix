@@ -246,12 +246,12 @@ async function resolveSession(req, env) {
     }
     // Sliding-window TTL refresh — fire-and-forget, never blocks the request.
     try {
-        env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
+        env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
         const idxKey = "userSessions:" + userId;
         env.SESSIONS.get(idxKey).then((cur) => {
             if (cur)
-                env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
-        }).catch(() => { });
+                env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
+        }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
     }
     catch { /* best-effort TTL refresh */ }
     return { uid: userId };
@@ -283,12 +283,12 @@ async function currentUserIdFromHeader(cookieHeader, env) {
     else {
         // Sliding-window TTL refresh
         try {
-            env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
+            env.SESSIONS.put(exports.KV_PREFIX + token, raw, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
             const idxKey = "userSessions:" + userId;
             env.SESSIONS.get(idxKey).then((cur) => {
                 if (cur)
-                    env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(() => { });
-            }).catch(() => { });
+                    env.SESSIONS.put(idxKey, cur, { expirationTtl: exports.SESSION_TTL_S }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
+            }).catch(e => console.error("[session] TTL refresh failed:", e?.message));
         }
         catch { /* best-effort */ }
     }
