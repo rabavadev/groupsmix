@@ -37,6 +37,49 @@ export default {
   }
 };
 
+function demoLeaderboardData() {
+  return {
+    brand: {
+      name: "StakeDrop",
+      casino: "Stake",
+      code: "DEMO2025",
+      ctaUrl: "https://stake.com/?c=DEMO2025",
+      prizePool: "$5,000",
+      period: "Monthly",
+      tagline: "Casino streamer & Stake partner",
+      resetNote: "",
+      blurb: "Welcome to the official StakeDrop leaderboard. Use code DEMO2025 to join and climb the ranks. Top wagerers win big every month.",
+    },
+    branding: { hasLogo: false },
+    players: [
+      { name: "Crypto*****99", wagered: 287400, prize: 1500 },
+      { name: "StakeWhale", wagered: 214800, prize: 1000 },
+      { name: "DiceKing", wagered: 189200, prize: 750 },
+      { name: "*****blue", wagered: 156000, prize: 500 },
+      { name: "HighRoller", wagered: 134500, prize: 250 },
+      { name: "JackpotJen", wagered: 112000, prize: 0 },
+      { name: "SlotNinja", wagered: 98700, prize: 0 },
+      { name: "*****ace", wagered: 87400, prize: 0 },
+      { name: "BetMaster", wagered: 76200, prize: 0 },
+      { name: "LuckyStar", wagered: 65100, prize: 0 },
+    ],
+    endsAt: new Date(Date.now() + 12 * 86400000).toISOString(),
+    rules: ["Wagers on Stake count towards your ranking.", "Minimum wager: $1,000.", "Leaderboard resets at the end of each month.", "Prizes credited within 48h of reset."],
+    whyStats: [
+      { big: "Licensed", label: "Provably Fair", sub: "Verified gaming platform" },
+      { big: "Instant", label: "Deposits & Withdrawals", sub: "No waiting around" },
+      { big: "24/7", label: "Live Support", sub: "Always online" },
+      { big: "Exclusive", label: "VIP Rewards", sub: "Top-tier perks" },
+    ],
+    socials: [
+      { platform: "kick", url: "https://kick.com/stakedrop", label: "Follow on Kick" },
+      { platform: "twitter", url: "https://x.com/stakedrop", label: "Follow on X" },
+      { platform: "discord", url: "https://discord.gg/stakedrop", label: "Join Discord" },
+    ],
+    archives: [],
+  };
+}
+
 async function handleRequest(request, env, ctx) {
     const sentry = env.SENTRY_DSN ? new Toucan({
       dsn: env.SENTRY_DSN,
@@ -290,48 +333,8 @@ async function handleRequest(request, env, ctx) {
 
       // --- permanent demo leaderboard (always works, no DB needed) ---
       if (method === "GET" && path === "/demo") {
-        const demoData = {
-          brand: {
-            name: "StakeDrop",
-            casino: "Stake",
-            code: "DEMO2025",
-            ctaUrl: "https://stake.com/?c=DEMO2025",
-            prizePool: "$5,000",
-            period: "Monthly",
-            tagline: "Casino streamer & Stake partner",
-            resetNote: "",
-            blurb: "Welcome to the official StakeDrop leaderboard. Use code DEMO2025 to join and climb the ranks. Top wagerers win big every month.",
-          },
-          branding: { hasLogo: false },
-          players: [
-            { name: "Crypto*****99", wagered: 287400, prize: 1500 },
-            { name: "StakeWhale", wagered: 214800, prize: 1000 },
-            { name: "DiceKing", wagered: 189200, prize: 750 },
-            { name: "*****blue", wagered: 156000, prize: 500 },
-            { name: "HighRoller", wagered: 134500, prize: 250 },
-            { name: "JackpotJen", wagered: 112000, prize: 0 },
-            { name: "SlotNinja", wagered: 98700, prize: 0 },
-            { name: "*****ace", wagered: 87400, prize: 0 },
-            { name: "BetMaster", wagered: 76200, prize: 0 },
-            { name: "LuckyStar", wagered: 65100, prize: 0 },
-          ],
-          endsAt: new Date(Date.now() + 12 * 86400000).toISOString(),
-          rules: ["Wagers on Stake count towards your ranking.", "Minimum wager: $1,000.", "Leaderboard resets at the end of each month.", "Prizes credited within 48h of reset."],
-          whyStats: [
-              { big: "Licensed", label: "Provably Fair", sub: "Verified gaming platform" },
-              { big: "Instant", label: "Deposits & Withdrawals", sub: "No waiting around" },
-              { big: "24/7", label: "Live Support", sub: "Always online" },
-              { big: "Exclusive", label: "VIP Rewards", sub: "Top-tier perks" },
-            ],
-          socials: [
-            { platform: "kick", url: "https://kick.com/stakedrop", label: "Follow on Kick" },
-            { platform: "twitter", url: "https://x.com/stakedrop", label: "Follow on X" },
-            { platform: "discord", url: "https://discord.gg/stakedrop", label: "Join Discord" },
-          ],
-          archives: [],
-        };
         return new Response(
-          renderLeaderboard(demoData, {
+          renderLeaderboard(demoLeaderboardData(), {
             watermark: false, homeUrl: url.origin, slug: "demo", nonce,
           }),
           { headers: { ...HTML_N, "cache-control": "no-store" } }
@@ -360,6 +363,11 @@ async function handleRequest(request, env, ctx) {
         let slug;
         try { slug = decodeURIComponent(path.slice(1).split("/")[0]).toLowerCase(); } catch { return new Response(notFoundPage("", nonce), { status: 404, headers: HTML_N }); }
         if (RESERVED.has(slug)) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
+        // Demo overlay: use hardcoded data (no DB)
+        if (slug === "demo") {
+          const overlayHtml = PAGES.overlay(demoLeaderboardData(), { slug: "demo", nonce });
+          return new Response(overlayHtml, { headers: { ...HTML_N, "cache-control": "no-store" } });
+        }
         const r = await getPublicSite(env, slug);
         if (!r || r.suspended) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
         const paid = r.plan !== "free";
