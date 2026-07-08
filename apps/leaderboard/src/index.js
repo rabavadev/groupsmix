@@ -1,6 +1,7 @@
 import { destroySession, cookieSet, cookieClear, readToken, handleAccountDelete, requireUser, RESERVED, slugify, clientIp, rateLimit, json, bad, currentUser, hasLegacyCookie, cookieClearLegacy } from "./auth.js";
 import { sendErrorToDiscord } from "../../../shared/monitoring.js";
 import { withWorkerFetch } from "../../../shared/with-worker.js";
+import { RateLimiter } from "../../../shared/rate-limiter-do.js";
 import { populateEnv } from "../../../shared/env.js";
 import { Toucan } from "toucan-js";
 import { getPublicSite, getByUser, getAllBoards, invalidateSiteCache, invalidateUserCache } from "./site.js";
@@ -465,3 +466,6 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
       return new Response("Internal Server Error", { status: 500 });
     }
 }
+
+// Durable Object classes must be exported from the main module.
+export { RateLimiter };

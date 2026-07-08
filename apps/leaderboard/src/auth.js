@@ -170,7 +170,7 @@ export async function currentUser(req, env) {
 // env.SESSIONS and forwards to the shared implementation.
 // Returns { ok, remaining, limit, retryAfter } — callers should destructure { ok }.
 export async function rateLimit(env, key, limit, ttlSeconds) {
-  return kvRateLimit(env.SESSIONS, key, limit, ttlSeconds);
+  return kvRateLimit(env, key, limit, ttlSeconds);
 }
 export const clientIp = (req) => req.headers.get("cf-connecting-ip") || "0.0.0.0";
 

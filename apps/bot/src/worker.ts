@@ -10,6 +10,7 @@
 // scheduled — they MUST populate the same set, or a binding set in only one
 import { sendErrorToDiscord, sendCronSummaryToDiscord } from "../../../shared/monitoring.js";
 import { withWorkerFetch } from "../../../shared/with-worker.js";
+import { RateLimiter } from "../../../shared/rate-limiter-do.js";
 import { populateEnv } from "../../../shared/env.js";
 import { exec as dbExec } from "../../../shared/db.js";
 import { Toucan } from "toucan-js";
@@ -173,3 +174,6 @@ export default {
     }
   },
 };
+
+// Durable Object classes must be exported from the main module.
+export { RateLimiter };
