@@ -358,6 +358,17 @@ export async function deleteArchive(env, uid, id) {
   return { ok: true };
 }
 
+// ends_at is a timestamptz. The dashboard always sends `endsAt`, using an empty
+// string when no countdown is set — and nullish coalescing keeps that "" (it only
+// defaults on null/undefined), so Postgres rejects the write with 22007 "invalid
+// input syntax for type timestamp with time zone". Normalise a blank value to NULL;
+// a genuinely omitted field (undefined) keeps the existing stored value.
+export function normalizeEndsAt(incoming, existing) {
+  if (incoming === undefined) return existing ?? null;
+  const trimmed = String(incoming ?? "").trim();
+  return trimmed || null;
+}
+
 export async function saveSite(env, user, payload, siteId) {
   const uid = typeof user === "string" ? user : user.id;
   const site = siteId ? await getBoardById(env, uid, siteId) : await getByUser(env, uid);
@@ -449,12 +460,13 @@ export async function saveSite(env, user, payload, siteId) {
     // their DELETE + INSERT players, leaving orphaned or missing rows.
     await tx.unsafe("SELECT id FROM sites WHERE id=$1 FOR UPDATE", [site.id]);
     const publishedVal = typeof payload.published === "boolean" ? payload.published : site.published;
+    const endsAtVal = normalizeEndsAt(payload.endsAt, site.ends_at);
     await tx.unsafe(
       `UPDATE sites SET name=$1, tagline=$2, casino=$3, code=$4, cta_url=$5, prize_pool=$6, period=$7, ends_at=$8, reset_note=$9, blurb=$10, extra_json=$11::jsonb, logo_data=$12, theme_json=$13::jsonb, published=$14, updated_at=now() WHERE id=$15`,
       [
         b.name ?? site.name, b.tagline ?? site.tagline, b.casino ?? site.casino, b.code ?? site.code,
         b.ctaUrl ?? site.cta_url, b.prizePool ?? site.prize_pool, b.period ?? site.period,
-        payload.endsAt ?? site.ends_at, b.resetNote ?? site.reset_note, (payload.partner && payload.partner.blurb) ?? site.blurb,
+        endsAtVal, b.resetNote ?? site.reset_note, (payload.partner && payload.partner.blurb) ?? site.blurb,
         extra, logoData, themeJson, publishedVal, site.id,
       ]
     );
