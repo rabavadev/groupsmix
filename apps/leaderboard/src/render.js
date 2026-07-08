@@ -18,7 +18,7 @@ export function renderLeaderboard(data, opts = {}) {
   // Template: which visual skin renders this page. Falls back to "classic".
   const tpl = validTemplate(br.template);
   const tplCssStr = templateCss(tpl);
-  const tplCss = tplCssStr ? `<style data-template="${tpl}">${tplCssStr}</style>` : "";
+  const tplCss = tplCssStr ? `<style nonce="${opts.nonce}" data-template="${tpl}">${tplCssStr}</style>` : "";
   // Free-plan pages carry the badge — it's how YourRank spreads.
   const badge = opts.watermark
     ? `<a class="rk-badge" href="${esc(opts.homeUrl || "/")}" target="_blank" rel="noopener">⚡ Powered by <b>YourRank</b></a>`
