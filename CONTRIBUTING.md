@@ -42,3 +42,10 @@ bun test apps/leaderboard   # leaderboard only
 ## Database Migrations
 
 Migrations live in `supabase/migrations/`. Name format: `YYYYMMDDHHMMSS_description.sql`.
+
+## Reference Docs
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - System overview
+- [DEPLOY.md](./DEPLOY.md) - Deployment procedures
+- [SECRETS.md](./SECRETS.md) - Secrets inventory
+- [`docs/history/`](./docs/history/) - Past audits and migration notes
