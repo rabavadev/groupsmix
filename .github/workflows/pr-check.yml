@@ -137,3 +137,74 @@ jobs:
 
       - name: Audit dependencies (moderate+)
         run: bun audit --audit-level moderate
+
+  migration-dry-run:
+    name: Migration Dry-Run
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: yourrank_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Validate migration filenames
+        run: |
+          echo "Checking migration file naming..."
+          for f in supabase/migrations/*.sql; do
+            basename=$(basename "$f")
+            if ! echo "$basename" | grep -qE '^[0-9]{14}_.+\.sql$'; then
+              echo "::error::Invalid migration filename: $basename (expected YYYYMMDDHHMMSS_description.sql)"
+              exit 1
+            fi
+          done
+          echo "OK: All migration filenames valid"
+
+      - name: Run migrations against ephemeral Postgres
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: test
+          PGDATABASE: yourrank_test
+        run: |
+          echo "Running all migrations against ephemeral Postgres..."
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            echo "--- Applying: $(basename $f) ---"
+            psql -v ON_ERROR_STOP=1 -f "$f" || {
+              echo "::error::Migration failed: $(basename $f)"
+              exit 1
+            }
+          done
+          echo "OK: All migrations applied successfully"
+
+      - name: Verify schema consistency
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: test
+          PGDATABASE: yourrank_test
+        run: |
+          echo "Checking for common schema issues..."
+          # Verify all tables have primary keys
+          TABLES=$(psql -t -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';")
+          for table in $TABLES; do
+            table=$(echo "$table" | xargs)
+            if [ -z "$table" ]; then continue; fi
+            PK=$(psql -t -c "SELECT count(*) FROM pg_constraint WHERE conrelid = '$table'::regclass AND contype = 'p';")
+            PK=$(echo "$PK" | xargs)
+            if [ "$PK" = "0" ]; then
+              echo "::warning::Table $table has no primary key"
+            fi
+          done
+          echo "OK: Schema consistency checks passed"
