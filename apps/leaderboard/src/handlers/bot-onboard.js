@@ -2,6 +2,7 @@
 // Streamlined flow: paste token → validate → create bot → set webhook → generate link
 
 import { requireUser, json, bad, readJson, rateLimit, slugify } from "../auth.js";
+import { trackActivation } from "../../../../shared/activation-funnel.js";
 import { one, query } from "../../../../shared/db.js";
 import { randomBytes } from "node:crypto";
 
@@ -117,6 +118,8 @@ export async function handleBotOnboard(request, env) {
     if (defaultLink) {
       trackedLink = `https://yourrank.site/r/${defaultLink.slug}`;
     }
+
+    trackActivation("leaderboard", user.id, "bot_connected", { botId, botUsername });
 
     return json({
       ok: true,

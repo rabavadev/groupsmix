@@ -1,5 +1,6 @@
 // Authentication handlers for signup, login, logout, password reset
 import { hashPassword, verifyPassword, uuid, newToken, createSession, destroySession, destroyAllUserSessions, currentUser, isEmail, slugify, RESERVED, cookieSet, cookieClear, readToken, json, bad, ok, readJson, rateLimit, clientIp } from "../auth.js";
+import { trackActivation } from "../../../../shared/activation-funnel.js";
 import { DEFAULT_EXTRA, getUserBoardsList } from "../site.js";
 import { sendEmail, resetEmail } from "../email.js";
 import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS, priceUsd } from "../billing.js";
@@ -53,6 +54,7 @@ export async function handleSignup(request, env) {
       }
     }
     const token = await createSession(env, userId);
+    trackActivation("leaderboard", userId, "signup", { email });
     return json({ ok: true, user: { id: userId, email, slug: finalSlug } }, 200, { "set-cookie": cookieSet(token) });
   } catch (e) {
     console.error("signup failed:", String(e?.message || e));
