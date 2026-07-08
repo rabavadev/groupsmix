@@ -9,6 +9,9 @@ import {
   handleSignup, handleLogin, handleLogout, handleMe, handleForgot, handleReset
 } from "./handlers/auth.js";
 import {
+  handleTelegramLink, handleTelegramUnlink, handleTelegramStatus
+} from "./handlers/telegram-link.js";
+import {
   handleStats, handleHeatmap, handleTrackCopy, handleGetSite, handleListBoards,
   handleCreateBoard, handleArchive, handleArchiveDelete, handlePutSite,
   handleNotifyTest, handleDomainVerify
@@ -36,6 +39,11 @@ export const ROUTES = [
   
   // Authenticated auth routes (CSRF required)
   { path: "/api/auth/logout", method: "POST", handler: withHandler(handleLogout) },
+  
+  // Telegram identity linking
+  { path: "/api/auth/telegram/link", method: "POST", handler: withHandler(handleTelegramLink) },
+  { path: "/api/auth/telegram/unlink", method: "POST", handler: withHandler(handleTelegramUnlink) },
+  { path: "/api/auth/telegram/status", method: "GET", handler: withHandler(handleTelegramStatus) },
   
   // Site routes
   { path: "/api/site", method: "GET", handler: withHandler(handleGetSite) },
