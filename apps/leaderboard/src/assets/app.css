@@ -39,7 +39,10 @@ a{color:var(--ink);text-decoration:none}a:hover{color:var(--accent)}
 .card h2{margin:0 0 2px;font-size:15px}.card .card-sub{color:var(--ink-mute);font-size:13px;margin:0 0 16px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
 @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.players-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -12px;padding:0 12px}
+@media(max-width:400px){.players-wrap{margin:0 -8px;padding:0 8px}}
 table.players{width:100%;border-collapse:collapse;font-size:14px}
+@media(max-width:500px){table.players{min-width:480px}}
 table.players th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);padding:8px;border-bottom:1px solid var(--line)}
 table.players td{padding:6px 8px;border-bottom:1px solid var(--line)}
 table.players td input{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px;color:var(--ink);width:100%}
