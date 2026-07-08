@@ -10,6 +10,7 @@ import { logClick } from "./clicks.js";
 import { billingEnabled, handleBillingUpdate, setupBillingWebhook } from "./billing.js";
 import { withPlanLimit } from "./plans.js";
 import { rateLimit, type RateLimitKV } from "./ratelimit.js";
+import { createQueueProducer, type QueueEvent } from "../../../shared/queue-producer.js";
 import { recordConversion, type PostbackQuery } from "./conversions.js";
 
 type Bindings = {
@@ -122,19 +123,27 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
       .replaceAll("{click_ref}", ref)
       .replaceAll("{click_id}", ref);
 
-    // On Workers, use waitUntil so the click log survives the response.
-    // On Node (hono dev), fall back to fire-and-forget.
+    // Enqueue click event to Cloudflare Queue (or fall back to direct write).
+    const queueProducer = createQueueProducer(
+      c.env.EVENTS_QUEUE,
+      async (event: QueueEvent) => { await logClick(event.shortLinkId, event.ip, event.userAgent, event.referer, event.country, event.tgUserId, event.clickRef); }
+    );
     let ctx: any = null;
     try { ctx = (c as any).executionCtx; } catch { /* not on Workers */ }
     const bg = ctx?.waitUntil
       ? (p: Promise<unknown>) => ctx.waitUntil(p)
       : (p: Promise<unknown>) => void p.catch((err) => { console.error("[clickLog]: background logging failed", err); });
-    bg(logClick(
-      link.id, ip,
-      c.req.header("user-agent") ?? null,
-      c.req.header("referer") ?? null,
-      country, tgUserId, ref
-    ));
+    bg(queueProducer.send({
+      type: "click",
+      shortLinkId: link.id,
+      ip,
+      userAgent: c.req.header("user-agent") ?? null,
+      referer: c.req.header("referer") ?? null,
+      country,
+      tgUserId,
+      clickRef: ref,
+      timestamp: Date.now(),
+    }));
     return c.redirect(destination);
   });
 

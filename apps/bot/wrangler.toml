@@ -19,6 +19,10 @@ routes = [
   { pattern = "yourrank.site/billing/hook/*", zone_name = "yourrank.site" },
 ]
 
+[[queues.producers]]
+queue = "yourrank-events"
+binding = "EVENTS_QUEUE"
+
 [triggers]
 # every minute: broadcast batches  |  03:00 UTC: rollup + partitions + expired plans
 crons = ["* * * * *", "0 3 * * *"]
