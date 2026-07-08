@@ -1,0 +1,16 @@
+name = "yourrank-monitor"
+main = "src/worker.ts"
+compatibility_date = "2024-12-01"
+
+# Cron trigger: every 5 minutes
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Production environment variables (non-secret)
+[vars]
+MONITOR_TARGET = "https://yourrank.site"
+MONITOR_SLUG = ""        # set to a known board slug after first board exists
+
+# Secrets (set via wrangler secret put):
+#   DISCORD_MONITORING_WEBHOOK — Discord webhook for uptime alerts
+#   MONITOR_PB_KEY — known postback key for /pb canary check
