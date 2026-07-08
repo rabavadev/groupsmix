@@ -1,3 +1,4 @@
+import { getSql, one, exec } from "../../../../shared/db.js";
 // Authentication handlers for signup, login, logout, password reset
 import { hashPassword, verifyPassword, uuid, newToken, createSession, destroySession, destroyAllUserSessions, currentUser, isEmail, slugify, RESERVED, cookieSet, cookieClear, readToken, json, bad, ok, readJson, rateLimit, clientIp } from "../auth.js";
 import { trackActivation } from "../../../../shared/activation-funnel.js";
@@ -8,7 +9,6 @@ import {
   findUserByEmail, findUserByCredentials, findSiteByUserId, findSiteBySlug, findUserForReset,
   findSubscriptionByUserId, createUser, createSite, updateUserPassword, findUserWithTotpSecret
 } from "../data/auth.js";
-import { getSql, one, exec } from "../../../../shared/db.js";
 
 export async function handleSignup(request, env) {
   try {
@@ -164,7 +164,7 @@ export async function handleForgot(request, env) {
     const user = await one("SELECT id, email FROM users WHERE email=$1", [email]);
     if (user) {
       const token = newToken();
-      await env.SESSIONS.put(`reset:${token}`, user.id, { expirationTtl: 3600 });
+      await exec("INSERT INTO password_resets (token, user_id, expires_at) VALUES ($1, $2, now() + INTERVAL '1 hour') ON CONFLICT (token) DO UPDATE SET user_id=$2, expires_at=now() + INTERVAL '1 hour'", [token, user.id]);
       const link = `${new URL(request.url).origin}/reset?token=${token}`;
       const mail = resetEmail(link);
       const result = await sendEmail(env, { to: user.email, ...mail });
@@ -191,11 +191,12 @@ export async function handleReset(request, env) {
     const password = String(body?.password || "");
     if (!token) return bad("Missing reset token");
     if (password.length < 8) return bad("Password must be at least 8 characters");
-    const userId = await env.SESSIONS.get(`reset:${token}`);
+    const resetRow = await one("SELECT user_id FROM password_resets WHERE token=$1 AND expires_at > now()", [token]);
+    const userId = resetRow?.user_id ?? null;
     if (!userId) return bad("This reset link is invalid or expired. Ask for a new one.", 400);
     const { hash, salt } = await hashPassword(password);
     await exec("UPDATE users SET password_hash=$1, password_salt=$2, updated_at=now() WHERE id=$3", [hash, salt, userId]);
-    await env.SESSIONS.delete(`reset:${token}`);
+    await exec("DELETE FROM password_resets WHERE token=$1", [token]);
     // Revoke EVERY other live session for this user before issuing a fresh one.
     // Without this, a stolen session survives a victim-initiated reset for up to
     // the 30-day KV TTL. The per-user token index in shared/session.js makes this

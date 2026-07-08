@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 PUBLIC_BASE_URL = "https://yourrank.site"
-RL_BACKEND = "kv"  # Change to "do" to use Durable Objects for rate limiting
+RL_BACKEND = "do"  # Change to "do" to use Durable Objects for rate limiting
 # Set SENTRY_DSN via `wrangler secret put SENTRY_DSN` when ready
 
 # Serve the bot Worker under the /bot, /hook, /r, /pb, /billing prefixes on the
@@ -27,11 +27,6 @@ binding = "EVENTS_QUEUE"
 # every minute: broadcast batches  |  03:00 UTC: rollup + partitions + expired plans
 crons = ["* * * * *", "0 3 * * *"]
 
-# SHARED session store — same KV namespace as the leaderboard Worker so one
-# login works across both. Bind the SAME id the leaderboard uses.
-[[kv_namespaces]]
-binding = "SESSIONS"
-id = "26e47bcce19941839a20bd2cd5879e42"
 
 # --- Durable Object for rate limiting ---
 [[durable_objects.bindings]]
@@ -80,11 +75,6 @@ crons = []
 [env.staging.vars]
 PUBLIC_BASE_URL = "https://staging.yourrank.site"
 
-# Staging KV namespace (separate from production — sessions don't carry over)
-# Create with: npx wrangler kv namespace create SESSIONS --env staging
-[[env.staging.kv_namespaces]]
-binding = "SESSIONS"
-id = "e0b6cba066ad4168ad76629f23b5111d"
 
 # Staging Hyperdrive — points to same Supabase DB as production (separate Worker env)
 [[env.staging.hyperdrive]]

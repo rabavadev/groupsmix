@@ -32,6 +32,8 @@ async function rateLimit(kvOrEnv, id, limit, windowSec) {
     if (backend === "do" && env.RATE_LIMITER_DO) {
         return rateLimitDO(env.RATE_LIMITER_DO, id, limit, windowSec);
     }
+    // KV removed — fail open if no DO and no SESSIONS binding
+    if (!env.SESSIONS) return { ok: true, remaining: limit, limit, retryAfter: 0 };
     return rateLimitKV(env.SESSIONS, id, limit, windowSec);
 }
 // --- Durable Object backend ---

@@ -50,7 +50,7 @@ export async function getBotBySecret(secret: string): Promise<BotRow | undefined
   );
 }
 
-export async function handleUpdateForBot(row: BotRow, update: Update, kv?: RateLimitKV): Promise<void> {
+export async function handleUpdateForBot(row: BotRow, update: Update, env?: any): Promise<void> {
   const token = await decryptToken(Buffer.from(row.token_encrypted));
   const botInfo: Record<string, unknown> = {
     id: Number(row.tg_bot_id),
@@ -59,14 +59,14 @@ export async function handleUpdateForBot(row: BotRow, update: Update, kv?: RateL
   };
   if (row.username) botInfo.username = row.username;
   const bot = new Bot(token, { botInfo: botInfo as any });
-  wireHandlers(bot, row, kv);
+  wireHandlers(bot, row, env);
   await bot.handleUpdate(update);
 }
 
 // ---------------------------------------------------------------
 // Handlers — the actual bot behavior, same code for every tenant.
 // ---------------------------------------------------------------
-export function wireHandlers(bot: Bot, botRow: BotRow, kv?: RateLimitKV): void {
+export function wireHandlers(bot: Bot, botRow: BotRow, env?: any): void {
   bot.use(async (ctx, next) => {
     const from = ctx.from;
     if (from && !from.is_bot) {
@@ -182,8 +182,8 @@ export function wireHandlers(bot: Bot, botRow: BotRow, kv?: RateLimitKV): void {
   const CHAT_CMD_WINDOW = 60; // seconds
 
   async function chatCmdRateLimited(chatId: number): Promise<boolean> {
-    if (!kv) return false; // no KV = no rate limit
-    const result = await rateLimit(kv, `chatcmd:${chatId}`, CHAT_CMD_LIMIT, CHAT_CMD_WINDOW);
+    if (!env) return false; // no KV = no rate limit
+    const result = await rateLimit(env, `chatcmd:${chatId}`, CHAT_CMD_LIMIT, CHAT_CMD_WINDOW);
     return !result.ok;
   }
 

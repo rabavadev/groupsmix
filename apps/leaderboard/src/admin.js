@@ -75,13 +75,14 @@ export async function requireAdminWith2fa(request, env, requireFresh = false) {
   const user = await one("SELECT totp_secret FROM users WHERE id=$1", [admin.id]);
   if (user?.totp_secret) {
     const token = readToken(request);
-    const tfaVerified = token ? await env.SESSIONS.get(`2fa:${token}`) : null;
+    const tfaRow = token ? await one("SELECT twofa_verified FROM sessions WHERE token=$1", [token]) : null;
+    const tfaVerified = tfaRow?.twofa_verified ? "1" : null;
     if (tfaVerified !== "1") {
       return { admin: null, res: bad("2fa_required", 403) };
     }
     // For sensitive actions, require fresh verification (clear the flag after use)
     if (requireFresh && token) {
-      await env.SESSIONS.delete(`2fa:${token}`);
+      await exec("UPDATE sessions SET twofa_verified=false WHERE token=$1", [token]);
     }
   }
   return { admin, res: null };
@@ -217,7 +218,7 @@ export async function handleAction(request, env) {
     case "reset-link": {
       if (target.is_admin) return bad("Can't generate a reset link for an admin");
       const token = newToken();
-      await env.SESSIONS.put(`reset:${token}`, target.id, { expirationTtl: RESET_TOKEN_TTL_S });
+      await exec("INSERT INTO password_resets (token, user_id, expires_at) VALUES ($1, $2, now() + make_interval(secs => $3)) ON CONFLICT (token) DO UPDATE SET user_id=$2, expires_at=now() + make_interval(secs => $3)", [token, target.id, RESET_TOKEN_TTL_S]);
       // SEC-010-v7: Do NOT return the token/URL in the API response.
       // Previously: return ok({ link: `${origin}/reset?token=${token}`, email: target.email });
       // Risk: the token in the response could be intercepted or logged. The reset link
@@ -313,7 +314,7 @@ export async function handle2faVerify(request, env) {
   // Mark 2FA verified in KV for this session token
   const token = readToken(request);
   if (token) {
-    await env.SESSIONS.put(`2fa:${token}`, "1", { expirationTtl: TOTP_VERIFICATION_TTL_S });
+    await exec("UPDATE sessions SET twofa_verified=true WHERE token=$1", [token]);
   }
 
   await logAdminAction(env, admin.id, "2fa_verify", admin.id, {
@@ -336,8 +337,8 @@ export async function handle2faStatus(request, env) {
   if (enabled) {
     const token = readToken(request);
     if (token) {
-      const kv = await env.SESSIONS.get(`2fa:${token}`);
-      verified = kv === "1";
+      const tfaRow2 = await one("SELECT twofa_verified FROM sessions WHERE token=$1", [token]);
+      verified = !!tfaRow2?.twofa_verified;
     }
   }
 
@@ -360,7 +361,7 @@ export async function handle2faDisable(request, env) {
   // Clear 2FA verification flag from KV
   const token = readToken(request);
   if (token) {
-    await env.SESSIONS.delete(`2fa:${token}`);
+    await exec("UPDATE sessions SET twofa_verified=false WHERE token=$1", [token]);
   }
 
   await logAdminAction(env, admin.id, "2fa_disable", admin.id, {

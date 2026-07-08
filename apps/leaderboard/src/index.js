@@ -161,14 +161,6 @@ async function handleRequest(request, env, ctx) {
           result.db = false;
           result.status = "degraded";
         }
-        // Probe KV availability
-        try {
-          await env.SESSIONS.get("__health_probe__");
-          result.kv = true;
-        } catch {
-          result.kv = false;
-          result.status = result.db ? "degraded" : "down";
-        }
         const status = result.status === "ok" ? 200 : 503;
         return new Response(JSON.stringify(result), {
           status,
@@ -288,7 +280,8 @@ async function handleRequest(request, env, ctx) {
         const tfaRow = await findUserTotpSecret(u.id);
         if (tfaRow?.totp_secret) {
           const token = readToken(request);
-          const tfaVerified = token ? await env.SESSIONS.get(`2fa:${token}`) : null;
+          const tfaRow2 = token ? await one("SELECT twofa_verified FROM sessions WHERE token=$1", [token]) : null;
+          const tfaVerified = tfaRow2?.twofa_verified ? "1" : null;
           if (tfaVerified !== "1") {
             // Show 2FA verification page instead of admin dashboard
             return new Response(PAGES.admin2fa, { headers: { ...SECURE_HTML, ...csrfHeader } });

@@ -68,6 +68,8 @@ export async function rateLimit(
     return rateLimitDO(env.RATE_LIMITER_DO, id, limit, windowSec);
   }
 
+  // KV removed — fail open if no DO and no SESSIONS binding
+  if (!env.SESSIONS) return { ok: true, remaining: limit, limit, retryAfter: 0 };
   return rateLimitKV(env.SESSIONS, id, limit, windowSec);
 }
 

@@ -9,7 +9,7 @@ import { buildDashboard } from "./dashboard.js";
 import { logClick } from "./clicks.js";
 import { billingEnabled, handleBillingUpdate, setupBillingWebhook } from "./billing.js";
 import { withPlanLimit } from "./plans.js";
-import { rateLimit, type RateLimitKV } from "./ratelimit.js";
+import { rateLimit } from "./ratelimit.js";
 import { createQueueProducer, type QueueEvent } from "../../../shared/queue-producer.js";
 import { recordConversion, type PostbackQuery } from "./conversions.js";
 
@@ -20,7 +20,7 @@ type Bindings = {
   IP_HASH_SALT: string;
   DATABASE_URL: string;
   HYPERDRIVE?: { connectionString: string };
-  SESSIONS?: RateLimitKV; // shared KV (also used for rate limiting)
+  // KV removed — sessions in Postgres, rate limiting via DO
 };
 
 // Admin API abuse guard: cap attempts per IP so a leaked-endpoint brute force
@@ -91,7 +91,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const row = await getBotBySecret(secret);
     if (!row || row.status === "revoked") return c.body(null, 404);
     const update = await c.req.json<Update>();
-    await handleUpdateForBot(row, update, c.env.SESSIONS as RateLimitKV | undefined);
+    await handleUpdateForBot(row, update, c.env);
     return c.body(null, 200);
   });
 
@@ -101,7 +101,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
   app.get("/r/:slug", async (c) => {
       const ip = c.req.header("cf-connecting-ip") ?? "0.0.0.0";
       // BE-005: Rate limit redirects to prevent click fraud amplification
-      const rl = await rateLimit(c.env.SESSIONS, `redirect:${ip}`, 200, 60);
+      const rl = await rateLimit(c.env, `redirect:${ip}`, 200, 60);
       if (!rl.ok) return c.json({ error: "rate limit exceeded" }, 429);
 
       const slug = c.req.param("slug");
@@ -169,7 +169,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const sig = c.req.header("x-postback-signature");
     if (!key || !sig) return c.json({ error: "missing X-Postback-Key / X-Postback-Signature" }, 400);
     // Rate limit per key (same limiter as the legacy path).
-    const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 120, 60);
+    const rl = await rateLimit(c.env, `pb:${key}`, 120, 60);
     if (!rl.ok) { c.header("Retry-After", String(rl.retryAfter)); return c.json({ error: "rate limited" }, 429); }
 
     const owner = await one<{ id: string; postback_key: string; postback_key_enc: Buffer | null }>(
@@ -195,7 +195,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
   // DEPRECATED: migrate to POST /pb with X-Postback-Key + X-Postback-Signature.
   app.on(["GET", "POST"], "/pb/:key", async (c) => {
     const key = c.req.param("key");
-    const rl = await rateLimit(c.env.SESSIONS, `pb:${key}`, 30, 60);
+    const rl = await rateLimit(c.env, `pb:${key}`, 30, 60);
     if (!rl.ok) { c.header("Retry-After", String(rl.retryAfter)); return c.json({ error: "rate limited" }, 429); }
     c.header("Deprecation", "true");
     c.header("Sunset", "2026-10-01");
@@ -232,7 +232,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     // Rate-limit by client IP BEFORE the key check, so failed attempts count
     // too and a brute force can't fish for the key at full speed.
     const ip = c.req.header("cf-connecting-ip") ?? "0.0.0.0";
-    const rl = await rateLimit(c.env.SESSIONS, `admin:${ip}`, ADMIN_RL_LIMIT, ADMIN_RL_WINDOW);
+    const rl = await rateLimit(c.env, `admin:${ip}`, ADMIN_RL_LIMIT, ADMIN_RL_WINDOW);
     c.header("X-RateLimit-Limit", String(rl.limit));
     c.header("X-RateLimit-Remaining", String(rl.remaining));
     if (!rl.ok) {

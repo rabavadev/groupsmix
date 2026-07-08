@@ -1,58 +1,49 @@
 // Auth helpers for the Worker.
 import { one, exec } from "../../../shared/db.js";
 import { rateLimit as kvRateLimit } from "../../../shared/ratelimit.js";
-// SHARED cross-Worker session: same cookie (yr_session) + same SESSIONS KV as
-// the bot Worker, so one login works across both. See ../../../shared/session.ts
-// (compiled to session.js for the leaderboard Worker).
+// SHARED cross-Worker session: same cookie (yr_session) + same Postgres
+// sessions table as the bot Worker. See ../../../shared/session.ts
 import {
   createSession as _createSession,
   destroySession as _destroySession,
   destroyAllUserSessions as _destroyAllUserSessions,
   cookieSet as _cookieSet,
   cookieClear as _cookieClear,
-  // SEC-104: readTokenWithLegacy removed (grace period over)
-  KV_PREFIX,
+  // SEC-107: session resolution (DB-backed, handles rotation + TTL refresh)
+  resolveSession as _resolveSession,
+  loadUser as _loadUser,
   // SEC-104: legacy cookie helpers
   hasLegacyCookie,
   cookieClearLegacy,
-  // SEC-107: session rotation
-  rotateSession as _rotateSession,
-  parseSessionValue,
-  SESSION_ROTATE_AFTER_S,
   SESSION_TTL_S,
+  SESSION_ROTATE_AFTER_S,
 } from "../../../shared/session.js";
-// Why 100,000 and not OWASP's 600,000:
-//   Cloudflare Workers runtime rejects PBKDF2 iteration counts above 100,000
-//   with: "iteration counts above 100000 are not supported". This is a hard
-//   runtime limit, not a CPU-time issue. 100k is the maximum the Workers
-//   WebCrypto implementation accepts for PBKDF2.
-//
-//   OWASP's >=600k guidance targets long-lived Node servers, not edge
-//   functions with constrained WebCrypto implementations.
-//
-//   Lazy rehash: verifyPassword() returns needsRehash=true when the stored hash
-//   used fewer iterations than PBKDF2_ITERATIONS. Callers re-hash and persist
-//   on successful login — existing users upgrade automatically, no forced reset.
-//
-//   Migration path if the Workers limit ever lifts:
-//   1. Bump PBKDF2_ITERATIONS — lazy rehash handles the rest.
-//   2. Or switch to argon2id if Workers adds native support.
+
+// Re-export session primitives so callers that import from auth.js still work.
+export const readToken = (req) => {
+  const h = req.headers.get("cookie") || "";
+  for (const name of ["yr_session", "gm_session"]) {
+    const m = h.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+    if (m) return decodeURIComponent(m[1]);
+  }
+  return null;
+};
+export { SESSION_TTL_S, SESSION_ROTATE_AFTER_S };
+
+const hex = (buf) => [...buf].map(b => b.toString(16).padStart(2, '0')).join('');
+const bytesToHex = hex;
+
+// Password hashing (PBKDF2-SHA256) and constant-time comparison.
 const PBKDF2_ITERATIONS = 100000;
-const LEGACY_ITERATIONS = 100000;  // same as current — kept for future-proofing if iterations change
-// CODE-007: bytesToHex and hexToBytes duplicate helpers in shared/crypto.ts.
-// safeEqual also duplicates the constant-time comparison pattern used by
-// verifyHmacSha256Hex in shared/crypto.ts. Do NOT refactor now (too risky for
-// a hot-fix wave), but the next cleanup pass should import these from the shared
-// module instead of maintaining two copies.
+const LEGACY_ITERATIONS = 100000;
 const enc = new TextEncoder();
-const bytesToHex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+const _bytesToHex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 const hexToBytes = (h) => {
   const o = new Uint8Array(h.length / 2);
   for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16);
   return o;
 };
 
-// Parse a stored hash: "iters$hex" (versioned) or bare "hex" (legacy 100k).
 function parseStored(stored) {
   const s = String(stored ?? "");
   const i = s.indexOf("$");
@@ -64,8 +55,7 @@ export async function hashPassword(password, saltHex) {
   const salt = saltHex ? hexToBytes(saltHex) : crypto.getRandomValues(new Uint8Array(16));
   const km = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" }, km, 256);
-  // Versioned so a future count bump re-upgrades lazily the same way.
-  return { salt: bytesToHex(salt), hash: `${PBKDF2_ITERATIONS}$${bytesToHex(new Uint8Array(bits))}` };
+  return { salt: _bytesToHex(salt), hash: `${PBKDF2_ITERATIONS}$${_bytesToHex(new Uint8Array(bits))}` };
 }
 
 export function safeEqual(a, b) {
@@ -78,34 +68,28 @@ export function safeEqual(a, b) {
   return diff === 0;
 }
 
-// Returns { ok, needsRehash } — needsRehash is true when the stored hash used
-// fewer iterations than the current target, so the caller can re-hash+persist.
 export async function verifyPassword(password, saltHex, expected) {
   const { iterations, hash: expectedHex } = parseStored(expected);
   const km = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: hexToBytes(saltHex), iterations, hash: "SHA-256" }, km, 256);
-  const computed = bytesToHex(new Uint8Array(bits));
+  const computed = _bytesToHex(new Uint8Array(bits));
   return { ok: safeEqual(computed, expectedHex), needsRehash: iterations < PBKDF2_ITERATIONS };
 }
 
 export const uuid = () => crypto.randomUUID();
 export const newToken = () => bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
 
-// Session mechanics delegate to the SHARED module (yr_session + shared KV).
-// These thin wrappers keep the existing call sites in index.js unchanged.
+// Session mechanics delegate to the SHARED module (Postgres-backed).
 export const createSession = (env, userId) => _createSession(env, userId);
 export const destroySession = (env, token) => _destroySession(env, token);
 export const destroyAllUserSessions = (env, userId) => _destroyAllUserSessions(env, userId);
 export const cookieSet = (token) => _cookieSet(token);
 export const cookieClear = () => _cookieClear();
-// readToken is used locally by currentUser(). Re-exported for other modules.
-import { readToken } from "../../../shared/session.js";
-export { readToken };
+
+// SEC-104: Legacy cookie detection helper — re-exported for index.js
+export { hasLegacyCookie, cookieClearLegacy };
 
 // Loads the full user row from Postgres for a resolved user id.
-// TIMESTAMPTZ columns come back as epoch-ms so downstream code (effectivePlan,
-// the /api/auth/me payload, the admin/dashboard frontends) keeps treating them
-// as numeric millisecond timestamps exactly like the old D1 INTEGER columns.
 const loadUser = (env, uid) =>
     one(
       `SELECT id, email, plan,
@@ -116,44 +100,18 @@ const loadUser = (env, uid) =>
       [uid]
     );
 
-// SEC-104: Legacy cookie detection helper — re-exported for index.js
-export { hasLegacyCookie, cookieClearLegacy };
-
-// SEC-104: Resolves the current user from the shared session using the
-// standard readToken (yr_session + gm_session fallback; legacy rk_session support removed).
-// SEC-107: Also handles session rotation. When a session is older than 24h
-// (or is a legacy bare-UUID session), a new token is issued. The new
-// Set-Cookie header is attached to req._sessionCookies for the main handler
-// to include in the response.
+// SEC-107: Resolves the current user from the shared session using DB-backed
+// resolveSession (handles rotation + TTL refresh automatically).
+// When a session is rotated, the new Set-Cookie header is attached to
+// req._sessionCookies for the main handler to include in the response.
 export async function currentUser(req, env) {
-    const token = readToken(req);
-    if (!token) return null;
-    const raw = await env.SESSIONS.get(KV_PREFIX + token);
-    if (!raw) return null;
+    const { userId, cookie } = await _resolveSession(req, env);
+    if (!userId) return null;
 
-    // Parse session value — handles both JSON and legacy bare UUID
-    const { userId, createdAt } = parseSessionValue(raw);
-
-    // SEC-107: Rotate if legacy bare UUID or older than 24h
-    let rotated = false;
-    const age = Date.now() - createdAt;
-    if (createdAt === 0 || age > SESSION_ROTATE_AFTER_S * 1000) {
-      try {
-        const fresh = await _rotateSession(env, token, userId);
-        const newCookie = cookieSet(fresh);
-        if (!req._sessionCookies) req._sessionCookies = [];
-        req._sessionCookies.push(newCookie);
-        rotated = true;
-      } catch {
-        // Rotation failed — still serve the request with the old session
-      }
-    }
-
-    // Sliding-window TTL refresh (only if we didn't rotate — the old entry is deleted after rotation)
-    if (!rotated) {
-      try {
-        env.SESSIONS.put(KV_PREFIX + token, raw, { expirationTtl: SESSION_TTL_S }).catch(e => console.error('[session] TTL refresh failed:', e?.message));
-      } catch { /* best-effort */ }
+    // If a rotation happened, propagate the new cookie
+    if (cookie) {
+      if (!req._sessionCookies) req._sessionCookies = [];
+      req._sessionCookies.push(cookie);
     }
 
     // SEC-104: If the request carries a legacy 'sess' cookie, schedule it for clearing
@@ -163,12 +121,10 @@ export async function currentUser(req, env) {
     }
 
     return loadUser(env, userId);
-  }
+}
 
-// Rate limit wrapper — delegates to the shared KV-based rate limiter.
-// Accepts `env` for backward compatibility with existing callers; extracts
-// env.SESSIONS and forwards to the shared implementation.
-// Returns { ok, remaining, limit, retryAfter } — callers should destructure { ok }.
+// Rate limit wrapper — delegates to the shared rate limiter.
+// With KV removed, passes full env so DO backend is used when RL_BACKEND=do.
 export async function rateLimit(env, key, limit, ttlSeconds) {
   return kvRateLimit(env, key, limit, ttlSeconds);
 }
@@ -192,23 +148,17 @@ export const readJson = async (req) => { try { return await req.json(); } catch 
 
 
 // POST /api/account/delete — GDPR account deletion (DB-102).
-// Requires authentication + password confirmation. Deletes the user row;
-// ON DELETE CASCADE handles cleanup of children (sites, players, offers,
-// short_links, payments, subscriptions, etc.). Destroys all sessions.
 export async function handleAccountDelete(request, env) {
     try {
       const user = await currentUser(request, env);
       if (!user) return bad("unauthorized", 401);
       const userPw = await one("SELECT password_hash, password_salt FROM users WHERE id=$1", [user.id]);
       if (userPw?.password_hash) {
-        // User has a password — require it for deletion
         const body = await readJson(request);
         if (!body || !body.password) return bad("Password required to confirm deletion");
         const { ok: pwOk } = await verifyPassword(body.password, userPw.password_salt, userPw.password_hash);
         if (!pwOk) return bad("Incorrect password", 401);
       }
-      // Telegram-only users (no password): session itself is proof of identity.
-      // BIZ-005: GDPR-compliant self-delete for passwordless accounts.
       await exec("DELETE FROM users WHERE id=$1", [user.id]);
       await destroyAllUserSessions(env, user.id);
       return ok({ message: "Account deleted successfully." });

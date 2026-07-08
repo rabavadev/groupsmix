@@ -33,14 +33,14 @@ export function buildDashboardApi(): Hono<{ Variables: { uid: string } }> {
       await next();
     } catch (e: any) {
       console.error("[dashboard-api session middleware]", e?.message, e?.stack);
-      return c.json({ error: "session_middleware_error", detail: e?.message ?? String(e), hasSessions: !!(c.env as any)?.SESSIONS }, 500);
+      return c.json({ error: "session_middleware_error", detail: e?.message ?? String(e), hasDb: true }, 500);
     }
   });
   // Rate-limit all API requests (120 req/min per IP).
   api.use("*", async (c, next) => {
     try {
       const ip = c.req.header("cf-connecting-ip") || "0.0.0.0";
-      const rlResult = await rateLimit((c.env as SessionEnv).SESSIONS, `dash:${ip}`, 120, 60);
+      const rlResult = await rateLimit(c.env, `dash:${ip}`, 120, 60);
       if (!rlResult.ok) return c.json({ error: "rate limit exceeded", retryAfter: rlResult.retryAfter }, 429);
     } catch (rlErr) {
       console.error("[rate-limit] KV error, allowing request:", (rlErr as any)?.message);

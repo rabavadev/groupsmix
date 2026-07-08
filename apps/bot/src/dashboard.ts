@@ -21,7 +21,7 @@
 //   POST /dash/api/bots        connect a bot (paste BotFather token)
 //
 // Session: SHARED KV-backed session (see ../../../shared/session.ts). The token
-// is a random opaque id; KV maps sess:<token> -> user UUID in the SESSIONS
+// is a random opaque id; DB sessions table maps token -> user UUID in
 // namespace, which is bound to the SAME id as the leaderboard Worker so one
 // login works across both Workers. Cookie name yr_session, Domain=.yourrank.site.
 // (Replaces the old HMAC-signed stateless `sess` cookie, which could not be
@@ -49,8 +49,8 @@ import { rateLimit } from "./ratelimit.js";
 // ---------------- app ----------------
 
 // The Workers env is passed straight through as Hono's `c.env` (see worker.ts:
-// `app.fetch(req, env as any)`), so the shared SESSIONS KV binding declared in
-// wrangler.toml is reachable as `c.env.SESSIONS`.
+// `app.fetch(req, env as any)`), so the env bindings declared in
+// wrangler.toml are reachable as `c.env`.
 type DashBindings = SessionEnv & Record<string, unknown>;
 type DashEnv = { Bindings: DashBindings; Variables: { cspNonce: string } };
 
@@ -91,7 +91,7 @@ export function buildDashboard(): Hono<DashEnv> {
   // signature forgery attempts (60 req/min per IP).
   app.post("/auth/telegram", async (c) => {
     const ip = c.req.header("cf-connecting-ip") || "0.0.0.0";
-    const rlResult = await rateLimit(c.env.SESSIONS, `bot-dash:${ip}`, 20, 60);
+    const rlResult = await rateLimit(c.env, `bot-dash:${ip}`, 20, 60);
     if (!rlResult.ok) return c.json({ error: "rate limit exceeded", retryAfter: rlResult.retryAfter }, 429);
     if (!sameOrigin(c.req.raw, config.publicBaseUrl)) return c.json({ error: "cross-origin request rejected" }, 403);
     const loginBotToken = process.env.LOGIN_BOT_TOKEN;
@@ -150,7 +150,7 @@ export function buildDashboard(): Hono<DashEnv> {
 
   // ---- HTML ----
   app.get("/dashboard", async (c) => {
-    const session = await resolveSession(c.req.raw, c.env);
+    const session = await resolveSession(c.req.raw, c.env as any);
     const uid = session?.uid ?? null;
     if (session?.rotatedCookie) c.header("Set-Cookie", session.rotatedCookie);
     const loginBotUsername = process.env.LOGIN_BOT_USERNAME ?? "";

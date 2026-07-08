@@ -13,12 +13,10 @@ export function serveRobotsTxt(origin) {
   );
 }
 
-// PERF-001: Two-tier cache for sitemap — L1 in-memory (per-isolate) + L2 KV (cross-isolate).
+// PERF-001: L1 in-memory cache for sitemap (per-isolate).
 // This addresses both PERF-001 (unbounded queries) and PERF-006 (L1-only = per-isolate).
 let sitemapCache = { xml: null, ts: 0 };
 const SITEMAP_TTL = 300_000; // 5 minutes L1 TTL
-const SITEMAP_KV_KEY = "sitemap:xml";
-const SITEMAP_KV_TTL = 3600; // 1 hour KV TTL (seconds) — sitemap changes infrequently
 
 export async function serveSitemapXml(origin, env) {
   // L1: in-memory cache (instant, per-isolate)
@@ -28,16 +26,6 @@ export async function serveSitemapXml(origin, env) {
     });
   }
 
-  // L2: KV cache (cross-isolate, shared across all Workers)
-  try {
-    const kvXml = await env?.SESSIONS?.get(SITEMAP_KV_KEY, { type: "text" });
-    if (kvXml) {
-      sitemapCache = { xml: kvXml, ts: Date.now() };
-      return new Response(kvXml, {
-        headers: { "content-type": "application/xml", "cache-control": "public, max-age=3600" },
-      });
-    }
-  } catch { /* KV miss — fall through to DB */ }
 
   let entries = [
     `<url><loc>${origin}/</loc><priority>1.0</priority></url>`,
@@ -63,11 +51,8 @@ export async function serveSitemapXml(origin, env) {
 ${entries.join("\n")}
 </urlset>`;
 
-  // Populate both cache tiers
+  // L1-only cache (KV removed)
   sitemapCache = { xml: sitemap, ts: Date.now() };
-  try {
-    await env?.SESSIONS?.put(SITEMAP_KV_KEY, sitemap, { expirationTtl: SITEMAP_KV_TTL });
-  } catch { /* non-critical */ }
 
   return new Response(sitemap, {
     headers: { 

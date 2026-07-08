@@ -32,36 +32,25 @@ export const DEFAULT_EXTRA = {
 // PERF-005: include has_logo as a computed column to avoid a separate re-query.
 const SITE_COLUMNS = "id, user_id, slug, name, tagline, casino, code, cta_url, prize_pool, period, ends_at, reset_note, blurb, extra_json, published, theme_json, updated_at, custom_domain, domain_status, (logo_data IS NOT NULL AND logo_data != '') AS has_logo";
 
-// Two-tier cache: L1 in-memory Map (per-isolate, instant) + L2 KV (cross-isolate, 30s TTL).
-// On Cloudflare Workers, each isolate has its own L1 Map. KV ensures that after
-// a dashboard save (which invalidates both layers), all isolates pick up the new
-// data within 30s. The L1 Map is a hot-path optimization — avoids a KV read for
-// the isolate that just wrote or recently read.
-// IMPORTANT: L1 TTL must be <= L2 TTL to prevent stale data in L1 after L2 expires.
-const siteCache = new Map();       // L1 — per-isolate, no TTL enforcement beyond what's set below
-const inflight = new Map();        // PERF-009: single-flight — prevent cache stampede on L1+L2 miss
-const L1_TTL = 25_000;             // L1 entries expire after 25s (must be <= L2_TTL)
-const L1_MAX_ENTRY_BYTES = 50_000; // SEC-009-v7: skip L1 caching for entries > 50KB to prevent memory pressure
-const L2_TTL = 30;                 // KV entries expire after 30s (seconds, for KV expirationTtl)
-const KV_PREFIX_SITE = "sitecache:";
-const SITE_CACHE_MAX = 1000;       // PERF-005: cap L1 entries to prevent unbounded memory growth
+// L1 in-memory cache (per-isolate). No L2 KV — sessions moved to Postgres.
+const siteCache = new Map();
+const inflight = new Map();        // PERF-009: single-flight — prevent cache stampede
+const L1_TTL = 25_000;
+const L1_MAX_ENTRY_BYTES = 50_000;
+const SITE_CACHE_MAX = 1000;
 
 function evictOldest(cache, max) {
-  // PERF-005: FIFO eviction — delete oldest entries when cache exceeds max size
   while (cache.size > max) {
     const first = cache.keys().next().value;
     cache.delete(first);
   }
 }
 
-// SEC-009-v7: Estimate serialized size of a value to prevent memory pressure.
-// Skips L1 caching for entries > L1_MAX_ENTRY_BYTES (50KB). These entries still
-// go to L2 KV (which has its own limits) and the DB, just not in-memory.
 function setL1(cache, key, data, maxEntryBytes) {
   try {
     const size = JSON.stringify(data).length;
-    if (size > maxEntryBytes) return; // too large for L1 — rely on L2/DB
-  } catch { /* stringify failed — skip L1 */ }
+    if (size > maxEntryBytes) return;
+  } catch { /* stringify failed */ }
   cache.set(key, { data, expires: Date.now() + L1_TTL });
   evictOldest(cache, SITE_CACHE_MAX);
 }
@@ -71,24 +60,12 @@ async function getCached(env, key, dbFetcher) {
   const entry = siteCache.get(key);
   if (entry && entry.expires > Date.now()) return entry.data;
 
-  // L2 check (KV, cross-isolate)
-  try {
-    const kvRaw = await env.SESSIONS.get(KV_PREFIX_SITE + key, { type: "json" });
-    if (kvRaw !== null) {
-      setL1(siteCache, key, kvRaw, L1_MAX_ENTRY_BYTES);
-      return kvRaw;
-    }
-  } catch { /* KV miss — fall through to DB */ }
-
   // DB fetch — single-flight: coalesce concurrent misses into one query
   if (inflight.has(key)) return inflight.get(key);
   const p = (async () => {
     try {
       const data = await dbFetcher();
       setL1(siteCache, key, data, L1_MAX_ENTRY_BYTES);
-      try {
-        await env.SESSIONS.put(KV_PREFIX_SITE + key, JSON.stringify(data), { expirationTtl: L2_TTL });
-      } catch { /* non-critical */ }
       return data;
     } finally {
       inflight.delete(key);
@@ -99,24 +76,14 @@ async function getCached(env, key, dbFetcher) {
 }
 
 export function invalidateSiteCache(env, ...keys) {
-  // Invalidate multiple cache keys (slug, uid, siteId, etc.)
   for (const key of keys) {
     siteCache.delete(key);
-    // Fire-and-forget KV delete — best-effort; 30s TTL handles stale entries anyway.
-    try { env?.SESSIONS?.delete(KV_PREFIX_SITE + key).catch((e) => { console.error("[site-cache] KV delete failed:", e); }); } catch (e) { console.error("[site-cache] invalidateSiteCache failed:", e); }
   }
 }
 
 export function invalidateUserCache(env, uid) {
   siteCache.delete(uid);
   siteCache.delete(`user_boards:${uid}`);
-  try {
-    const sessions = env?.SESSIONS;
-    if (sessions) {
-      sessions.delete(KV_PREFIX_SITE + uid).catch((e) => { console.error("[site-cache] invalidateUserCache KV delete failed:", e?.message); });
-        sessions.delete(KV_PREFIX_SITE + `user_boards:${uid}`).catch((e) => { console.error("[site-cache] invalidateUserCache KV delete failed:", e?.message); });
-    }
-  } catch (e) { console.error("[site-cache] invalidateUserCache KV delete failed:", e); }
 }
 
 const getBySlug = (env, slug) => getCached(env, slug, () => one(`SELECT ${SITE_COLUMNS} FROM sites WHERE slug=$1`, [slug]));
@@ -438,17 +405,7 @@ export async function saveSite(env, user, payload, siteId) {
 
   // Invalidate cache before write (both L1 and L2 for cross-isolate consistency)
   invalidateSiteCache(env, site.slug, uid, siteId);
-  // Also invalidate L2 KV entries explicitly with env for immediate effect
-  const _kv = env?.SESSIONS;
-  if (_kv) {
-    try {
-      await Promise.all([
-        _kv.delete(KV_PREFIX_SITE + site.slug),
-        _kv.delete(KV_PREFIX_SITE + uid),
-        siteId ? _kv.delete(KV_PREFIX_SITE + siteId) : Promise.resolve(),
-      ]);
-    } catch (e) { console.error("[notify] KV cache delete failed:", e); }
-  }
+  // L1-only cache invalidated above.
 
   // Capture old top-3 for notifications
   const oldPlayers = await getPlayers(env, site.id);
