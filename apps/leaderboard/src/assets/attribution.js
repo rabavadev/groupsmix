@@ -18,10 +18,19 @@ function td(text, className) {
   return cell;
 }
 
+function getDays() {
+  const raw = $("daysRange").value;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 30;
+}
+
 async function load() {
-  const days = $("daysRange").value;
+  const days = getDays();
   try {
-    const data = await api(`/api/attribution?days=${days}`);
+    const apiUrl = new URL("/api/attribution", location.origin);
+    apiUrl.searchParams.set("days", String(days));
+    const data = await api(apiUrl.toString());
+
     $("s_clicks").textContent = fmt(data.summary?.clicks);
     $("s_unique").textContent = fmt(data.summary?.uniqueVisitors);
     $("s_conversions").textContent = fmt(data.summary?.conversions);
@@ -52,7 +61,10 @@ async function load() {
       $("postbackCard").hidden = true;
       $("postbackUpgrade").hidden = false;
     }
-    $("exportBtn").href = `/api/attribution/export?days=${days}`;
+
+    const exportUrl = new URL("/api/attribution/export", location.origin);
+    exportUrl.searchParams.set("days", String(days));
+    $("exportBtn").href = exportUrl.toString();
   } catch (e) {
     $("offersEmpty").hidden = false;
     $("offersEmpty").textContent = "Could not load attribution. " + e.message;
