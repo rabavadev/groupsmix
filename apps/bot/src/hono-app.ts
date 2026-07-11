@@ -10,16 +10,18 @@ import { logClick } from "./clicks.js";
 import { billingEnabled, handleBillingUpdate, setupBillingWebhook } from "./billing.js";
 import { withPlanLimit } from "./plans.js";
 import { rateLimit } from "./ratelimit.js";
-import { createQueueProducer, type QueueEvent } from "../../../shared/queue-producer.js";
+import { createQueueProducer, type QueueEvent, type ClickEvent } from "../../../shared/queue-producer.js";
 import { recordConversion, type PostbackQuery } from "./conversions.js";
+import type { RateLimitEnv } from "./ratelimit.js";
 
-type Bindings = {
+type Bindings = RateLimitEnv & {
   PUBLIC_BASE_URL: string;
   TOKEN_ENC_KEY: string;
   ADMIN_API_KEY: string;
   IP_HASH_SALT: string;
   DATABASE_URL: string;
   HYPERDRIVE?: { connectionString: string };
+  EVENTS_QUEUE?: { send: (message: QueueEvent) => Promise<void> };
   // KV removed — sessions in Postgres, rate limiting via DO
 };
 
@@ -127,7 +129,10 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     // Enqueue click event to Cloudflare Queue (or fall back to direct write).
     const queueProducer = createQueueProducer(
       c.env.EVENTS_QUEUE,
-      async (event: QueueEvent) => { await logClick(event.shortLinkId, event.ip, event.userAgent, event.referer, event.country, event.tgUserId, event.clickRef); }
+      async (event: QueueEvent) => {
+        if (event.type !== "click") return;
+        await logClick(event.shortLinkId, event.ip, event.userAgent, event.referer, event.country, event.tgUserId, event.clickRef);
+      }
     );
     let ctx: any = null;
     try { ctx = (c as any).executionCtx; } catch { /* not on Workers */ }

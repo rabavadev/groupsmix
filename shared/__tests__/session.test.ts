@@ -1,59 +1,102 @@
 // ============================================================================
-//  YourRank — SHARED SESSION (real executable tests)
+//  YourRank — SHARED SESSION (Postgres-backed, no KV)
 // ============================================================================
 
-import { describe, it, expect } from 'bun:test';
-import {
-  COOKIE_NAME,
-  LEGACY_COOKIE_NAME,
-  LEGACY_COOKIE_NAME2,
-  COOKIE_DOMAIN,
-  SESSION_TTL_S,
-  KV_PREFIX,
-  newToken,
-  cookieSet,
-  cookieClear,
-  cookieClearLegacy2,
-  readToken,
-  readTokenFromHeader,
-  createSession,
-  destroySession,
-  parseSessionValue,
-  hasLegacyCookie,
-} from '../session';
-import type { KVNamespace, SessionEnv } from '../session';
+import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import type { SessionEnv, UserRecord } from '../session';
 
-// ---- Mock KV ----
-const mockKV = (): KVNamespace => {
-  const store = new Map<string, string>();
-  return {
-    get: (key: string) => Promise.resolve(store.get(key) ?? null),
-    put: (key: string, value: string, _opts?: { expirationTtl?: number }) => {
-      store.set(key, value);
-      return Promise.resolve();
-    },
-    delete: (key: string) => {
-      store.delete(key);
-      return Promise.resolve();
-    },
-  };
+// Mock the DB before importing session.ts so we never try to connect to Postgres.
+const dbUrl    = import.meta.resolve('../db.js');
+const dbUrlTs  = import.meta.resolve('../db.ts');
+
+interface SessionRow {
+  user_id: string;
+  created_at: string;
+  age: number;
+}
+
+const sessions = new Map<string, SessionRow>();
+const users = new Map<string, UserRecord>();
+
+const resetStores = () => {
+  sessions.clear();
+  users.clear();
 };
 
-const mockEnv = (): SessionEnv => ({
-  SESSIONS: mockKV(),
+const dbMock = () => ({
+  one: async (sql: string, params: unknown[]) => {
+    if (/users/i.test(sql) && params[0]) {
+      return users.get(String(params[0])) ?? null;
+    }
+    return null;
+  },
+  exec: async (sql: string, params: unknown[]) => {
+    if (/INSERT INTO sessions/i.test(sql)) {
+      const [token, userId] = params as [string, string];
+      sessions.set(token, { user_id: userId, created_at: new Date().toISOString(), age: 0 });
+      return;
+    }
+    if (/DELETE FROM sessions/i.test(sql)) {
+      const [tokenOrUserId] = params as [string];
+      for (const [k, v] of sessions.entries()) {
+        if (k === tokenOrUserId || v.user_id === tokenOrUserId) sessions.delete(k);
+      }
+      return;
+    }
+    if (/UPDATE sessions SET token/i.test(sql)) {
+      const [newToken, _ttl, oldToken] = params as [string, number, string];
+      const row = sessions.get(oldToken);
+      if (row) {
+        sessions.delete(oldToken);
+        sessions.set(newToken, { ...row, created_at: new Date().toISOString(), age: 0 });
+      }
+      return;
+    }
+    // TTL refresh updates are no-ops in the mock
+    return;
+  },
+  query: async (sql: string, params: unknown[]) => {
+    if (/sessions/i.test(sql) && params[0]) {
+      const row = sessions.get(String(params[0]));
+      if (row) return [{ user_id: row.user_id, created_at: row.created_at, age: row.age }];
+    }
+    return [];
+  },
+  getSql: () => null,
+  withTransaction: async (fn: any) => fn({ one: dbMock().one, exec: dbMock().exec, query: dbMock().query }),
 });
 
-// ---- Constants ----
+mock.module(dbUrl, dbMock);
+mock.module(dbUrlTs, dbMock);
+
+const sessionModule = await import('../session');
+const {
+  COOKIE_NAME, SESSION_TTL_S, SESSION_ROTATE_AFTER_S,
+  cookieSet, cookieClear, cookieClearLegacy, cookieClearLegacy2,
+  readToken, hasLegacyCookie, cookieDomain,
+  createSession, destroySession, destroyAllUserSessions,
+  resolveSession, currentUserId, loadUser, resolveUser, currentUser,
+} = sessionModule;
+
+const mockEnv = (): SessionEnv => ({});
+
+const setUser = (id = 'user-1'): UserRecord => {
+  const u: UserRecord = { id, email: 'test@example.com', slug: 'test', plan: 'free', plan_expires_at: null, status: 'active', is_admin: false };
+  users.set(id, u);
+  return u;
+};
+
+const setSession = (token: string, userId: string, age = 0) => {
+  sessions.set(token, { user_id: userId, created_at: new Date(Date.now() - age * 1000).toISOString(), age });
+};
+
+// ============================================================================
+//  Constants
+// ============================================================================
 
 describe('COOKIE_NAME', () => {
   it('is "yr_session"', () => {
     expect(COOKIE_NAME).toBe('yr_session');
-  });
-});
-
-describe('LEGACY_COOKIE_NAME2', () => {
-  it('is "gm_session"', () => {
-    expect(LEGACY_COOKIE_NAME2).toBe('gm_session');
   });
 });
 
@@ -63,258 +106,113 @@ describe('SESSION_TTL_S', () => {
   });
 });
 
-describe('COOKIE_DOMAIN', () => {
-  it('defaults to ".yourrank.site"', () => {
-    expect(COOKIE_DOMAIN).toBe('.yourrank.site');
+describe('SESSION_ROTATE_AFTER_S', () => {
+  it('is 24 hours (86400)', () => {
+    expect(SESSION_ROTATE_AFTER_S).toBe(86400);
   });
 });
 
-describe('KV_PREFIX', () => {
-  it('is "sess:"', () => {
-    expect(KV_PREFIX).toBe('sess:');
-  });
-});
-
-// ---- Token generation ----
-
-describe('newToken', () => {
-  it('returns a non-empty string', () => {
-    const token = newToken();
-    expect(token.length).toBeGreaterThan(0);
-  });
-
-  it('returns a hex string of 64 characters (32 bytes)', () => {
-    const token = newToken();
-    expect(token.length).toBe(64);
-    expect(/^[0-9a-f]+$/.test(token)).toBe(true);
-  });
-
-  it('generates unique tokens', () => {
-    const a = newToken();
-    const b = newToken();
-    expect(a).not.toBe(b);
-  });
-});
-
-// ---- Cookie helpers ----
+// ============================================================================
+//  Cookie helpers
+// ============================================================================
 
 describe('cookieSet', () => {
   it('returns a Set-Cookie header string', () => {
     const header = cookieSet('test-token');
     expect(typeof header).toBe('string');
-    expect(header.length).toBeGreaterThan(0);
-  });
-
-  it('contains yr_session', () => {
-    const header = cookieSet('test-token');
     expect(header).toContain('yr_session=');
-  });
-
-  it('contains the token value', () => {
-    const header = cookieSet('test-token');
-    expect(header).toContain('yr_session=test-token');
-  });
-
-  it('contains Domain=.yourrank.site', () => {
-    const header = cookieSet('test-token');
+    expect(header).toContain('HttpOnly');
+    expect(header).toContain('Secure');
+    expect(header).toContain('SameSite=Lax');
+    expect(header).toContain(`Max-Age=${SESSION_TTL_S}`);
     expect(header).toContain('Domain=.yourrank.site');
   });
 
-  it('contains Secure flag', () => {
-    const header = cookieSet('test-token');
-    expect(header).toContain('Secure');
-  });
-
-  it('contains SameSite=Lax', () => {
-    const header = cookieSet('test-token');
-    expect(header).toContain('SameSite=Lax');
-  });
-
-  it('contains HttpOnly flag', () => {
-    const header = cookieSet('test-token');
-    expect(header).toContain('HttpOnly');
-  });
-
-  it('contains Max-Age=2592000', () => {
-    const header = cookieSet('test-token');
-    expect(header).toContain(`Max-Age=${SESSION_TTL_S}`);
+  it('uses the domain from env when provided', () => {
+    const header = cookieSet('test-token', { SESSION_COOKIE_DOMAIN: '.example.com' });
+    expect(header).toContain('Domain=.example.com');
   });
 });
 
 describe('cookieClear', () => {
-  it('returns a Set-Cookie header string', () => {
-    const header = cookieClear();
-    expect(typeof header).toBe('string');
-    expect(header.length).toBeGreaterThan(0);
-  });
-
-  it('contains Max-Age=0', () => {
-    const header = cookieClear();
-    expect(header).toContain('Max-Age=0');
-  });
-
-  it('starts with yr_session=', () => {
+  it('returns a Set-Cookie header that clears the cookie', () => {
     const header = cookieClear();
     expect(header.startsWith('yr_session=;')).toBe(true);
-  });
-
-  it('contains Domain=.yourrank.site', () => {
-    const header = cookieClear();
+    expect(header).toContain('Max-Age=0');
     expect(header).toContain('Domain=.yourrank.site');
   });
+});
 
-  it('contains Secure flag', () => {
-    const header = cookieClear();
-    expect(header).toContain('Secure');
+describe('cookieClearLegacy', () => {
+  it('clears the legacy "sess" cookie', () => {
+    const header = cookieClearLegacy();
+    expect(header.startsWith('sess=;')).toBe(true);
+    expect(header).toContain('Max-Age=0');
   });
 });
 
 describe('cookieClearLegacy2', () => {
-  it('clears gm_session cookie', () => {
+  it('clears the legacy "gm_session" cookie', () => {
     const header = cookieClearLegacy2();
     expect(header.startsWith('gm_session=;')).toBe(true);
     expect(header).toContain('Max-Age=0');
   });
 });
 
-// ---- readToken ----
+describe('cookieDomain', () => {
+  it('defaults to .yourrank.site', () => {
+    expect(cookieDomain({})).toBe('.yourrank.site');
+  });
+
+  it('respects env.SESSION_COOKIE_DOMAIN', () => {
+    expect(cookieDomain({ SESSION_COOKIE_DOMAIN: '.example.com' })).toBe('.example.com');
+  });
+});
+
+// ============================================================================
+//  readToken / hasLegacyCookie
+// ============================================================================
 
 describe('readToken', () => {
-  it('extracts token from valid Cookie header (yr_session)', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'yr_session=abc123def456' },
-    });
-    expect(readToken(req)).toBe('abc123def456');
+  it('extracts the yr_session token from the Cookie header', () => {
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=abc123' } });
+    expect(readToken(req)).toBe('abc123');
   });
 
   it('extracts token among multiple cookies', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'other=value; yr_session=mytoken; another=val' },
-    });
+    const req = new Request('https://example.com', { headers: { Cookie: 'a=1; yr_session=mytoken; b=2' } });
     expect(readToken(req)).toBe('mytoken');
   });
 
-  it('returns null for missing cookie', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'other=value' },
-    });
-    expect(readToken(req)).toBeNull();
+  it('falls back to gm_session', () => {
+    const req = new Request('https://example.com', { headers: { Cookie: 'gm_session=legacytoken' } });
+    expect(readToken(req)).toBe('legacytoken');
   });
 
-  it('returns null for empty Cookie header', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: '' },
-    });
-    expect(readToken(req)).toBeNull();
+  it('prefers yr_session over gm_session when both present', () => {
+    const req = new Request('https://example.com', { headers: { Cookie: 'gm_session=old; yr_session=new' } });
+    expect(readToken(req)).toBe('new');
   });
 
-  it('returns null when no Cookie header is present', () => {
+  it('returns null when no cookie is present', () => {
     const req = new Request('https://example.com');
     expect(readToken(req)).toBeNull();
   });
 
-  // DOC-001: Legacy gm_session fallback tests
-  it('falls back to legacy gm_session cookie', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'gm_session=legacytoken123' },
-    });
-    expect(readToken(req)).toBe('legacytoken123');
-  });
-
-  it('prefers yr_session over gm_session when both present', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'gm_session=oldtoken; yr_session=newtoken' },
-    });
-    expect(readToken(req)).toBe('newtoken');
+  it('returns null for an empty cookie header', () => {
+    const req = new Request('https://example.com', { headers: { Cookie: '' } });
+    expect(readToken(req)).toBeNull();
   });
 });
-
-// ---- readTokenFromHeader ----
-
-describe('readTokenFromHeader', () => {
-  it('extracts token from a raw cookie header string (yr_session)', () => {
-    expect(readTokenFromHeader('yr_session=abc123')).toBe('abc123');
-  });
-
-  it('returns null for missing yr_session', () => {
-    expect(readTokenFromHeader('other=value')).toBeNull();
-  });
-
-  it('returns null for undefined', () => {
-    expect(readTokenFromHeader(undefined)).toBeNull();
-  });
-
-  it('returns null for empty string', () => {
-    expect(readTokenFromHeader('')).toBeNull();
-  });
-
-  it('extracts token among multiple cookies', () => {
-    expect(readTokenFromHeader('a=1; yr_session=xyz; b=2')).toBe('xyz');
-  });
-
-  // DOC-001: Legacy gm_session fallback tests
-  it('falls back to legacy gm_session', () => {
-    expect(readTokenFromHeader('gm_session=legacytoken')).toBe('legacytoken');
-  });
-
-  it('prefers yr_session over gm_session', () => {
-    expect(readTokenFromHeader('gm_session=old; yr_session=new')).toBe('new');
-  });
-});
-
-// ---- parseSessionValue ----
-
-describe('parseSessionValue', () => {
-  it('parses userId and createdAt from valid JSON value', () => {
-    const raw = JSON.stringify({ u: 'user-uuid-123', c: 1700000000000 });
-    const result = parseSessionValue(raw);
-    expect(result.userId).toBe('user-uuid-123');
-    expect(result.createdAt).toBe(1700000000000);
-  });
-
-  it('handles legacy bare UUID (not JSON)', () => {
-    const result = parseSessionValue('bare-uuid-456');
-    expect(result.userId).toBe('bare-uuid-456');
-    expect(result.createdAt).toBe(0);
-  });
-
-  it('returns createdAt=0 when JSON has no c field', () => {
-    const raw = JSON.stringify({ u: 'user-789' });
-    const result = parseSessionValue(raw);
-    expect(result.userId).toBe('user-789');
-    expect(result.createdAt).toBe(0);
-  });
-
-  it('handles JSON with missing u field by falling back to legacy', () => {
-    const raw = JSON.stringify({ x: 'not-a-user' });
-    // parsed object has no 'u' string → falls through to legacy path
-    const result = parseSessionValue(raw);
-    expect(result.userId).toBe(raw);
-    expect(result.createdAt).toBe(0);
-  });
-});
-
-// ---- hasLegacyCookie ----
 
 describe('hasLegacyCookie', () => {
   it('returns true when legacy "sess" cookie is present', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'sess=oldtoken123' },
-    });
-    expect(hasLegacyCookie(req)).toBe(true);
-  });
-
-  it('returns true when legacy "sess" is among other cookies', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'yr_session=newtoken; sess=oldtoken' },
-    });
+    const req = new Request('https://example.com', { headers: { Cookie: 'sess=old' } });
     expect(hasLegacyCookie(req)).toBe(true);
   });
 
   it('returns false when only yr_session is present', () => {
-    const req = new Request('https://example.com', {
-      headers: { Cookie: 'yr_session=sometoken' },
-    });
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=sometoken' } });
     expect(hasLegacyCookie(req)).toBe(false);
   });
 
@@ -324,51 +222,158 @@ describe('hasLegacyCookie', () => {
   });
 });
 
-// ---- createSession / destroySession ----
+// ============================================================================
+//  Session CRUD
+// ============================================================================
 
 describe('createSession', () => {
-  it('returns a non-empty token', async () => {
-    const env = mockEnv();
-    const token = await createSession(env, 'user-abc');
+  beforeEach(resetStores);
+
+  it('creates a non-empty token', async () => {
+    setUser('user-1');
+    const token = await createSession(mockEnv(), 'user-1');
+    expect(typeof token).toBe('string');
     expect(token.length).toBeGreaterThan(0);
   });
 
-  it('stores the session in KV with correct prefix', async () => {
-    const env = mockEnv();
-    const token = await createSession(env, 'user-abc');
-    const raw = await env.SESSIONS.get(KV_PREFIX + token);
-    expect(raw).not.toBeNull();
-    const parsed = JSON.parse(raw!);
-    expect(parsed.u).toBe('user-abc');
-    expect(typeof parsed.c).toBe('number');
-  });
-
-  it('creates unique tokens for each session', async () => {
-    const env = mockEnv();
-    const t1 = await createSession(env, 'user-abc');
-    const t2 = await createSession(env, 'user-abc');
-    expect(t1).not.toBe(t2);
+  it('stores the session in the mock DB', async () => {
+    setUser('user-1');
+    const token = await createSession(mockEnv(), 'user-1');
+    expect(sessions.has(token)).toBe(true);
+    expect(sessions.get(token)?.user_id).toBe('user-1');
   });
 });
 
 describe('destroySession', () => {
-  it('removes the session from KV', async () => {
-    const env = mockEnv();
-    const token = await createSession(env, 'user-xyz');
-    // Verify it exists
-    expect(await env.SESSIONS.get(KV_PREFIX + token)).not.toBeNull();
-    // Destroy it
-    await destroySession(env, token);
-    expect(await env.SESSIONS.get(KV_PREFIX + token)).toBeNull();
+  beforeEach(resetStores);
+
+  it('removes the session from the mock DB', async () => {
+    setUser('user-1');
+    const token = await createSession(mockEnv(), 'user-1');
+    expect(sessions.has(token)).toBe(true);
+    await destroySession(mockEnv(), token);
+    expect(sessions.has(token)).toBe(false);
   });
 
   it('handles null token gracefully', async () => {
-    const env = mockEnv();
-    await expect(destroySession(env, null)).resolves.toBeUndefined();
+    await expect(destroySession(mockEnv(), null)).resolves.toBeUndefined();
   });
 
   it('handles non-existent token gracefully', async () => {
-    const env = mockEnv();
-    await expect(destroySession(env, 'nonexistent')).resolves.toBeUndefined();
+    await expect(destroySession(mockEnv(), 'nonexistent')).resolves.toBeUndefined();
+  });
+});
+
+describe('destroyAllUserSessions', () => {
+  beforeEach(resetStores);
+
+  it('removes all sessions for a user', async () => {
+    setUser('user-1');
+    const t1 = await createSession(mockEnv(), 'user-1');
+    const t2 = await createSession(mockEnv(), 'user-1');
+    expect(sessions.size).toBe(2);
+    await destroyAllUserSessions(mockEnv(), 'user-1');
+    expect(sessions.size).toBe(0);
+  });
+});
+
+// ============================================================================
+//  Session resolution
+// ============================================================================
+
+describe('resolveSession', () => {
+  beforeEach(resetStores);
+
+  it('returns null for requests without a cookie', async () => {
+    const req = new Request('https://example.com');
+    const result = await resolveSession(req, mockEnv());
+    expect(result.userId).toBeNull();
+    expect(result.cookie).toBeNull();
+  });
+
+  it('returns the userId for a valid session', async () => {
+    setUser('user-1');
+    setSession('tok123', 'user-1', 0);
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=tok123' } });
+    const result = await resolveSession(req, mockEnv());
+    expect(result.userId).toBe('user-1');
+    expect(result.cookie).toBeNull();
+  });
+
+  it('returns a rotation cookie when the session is older than threshold', async () => {
+    setUser('user-1');
+    setSession('oldtok', 'user-1', SESSION_ROTATE_AFTER_S + 1);
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=oldtok' } });
+    const result = await resolveSession(req, mockEnv());
+    expect(result.userId).toBe('user-1');
+    expect(result.cookie).not.toBeNull();
+    expect(result.cookie).toContain('yr_session=');
+    expect(sessions.has('oldtok')).toBe(false);
+  });
+});
+
+describe('currentUserId', () => {
+  beforeEach(resetStores);
+
+  it('returns the user ID for a valid session', async () => {
+    setUser('user-1');
+    setSession('tok123', 'user-1', 0);
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=tok123' } });
+    expect(await currentUserId(req, mockEnv())).toBe('user-1');
+  });
+
+  it('returns null for an unknown session', async () => {
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=unknown' } });
+    expect(await currentUserId(req, mockEnv())).toBeNull();
+  });
+});
+
+describe('loadUser', () => {
+  beforeEach(resetStores);
+
+  it('returns the user record for a valid user ID', async () => {
+    const u = setUser('user-1');
+    const loaded = await loadUser(mockEnv(), 'user-1');
+    expect(loaded).toEqual(u);
+  });
+
+  it('returns null for an unknown user', async () => {
+    expect(await loadUser(mockEnv(), 'unknown')).toBeNull();
+  });
+});
+
+describe('resolveUser', () => {
+  beforeEach(resetStores);
+
+  it('returns the user and no cookie for a valid session', async () => {
+    const u = setUser('user-1');
+    setSession('tok123', 'user-1', 0);
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=tok123' } });
+    const result = await resolveUser(req, mockEnv());
+    expect(result.user).toEqual(u);
+    expect(result.cookie).toBeNull();
+  });
+
+  it('returns null for an unauthenticated request', async () => {
+    const req = new Request('https://example.com');
+    const result = await resolveUser(req, mockEnv());
+    expect(result.user).toBeNull();
+    expect(result.cookie).toBeNull();
+  });
+});
+
+describe('currentUser', () => {
+  beforeEach(resetStores);
+
+  it('returns the user record for a valid session', async () => {
+    const u = setUser('user-1');
+    setSession('tok123', 'user-1', 0);
+    const req = new Request('https://example.com', { headers: { Cookie: 'yr_session=tok123' } });
+    expect(await currentUser(req, mockEnv())).toEqual(u);
+  });
+
+  it('returns null for an unauthenticated request', async () => {
+    const req = new Request('https://example.com');
+    expect(await currentUser(req, mockEnv())).toBeNull();
   });
 });

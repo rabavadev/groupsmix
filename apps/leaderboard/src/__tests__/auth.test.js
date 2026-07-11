@@ -25,13 +25,12 @@ mock.module(sessionUrl, () => ({
     cookieSet:  (t) => `yr_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
     cookieClear: ()  => "yr_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
     readToken:  (_req) => null,
-    KV_PREFIX:  "session:",
+    // SEC-107
+    resolveSession:       () => Promise.resolve({ userId: null, cookie: null }),
+    loadUser:             () => Promise.resolve(null),
     // SEC-104
     hasLegacyCookie:  (_req) => false,
     cookieClearLegacy: () => "sess=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-    // SEC-107
-    rotateSession:      (_env, _token, userId) => Promise.resolve("mock-rotated-token"),
-    parseSessionValue:  (raw) => ({ userId: raw, createdAt: Date.now() }),
     SESSION_ROTATE_AFTER_S: 86400,
     SESSION_TTL_S: 2592000, // 30 days
     }));

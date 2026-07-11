@@ -21,20 +21,20 @@ export interface RateLimitResult {
   retryAfter: number;
 }
 
-interface DurableObjectNamespace {
+export interface DurableObjectNamespace {
   idFromName(name: string): DurableObjectId;
   get(id: DurableObjectId): DurableObjectStub;
 }
 
-interface DurableObjectId {
+export interface DurableObjectId {
   toString(): string;
 }
 
-interface DurableObjectStub {
+export interface DurableObjectStub {
   fetch(input: RequestInfo, init?: RequestInit): Promise<Response>;
 }
 
-interface RateLimitEnv {
+export interface RateLimitEnv {
   SESSIONS?: RateLimitKV;
   RATE_LIMITER_DO?: DurableObjectNamespace;
   RL_BACKEND?: string;

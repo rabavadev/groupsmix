@@ -9,10 +9,9 @@ import { mock, test, expect, describe, beforeEach, beforeAll, afterAll, jest } f
 const _sessionUrl   = import.meta.resolve("../../../../shared/session.js");
 const _dbUrl        = import.meta.resolve("../../../../shared/db.js");
 const _cryptoUrl    = import.meta.resolve("../../../../shared/crypto.js");
-const _ratelimitUrl = import.meta.resolve("../../../../shared/ratelimit.js");
 
 // ── shared state that individual tests can override ────────────────────────
-let _rateLimitResult = { ok: true };
+let _rateLimitCount = 0;
 let _siteRow = null;
 let _ownerRow = null;
 let _existingSiteRow = null;
@@ -35,26 +34,31 @@ mock.module(_sessionUrl, () => ({
     destroyAllUserSessions: () => Promise.resolve(),
     cookieSet:  (t) => `yr_session=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
     cookieClear: ()  => "yr_session=; Path=/; Max-Age=0",
-    KV_PREFIX:  "session:",
     readToken:  () => null,
+    resolveSession:       () => Promise.resolve({ userId: null, cookie: null }),
+    loadUser:             () => Promise.resolve(null),
     hasLegacyCookie:  () => false,
     cookieClearLegacy: () => "sess=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-    rotateSession:      () => Promise.resolve("mock-rotated-token"),
-    parseSessionValue:  (raw) => ({ userId: raw, createdAt: Date.now() }),
     SESSION_ROTATE_AFTER_S: 86400,
     SESSION_TTL_S: 2592000, // 30 days
     }));
 
   // Mock crypto.js so HMAC verification always passes in tests
+  // Include the full crypto API so later tests in the same process don't see
+  // a partial crypto module (bun:test mock.module state can persist across files).
 mock.module(_cryptoUrl, () => ({
+  decryptToken: (enc) => enc,
+  encryptToken: (s) => s,
+  reencryptToken: (s) => s,
+  encrypt: (s) => s,
+  decrypt: (s) => s,
   verifyHmacSha256Hex: async () => true,
-}));
-
-// Mock ratelimit.js to keep rateLimit under test control.
-// This avoids mocking auth.js entirely, which would clobber auth.test.js's
-// access to hashPassword/verifyPassword/safeEqual/isEmail/slugify.
-mock.module(_ratelimitUrl, () => ({
-  rateLimit: async () => _rateLimitResult,
+  safeEqual: (a, b) => a === b,
+  isCurrentVersion: () => true,
+  newClickRef: () => "ref",
+  newLinkSlug: () => "slug",
+  newWebhookSecret: () => "secret",
+  hashIp: async (ip) => ip,
 }));
 
 mock.module("../site.js", () => ({
@@ -104,6 +108,16 @@ const existingSite = () => ({
   updated_at: new Date().toISOString(),
 });
 
+// Environment with a controllable SESSIONS KV so the real rate limiter can fail closed.
+function makeEnv() {
+  return {
+    SESSIONS: {
+      get: () => Promise.resolve(String(_rateLimitCount)),
+      put: () => Promise.resolve(),
+    },
+  };
+}
+
 // ── tests ─────────────────────────────────────────────────────────────────
 
 describe("handleScores — auth", () => {
@@ -116,11 +130,11 @@ describe("handleScores — auth", () => {
   });
 
   test("rate limit exceeded returns 429", async () => {
-    _rateLimitResult = { ok: false };
+    _rateLimitCount = 10;
     const req = makeRequest({ headers: { "x-postback-key": "valid-key" }, body: { slug: "test", players: [] } });
-    const res = await handleScores(req, {});
+    const res = await handleScores(req, makeEnv());
     expect(res.status).toBe(429);
-    _rateLimitResult = { ok: true };
+    _rateLimitCount = 0;
   });
 
   test("unknown postback key returns 401", async () => {

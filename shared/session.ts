@@ -120,7 +120,7 @@ export async function createSession(env: SessionEnv, userId: string): Promise<st
 }
 
 /** Delete one session.  Used during logout. */
-export async function destroySession(env: SessionEnv, token: string): Promise<void> {
+export async function destroySession(env: SessionEnv, token: string | null): Promise<void> {
   if (!token) return;
   await exec("DELETE FROM sessions WHERE token = $1", [token]);
 }
@@ -163,8 +163,8 @@ export async function resolveSession(req: Request, env: SessionEnv): Promise<Res
   );
   if (!row || row.length === 0) return { userId: null, cookie: null };
 
-  const { user_id, age } = row[0];
-  const userId = user_id as string;
+  const { user_id, age } = row[0] as { user_id: string; age: number };
+  const userId = user_id;
 
   // SEC-107: Rotate if session is older than threshold
   if (age > SESSION_ROTATE_AFTER_S) {
@@ -220,11 +220,11 @@ export async function currentUserId(req: Request, env: SessionEnv): Promise<stri
 
 export async function loadUser(env: SessionEnv, userId: string): Promise<UserRecord | null> {
   try {
-    return await one<UserRecord>(
+    return (await one<UserRecord>(
       `SELECT id, email, slug, plan, plan_expires_at, status, is_admin
          FROM users WHERE id = $1`,
       [userId]
-    );
+    )) ?? null;
   } catch (e) {
     console.error("[session] loadUser failed:", (e as Error)?.message ?? e);
     return null;

@@ -34,14 +34,15 @@ const sessMock = () => ({
     const m = cookie.match(/yr_session=([^;]+)/);
     return m ? m[1] : null;
   },
+  resolveSession: (req) => {
+    const cookie = req?.headers?.get?.("cookie") || "";
+    const m = cookie.match(/yr_session=([^;]+)/);
+    return Promise.resolve({ userId: m ? "user-1" : null, cookie: null });
+  },
+  loadUser: () => Promise.resolve(USER_ROW),
   hasLegacyCookie: () => false,
   cookieClearLegacy: () => "sess=",
-  rotateSession: () => Promise.resolve("tok"),
-  parseSessionValue: (raw) => {
-    try { const p = JSON.parse(raw); return { userId: p.u, createdAt: p.c || 0 }; }
-    catch { return { userId: raw, createdAt: 0 }; }
-  },
-  KV_PREFIX: "sess:",
+  cookieClearLegacy2: () => "gm_session=",
   SESSION_ROTATE_AFTER_S: 86400,
   SESSION_TTL_S: 2592000,
 });
