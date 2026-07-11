@@ -34,35 +34,17 @@ const sessMock = () => ({
     const m = cookie.match(/yr_session=([^;]+)/);
     return m ? m[1] : null;
   },
-  hasLegacyCookie: () => false,
-  cookieClearLegacy: () => "sess=",
-  rotateSession: () => Promise.resolve("tok"),
-  parseSessionValue: (raw) => {
-    try { const p = JSON.parse(raw); return { userId: p.u, createdAt: p.c || 0 }; }
-    catch { return { userId: raw, createdAt: 0 }; }
-  },
-  KV_PREFIX: "sess:",
-  SESSION_ROTATE_AFTER_S: 86400,
-  SESSION_TTL_S: 2592000,
-  // SEC-107: shared session module now resolves via resolveSession + loadUser
   resolveSession: (req) => {
     const cookie = req?.headers?.get?.("cookie") || "";
     const m = cookie.match(/yr_session=([^;]+)/);
-    return Promise.resolve({
-      userId: m ? m[1] : null,
-      uid: m ? m[1] : null,
-      cookie: null,
-      rotatedCookie: null,
-    });
+    return Promise.resolve({ userId: m ? "user-1" : null, cookie: null });
   },
-  loadUser: (env, userId) => Promise.resolve({
-    id: userId,
-    email: "test@test.com",
-    plan: "free",
-    plan_expires_at: null,
-    status: "active",
-    is_admin: false,
-  }),
+  loadUser: () => Promise.resolve(USER_ROW),
+  hasLegacyCookie: () => false,
+  cookieClearLegacy: () => "sess=",
+  cookieClearLegacy2: () => "gm_session=",
+  SESSION_ROTATE_AFTER_S: 86400,
+  SESSION_TTL_S: 2592000,
 });
 
 mock.module(dbUrl, dbMock);

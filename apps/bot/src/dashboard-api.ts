@@ -41,7 +41,7 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
       await next();
     } catch (e: any) {
       console.error("[dashboard-api session middleware]", e?.message, e?.stack);
-      return c.json({ error: "session_middleware_error", detail: e?.message ?? String(e), hasDb: true }, 500);
+      return c.json({ error: "session_middleware_error" }, 500);
     }
   });
   // Rate-limit all API requests (120 req/min per IP).
@@ -74,7 +74,7 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
       await next();
     } catch (e: any) {
       console.error("[dashboard-api auth middleware]", e?.message, e?.stack);
-      return c.json({ error: "auth_middleware_error", detail: e?.message ?? String(e), uid: c.get("uid") }, 500);
+      return c.json({ error: "auth_middleware_error" }, 500);
     }
   });
 

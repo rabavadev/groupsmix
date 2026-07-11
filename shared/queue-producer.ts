@@ -35,7 +35,7 @@ interface QueueProducer {
  * Falls back to direct DB write if queue is not available.
  */
 export function createQueueProducer(
-  queue: { send: (message: unknown) => Promise<void> } | undefined,
+  queue: { send: (message: QueueEvent) => Promise<void> } | undefined,
   fallbackFn: (event: QueueEvent) => Promise<void>
 ): QueueProducer {
   if (!queue) {
