@@ -24,10 +24,6 @@ routes = [
 name = "RATE_LIMITER_DO"
 class_name = "RateLimiter"
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["RateLimiter"]
-
 # --- Postgres (Supabase) via Hyperdrive. ---
 # Config recreated with correct username (postgres, not postgres.<ref>).
 [[hyperdrive]]
