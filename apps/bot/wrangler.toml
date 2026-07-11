@@ -33,10 +33,6 @@ crons = ["* * * * *", "0 3 * * *"]
 name = "RATE_LIMITER_DO"
 class_name = "RateLimiter"
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["RateLimiter"]
-
 # Postgres via Hyperdrive — recreated with correct username (postgres).
 [[hyperdrive]]
 binding = "HYPERDRIVE"
