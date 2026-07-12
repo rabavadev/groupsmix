@@ -243,8 +243,19 @@ async function load() {
 
   // bots
   $('botList').innerHTML = bots.length
-    ? bots.map(b=>'<div>@'+esc(b.username)+' <span class="muted">(…'+esc(b.token_hint)+')</span> <span class="'+(b.status==='active'?'ok':'off')+'">'+esc(b.status)+'</span> '+
-        '<button class="ghost" data-action="checkHealth" data-id="'+esc(b.id)+'" type="button">Check health</button></div>').join('')
+    ? bots.map(b => {
+        const statusClass = b.status === 'active' ? 'ok' : 'off';
+        const statusText = b.status === 'active' ? 'active' : (b.status === 'revoked' ? 'disconnected' : b.status);
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'+
+          '<div><a href="https://t.me/'+esc(b.username)+'" target="_blank" rel="noopener">@'+esc(b.username)+'</a> '+
+          '<span class="muted">(…'+esc(b.token_hint)+')</span> <span class="'+statusClass+'">'+esc(statusText)+'</span></div>'+
+          '<div>'+
+            '<button class="ghost" data-action="checkHealth" data-id="'+esc(b.id)+'" type="button">Check health</button> '+
+            '<button class="ghost" data-action="reconnectBot" data-id="'+esc(b.id)+'" type="button">Reconnect</button>'+
+            (b.status === 'active' ? ' <button class="ghost" data-action="disconnectBot" data-id="'+esc(b.id)+'" type="button">Disconnect</button>' : '')+
+          '</div>'+
+        '</div>';
+      }).join('')
     : 'No bot connected yet — paste your token below.';
 
   // customization panel (targets the first connected bot)
@@ -302,6 +313,21 @@ async function checkHealth(target){
     : 'Webhook not set: ' + (r.url || 'none') + ' ('+r.pending_updates+' pending)';
   toast(msg + (r.last_error ? ' | Error: ' + r.last_error : ''));
   restoreBtn(target);
+}
+async function disconnectBot(btn){
+  if (!confirm('Disconnect this bot? It will stop responding and free your plan slot.')) return;
+  setLoading(btn, 'Disconnecting…');
+  const r = await api('/bots/'+btn.dataset.id+'/disconnect',{method:'POST'});
+  if (r.error) { restoreBtn(btn); return toast(r.error); }
+  toast(r.webhook_removed ? 'Bot disconnected' : 'Bot disconnected, but the Telegram webhook could not be removed. Delete it manually in @BotFather if needed.');
+  restoreBtn(btn); load();
+}
+async function reconnectBot(btn){
+  setLoading(btn, 'Reconnecting…');
+  const r = await api('/bots/'+btn.dataset.id+'/reconnect',{method:'POST'});
+  if (r.error) { restoreBtn(btn); return toast(r.error); }
+  toast('Bot @'+r.username+' reconnected');
+  restoreBtn(btn); load();
 }
 
 // ---- bot customization: welcome message + custom slash-commands ----
@@ -432,6 +458,8 @@ async function handleAction(e) {
     if (action === 'logout') { e.preventDefault(); await logout(target); }
     else if (action === 'connectBot') { e.preventDefault(); await connectBot(target); }
     else if (action === 'checkHealth') { e.preventDefault(); await checkHealth(target); }
+    else if (action === 'disconnectBot') { e.preventDefault(); await disconnectBot(target); }
+    else if (action === 'reconnectBot') { e.preventDefault(); await reconnectBot(target); }
     else if (action === 'createOffer') { e.preventDefault(); await createOffer(target); }
     else if (action === 'addCommand') { e.preventDefault(); await addCommand(target); }
     else if (action === 'saveWelcome') { e.preventDefault(); await saveWelcome(target); }
