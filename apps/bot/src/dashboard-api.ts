@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { config } from "./config.js";
 import { one, query } from "../../../shared/db.js";
 import { encryptToken, decryptToken, newLinkSlug, newPostbackKey, newWebhookSecret } from "../../../shared/crypto.js";
-import { getMe, setWebhook, getWebhookInfo } from "./telegram.js";
+import { getMe, setWebhook, deleteWebhook, getWebhookInfo } from "./telegram.js";
 import { withPlanLimit, getUserPlan, type PlanTier } from "./plans.js";
 import { billingEnabled, createStarsInvoice } from "./billing.js";
 import { checkFeature, PLANS } from "./plans.js";
@@ -234,6 +234,84 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
     }
   });
 
+  // Disconnect a bot: remove its Telegram webhook and mark it revoked so the
+  // hook endpoint stops accepting updates. This frees the bot plan slot and
+  // lets the user reconnect or switch to a different bot later.
+  api.post("/bots/:id/disconnect", async (c) => {
+    const bot = await one<{ id: string; token_encrypted: Buffer; webhook_secret: string }>(
+      `SELECT id, token_encrypted, webhook_secret FROM bots WHERE id = $1 AND owner_id = $2`,
+      [c.req.param("id"), c.get("uid")]
+    );
+    if (!bot) return c.json({ error: "bot not found" }, 404);
+
+    let token: string;
+    try { token = await decryptToken(bot.token_encrypted); }
+    catch (err) {
+      console.error("[POST /bots/:id/disconnect] decrypt failed:", String((err as any)?.message ?? err));
+      return c.json({ error: "Could not decrypt stored bot token. Disconnect it manually in @BotFather, then reconnect with a fresh token." }, 500);
+    }
+
+    let webhookRemoved = false;
+    try {
+      await deleteWebhook(token);
+      webhookRemoved = true;
+    } catch (err) {
+      console.error("[POST /bots/:id/disconnect] deleteWebhook failed:", String((err as any)?.message ?? err));
+    }
+
+    const row = await one<{ id: string }>(
+      `UPDATE bots SET status = 'revoked', updated_at = now() WHERE id = $1 RETURNING id`,
+      [bot.id]
+    );
+    if (!row) return c.json({ error: "bot not found" }, 404);
+    return c.json({ ok: true, webhook_removed: webhookRemoved });
+  });
+
+  // One-click reconnect: re-register the stored webhook with Telegram.
+  // Useful when the dashboard shows the bot disconnected or after a webhook
+  // failure during the initial token setup.
+  api.post("/bots/:id/reconnect", async (c) => {
+    const bot = await one<{ id: string; token_encrypted: Buffer; webhook_secret: string }>(
+      `SELECT id, token_encrypted, webhook_secret FROM bots WHERE id = $1 AND owner_id = $2`,
+      [c.req.param("id"), c.get("uid")]
+    );
+    if (!bot) return c.json({ error: "bot not found" }, 404);
+
+    let token: string;
+    try { token = await decryptToken(bot.token_encrypted); }
+    catch (err) {
+      console.error("[POST /bots/:id/reconnect] decrypt failed:", String((err as any)?.message ?? err));
+      return c.json({ error: "Could not decrypt stored bot token. Paste the token again to reconnect." }, 500);
+    }
+
+    let me;
+    try { me = await getMe(token); }
+    catch (err) {
+      const msg = String((err as any)?.message ?? err);
+      console.error("[POST /bots/:id/reconnect] getMe failed:", msg);
+      return c.json({ error: "Telegram rejected the stored token. It may have been regenerated in @BotFather. Paste the new token to reconnect." }, 400);
+    }
+
+    const expectedUrl = `${config.publicBaseUrl}/hook/${bot.webhook_secret}`;
+    try {
+      await setWebhook(token, expectedUrl, bot.webhook_secret, {
+        dropPendingUpdates: true,
+        allowedUpdates: ["message", "callback_query"],
+      });
+    } catch (err) {
+      const msg = String((err as any)?.message ?? err);
+      console.error("[POST /bots/:id/reconnect] setWebhook failed:", msg);
+      return c.json({ error: "Telegram could not set the webhook. Check that PUBLIC_BASE_URL is correct and reachable from the internet." }, 500);
+    }
+
+    const row = await one<{ id: string; username: string }>(
+      `UPDATE bots SET status = 'active', username = $1, tg_bot_id = $2, updated_at = now() WHERE id = $3 RETURNING id, username`,
+      [me.username, me.id, bot.id]
+    );
+    if (!row) return c.json({ error: "bot not found" }, 404);
+    return c.json({ ok: true, bot_id: row.id, username: row.username, try_it: `https://t.me/${row.username}` });
+  });
+
   api.post("/bots", async (c) => {
     const { token, welcome_message } = await c.req.json<{ token: string; welcome_message?: string }>();
     if (!token) return c.json({ error: "token required" }, 400);
@@ -243,7 +321,11 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
     // don't hold a Postgres advisory lock across an external HTTP call.
     let me;
     try { me = await getMe(token); }
-    catch { return c.json({ error: "Telegram rejected that token — double-check it in @BotFather" }, 400); }
+    catch (err) {
+      const msg = String((err as any)?.message ?? err);
+      console.error("[POST /bots] getMe failed:", msg);
+      return c.json({ error: "Telegram rejected that token — double-check it in @BotFather" }, 400);
+    }
 
     const uid = c.get("uid");
     const secret = newWebhookSecret();
@@ -298,7 +380,7 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
       });
     } catch (err) {
       console.error("[POST /bots] setWebhook failed:", String((err as any)?.message ?? err));
-      webhookWarning = "Bot saved — but webhook registration failed. Re-submit the token to retry, or check PUBLIC_BASE_URL config.";
+      webhookWarning = "Bot saved — but webhook registration failed. Click Reconnect on the bot card to retry, or check PUBLIC_BASE_URL config.";
     }
     return c.json({
       bot_id: out.result.bot_id,

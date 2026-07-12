@@ -198,6 +198,8 @@ describe("buildDashboard", () => {
     expect(html).toContain('data-action="connectBot"');
     expect(html).toContain('data-action="logout"');
     expect(html).toContain('data-action="checkHealth"');
+    expect(html).toContain('data-action="disconnectBot"');
+    expect(html).toContain('data-action="reconnectBot"');
     expect(html).not.toContain("onclick=");
   });
 
@@ -243,5 +245,45 @@ describe("buildDashboard", () => {
     expect(body.ok).toBe(true);
     expect(body.configured).toBe(true);
     expect(body.url).toBe("https://yourrank.site/hook/secret");
+  });
+
+  it("POST /dash/api/bots/:id/disconnect revokes the bot", async () => {
+    mockOne.mockImplementation((sql: string) => {
+      if (sql.includes("SELECT status FROM users")) return Promise.resolve({ status: "active" });
+      if (sql.includes("SELECT id, token_encrypted, webhook_secret FROM bots")) {
+        return Promise.resolve({ id: "b-1", token_encrypted: "enc:123456:ABC-DEF", webhook_secret: "secret" });
+      }
+      if (sql.includes("UPDATE bots SET status = 'revoked'")) return Promise.resolve({ id: "b-1" });
+      return Promise.resolve(null);
+    });
+    const req = new Request("http://localhost:8787/dash/api/bots/b-1/disconnect", {
+      method: "POST",
+      headers: { origin: "https://yourrank.site", cookie: "yr_session=token123" },
+    });
+    const res = await app.fetch(req, {} as any);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.webhook_removed).toBe(true);
+  });
+
+  it("POST /dash/api/bots/:id/reconnect reactivates the bot", async () => {
+    mockOne.mockImplementation((sql: string) => {
+      if (sql.includes("SELECT status FROM users")) return Promise.resolve({ status: "active" });
+      if (sql.includes("SELECT id, token_encrypted, webhook_secret FROM bots")) {
+        return Promise.resolve({ id: "b-1", token_encrypted: "enc:123456:ABC-DEF", webhook_secret: "secret" });
+      }
+      if (sql.includes("UPDATE bots SET status = 'active'")) return Promise.resolve({ id: "b-1", username: "testbot" });
+      return Promise.resolve(null);
+    });
+    const req = new Request("http://localhost:8787/dash/api/bots/b-1/reconnect", {
+      method: "POST",
+      headers: { origin: "https://yourrank.site", cookie: "yr_session=token123" },
+    });
+    const res = await app.fetch(req, {} as any);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.username).toBe("testbot");
   });
 });
