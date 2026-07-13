@@ -261,6 +261,7 @@ async function logout(btn) {
 let submitting = false;
 const page = document.body.dataset.page || 'overview';
 let __lastBots = [];
+let __offers = [];
 
 function showPage(p) {
   document.querySelectorAll('[data-page]').forEach(el => {
@@ -308,17 +309,23 @@ async function load() {
 
   renderBots(bots);
 
-  // offers
+  __offers = offers || [];
+  renderOffers();
+}
+
+// Render the offers table from client state. Mutation handlers update __offers
+// from their authoritative result and re-render, so the table reflects changes
+// immediately without a re-fetch (which can read stale data after a write).
+function renderOffers(){
   const offersEl = $('offers');
-  if (offersEl) {
-    offersEl.innerHTML = offers.map(o=>'<tr>'+
-      '<td><b>'+esc(o.casino)+'</b><br><span class="muted">'+esc(o.label)+'</span></td>'+
-      '<td>'+(o.slug?'<span class="copy" data-action="copyLink" data-slug="'+esc(o.slug)+'">'+esc('/r/'+o.slug)+'</span>':'–')+'</td>'+
-      '<td>'+esc(String(o.clicks))+'</td><td>'+esc(String(o.unique_clicks))+'</td>'+
-      '<td class="'+(o.is_active?'ok':'off')+'">'+(o.is_active?'active':'off')+'</td>'+
-      '<td><button class="ghost" data-action="toggleOffer" data-id="'+esc(o.id)+'" data-active="'+(!o.is_active)+'">'+(o.is_active?'Disable':'Enable')+'</button></td>'+
-    '</tr>').join('') || '<tr><td colspan="6" class="muted">No offers yet.</td></tr>';
-  }
+  if (!offersEl) return;
+  offersEl.innerHTML = (__offers||[]).map(o=>'<tr>'+
+    '<td><b>'+esc(o.casino)+'</b><br><span class="muted">'+esc(o.label)+'</span></td>'+
+    '<td>'+(o.slug?'<span class="copy" data-action="copyLink" data-slug="'+esc(o.slug)+'">'+esc('/r/'+o.slug)+'</span>':'–')+'</td>'+
+    '<td>'+esc(String(o.clicks))+'</td><td>'+esc(String(o.unique_clicks))+'</td>'+
+    '<td class="'+(o.is_active?'ok':'off')+'">'+(o.is_active?'active':'off')+'</td>'+
+    '<td><button class="ghost" data-action="toggleOffer" data-id="'+esc(o.id)+'" data-active="'+(!o.is_active)+'">'+(o.is_active?'Disable':'Enable')+'</button></td>'+
+  '</tr>').join('') || '<tr><td colspan="6" class="muted">No offers yet.</td></tr>';
 }
 
 async function loadExtras(){
@@ -363,7 +370,10 @@ async function toggleOffer(target){
   setLoading(target);
   const r = await api('/offers/'+target.dataset.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({is_active:on})});
   if (r.error) { restoreBtn(target); return toast(r.error); }
-  restoreBtn(target); load();
+  const o = __offers.find(x => x.id === target.dataset.id);
+  if (o) o.is_active = (r.is_active !== undefined ? r.is_active : on);
+  renderOffers();
+  restoreBtn(target);
 }
 async function createOffer(btn){
   const body = { casino:$('oCasino').value.trim(), label:$('oLabel').value.trim(), referral_url:$('oUrl').value.trim(),
