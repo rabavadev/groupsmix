@@ -55,7 +55,7 @@ mock.module(sessUrl, sessMock);
 mock.module(sessUrlTs, sessMock);
 
 const { handleCheckout } = await import("../billing.js");
-const { saveSite } = await import("../site.js");
+const { saveSite, updateSiteTheme } = await import("../site.js");
 
 const SESSION_VALUE = JSON.stringify({ u: "user-1", c: Date.now() });
 function mockEnv(extra = {}) {
@@ -116,6 +116,69 @@ describe("saveSite referral/CTA URL validation", () => {
     mockOne.mockResolvedValue(SITE);
     const r = await saveSite(mockEnv(), USER_ROW, { brand: { ctaUrl: "" } }, "site-1");
     expect(r.code).not.toBe("invalid_cta");
+  });
+});
+
+describe("updateSiteTheme validation and plan behavior", () => {
+  const SITE = {
+    id: "site-1",
+    slug: "actual-board",
+    user_id: "user-1",
+    theme_json: { template: "classic", accentA: "#111111", accentB: "#222222" },
+  };
+
+  beforeEach(() => { mockOne.mockReset(); mockQuery.mockReset(); mockExec.mockReset(); });
+
+  it("rejects unknown template ids", async () => {
+    mockOne.mockResolvedValueOnce(SITE);
+    const r = await updateSiteTheme(mockEnv(), USER_ROW, { siteId: "site-1", template: "unknown" });
+    expect(r.code).toBe("invalid_template");
+    expect(mockExec).not.toHaveBeenCalled();
+  });
+
+  it("ignores accent overrides on free plans", async () => {
+    mockOne.mockResolvedValueOnce(SITE);
+    const r = await updateSiteTheme(mockEnv(), USER_ROW, {
+      siteId: "site-1",
+      template: "neon",
+      accentA: "#00ffd1",
+      accentB: "#ff2cd0",
+    });
+    expect(r.ok).toBe(true);
+    const savedTheme = JSON.parse(mockExec.mock.calls[0][1][0]);
+    expect(savedTheme).toEqual({
+      template: "neon",
+      accentA: "#111111",
+      accentB: "#222222",
+    });
+  });
+
+  it("validates and saves accent overrides on paid plans", async () => {
+    mockOne.mockResolvedValueOnce(SITE);
+    const paidUser = { ...USER_ROW, plan: "pro", plan_expires_at: Date.now() + 86_400_000 };
+    const invalid = await updateSiteTheme(mockEnv(), paidUser, {
+      siteId: "site-1",
+      template: "neon",
+      accentA: "red",
+      accentB: "#ff2cd0",
+    });
+    expect(invalid.code).toBe("invalid_colors");
+    expect(mockExec).not.toHaveBeenCalled();
+
+    mockOne.mockResolvedValueOnce(SITE);
+    const valid = await updateSiteTheme(mockEnv(), paidUser, {
+      siteId: "site-1",
+      template: "neon",
+      accentA: "#00ffd1",
+      accentB: "#ff2cd0",
+    });
+    expect(valid.ok).toBe(true);
+    const savedTheme = JSON.parse(mockExec.mock.calls[0][1][0]);
+    expect(savedTheme).toEqual({
+      template: "neon",
+      accentA: "#00ffd1",
+      accentB: "#ff2cd0",
+    });
   });
 });
 

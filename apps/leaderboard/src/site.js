@@ -538,4 +538,40 @@ export async function setActiveBoard(env, uid, siteId) {
   return { ok: true };
 }
 
+export async function updateSiteTheme(env, user, payload = {}) {
+  const site = payload.siteId
+    ? await getBoardById(env, user.id, payload.siteId)
+    : await getByUser(env, user.id);
+  if (!site) return { error: "no site" };
+  if (!TEMPLATE_IDS.includes(payload.template)) {
+    return { error: "Choose a valid page template.", code: "invalid_template" };
+  }
+
+  const theme = (site.theme_json && typeof site.theme_json === "object") ? { ...site.theme_json } : {};
+  theme.template = payload.template;
+  const plan = effectivePlan(user);
+  if (plan !== "free" && (payload.accentA != null || payload.accentB != null)) {
+    if (!HEX.test(payload.accentA || "") || !HEX.test(payload.accentB || "")) {
+      return { error: "Choose two valid accent colors.", code: "invalid_colors" };
+    }
+    theme.accentA = payload.accentA;
+    theme.accentB = payload.accentB;
+  }
+
+  await exec(
+    "UPDATE sites SET theme_json=$1::jsonb, updated_at=now() WHERE id=$2 AND user_id=$3",
+    [JSON.stringify(theme), site.id, user.id]
+  );
+  invalidateSiteCache(env, site.slug, user.id, site.id);
+  invalidateUserCache(env, user.id);
+  return {
+    ok: true,
+    branding: {
+      template: theme.template,
+      accentA: HEX.test(theme.accentA || "") ? theme.accentA : null,
+      accentB: HEX.test(theme.accentB || "") ? theme.accentB : null,
+    },
+  };
+}
+
 export { getByUser, getBySlug };

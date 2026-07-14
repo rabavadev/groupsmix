@@ -15,6 +15,10 @@ const sessUrlTs = import.meta.resolve("../../../../shared/session.ts");
 const mockExec = mock(() => Promise.resolve());
 const mockOne = mock(() => Promise.resolve(null));
 const mockQuery = mock(() => Promise.resolve([]));
+const mockUpdateSiteTheme = mock(() => Promise.resolve({
+  ok: true,
+  branding: { template: "neon", accentA: null, accentB: null },
+}));
 
 const dbMock = () => ({
   one: (...args) => mockOne(...args),
@@ -68,6 +72,7 @@ const siteMock = () => ({
   ])),
   invalidateSiteCache: () => {},
   invalidateUserCache: () => {},
+  updateSiteTheme: (...args) => mockUpdateSiteTheme(...args),
 });
 mock.module(siteUrl, siteMock);
 mock.module(siteUrlTs, siteMock);
@@ -87,7 +92,7 @@ mock.module(dataSitesUrlTs, () => ({
 }));
 
 // ── Import after mocks ─────────────────────────────────────────────────
-import { handleGetSite, handleListBoards, handleStats, handleTrackCopy } from "../handlers/sites.js";
+import { handleGetSite, handleListBoards, handlePutTheme, handleStats, handleTrackCopy } from "../handlers/sites.js";
 
 // Session value matching parseSessionValue format: {"u":"user-1","c":<timestamp>}
 const SESSION_VALUE = JSON.stringify({ u: "user-1", c: Date.now() });
@@ -140,6 +145,8 @@ describe("handleGetSite", () => {
     expect(body).toHaveProperty("siteId");
     expect(body).toHaveProperty("customDomain");
     expect(body).toHaveProperty("domainStatus");
+    expect(body.templates).toHaveLength(8);
+    expect(body.templates.every((template) => !Object.hasOwn(template, "css"))).toBe(true);
     // Verify data sub-shape matches what dashboard.js expects
     expect(body.data).toHaveProperty("brand");
     expect(body.data).toHaveProperty("players");
@@ -151,6 +158,31 @@ describe("handleGetSite", () => {
     const noAuthReq = new Request("https://test.com/api/site", { method: "GET" });
     const res = await handleGetSite(noAuthReq, env);
     expect(res.status).toBe(401);
+  });
+});
+
+describe("handlePutTheme", () => {
+  beforeEach(() => {
+    mockOne.mockReset();
+    mockUpdateSiteTheme.mockReset();
+    mockUpdateSiteTheme.mockResolvedValue({
+      ok: true,
+      branding: { template: "neon", accentA: null, accentB: null },
+    });
+  });
+
+  it("applies a template without saving unrelated board fields", async () => {
+    mockOne.mockResolvedValueOnce(USER_ROW);
+    const res = await handlePutTheme(req("https://test.com/api/site/theme", "POST", {
+      siteId: "site-1",
+      template: "neon",
+    }), mockEnv());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      ok: true,
+      branding: { template: "neon", accentA: null, accentB: null },
+    });
+    expect(mockUpdateSiteTheme).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -21,6 +21,7 @@ import {
 } from "./middleware/index.js";
 import { findSiteLogoData, findSiteStatus, findUserTotpSecret } from "./data/sites.js";
 import { one } from "../../../shared/db.js";
+import { handleDashboardPreview } from "./handlers/preview.js";
 
 export default {
   fetch: withWorkerFetch("leaderboard", async (request, env, ctx) => {
@@ -211,6 +212,14 @@ async function handleRequest(request, env, ctx) {
           // unauthenticated path. Retry-safe: a plain refresh re-runs the read.
           console.error("dashboard render failed:", String(e?.message || e));
           return new Response("Dashboard couldn't load right now — please refresh.", { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } });
+        }
+      }
+      if (path === "/dashboard/preview" && method === "GET") {
+        try {
+          return await handleDashboardPreview(request, env, nonce);
+        } catch (e) {
+          console.error("template preview failed:", String(e?.message || e));
+          return new Response("Preview couldn't load.", { status: 500 });
         }
       }
       if (path === "/dashboard/analytics") {

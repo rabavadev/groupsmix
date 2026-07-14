@@ -19,6 +19,19 @@ export function renderLeaderboard(data, opts = {}) {
   const tpl = validTemplate(br.template);
   const tplCssStr = templateCss(tpl);
   const tplCss = tplCssStr ? `<style nonce="${opts.nonce}" data-template="${tpl}">${tplCssStr}</style>` : "";
+  const previewCss = opts.preview ? `<style nonce="${opts.nonce}">
+html{background:var(--bg)}body[data-preview]{min-width:1100px;overflow:hidden}
+body[data-preview] .nav,body[data-preview] .field,body[data-preview] .watermarks,body[data-preview] .stream-window,
+body[data-preview] .panel,body[data-preview] .find-rank-bar,body[data-preview] .rules,body[data-preview] .past-sec,
+body[data-preview] .socials-sec,body[data-preview] .ftr,body[data-preview] .rk-badge{display:none!important}
+body[data-preview] .hero{min-height:350px;padding:58px 4vw 24px}
+body[data-preview] .hero-name{font-size:88px}
+body[data-preview] .hero-sub{margin:.65rem auto 1rem}
+body[data-preview] .hero-timer{margin-top:1rem}
+body[data-preview] .board{width:92%;padding:28px 0 50px}
+body[data-preview] .board-head{margin-bottom:18px}
+body[data-preview] .top3{margin-bottom:14px}
+</style>` : "";
   // Free-plan pages carry the badge — it's how YourRank spreads.
   const badge = opts.watermark
     ? `<a class="rk-badge" href="${esc(opts.homeUrl || "/")}" target="_blank" rel="noopener">⚡ Powered by <b>YourRank</b></a>`
@@ -81,8 +94,9 @@ export function renderLeaderboard(data, opts = {}) {
 <link rel="stylesheet" href="/assets/leaderboard.css" />
 ${tplCss}
 ${themeCss}
+${previewCss}
 <script nonce="${opts.nonce}" type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":${JSON.stringify(title)},"description":${JSON.stringify(desc)},"numberOfItems":${data.players ? data.players.length : 0}}</script>
-</head><body data-template="${tpl}">
+</head><body data-template="${tpl}"${opts.preview ? " data-preview" : ""}>
 <noscript><p class="noscript-noscroll">This leaderboard requires JavaScript for live updates. The data shown below may not refresh automatically.</p></noscript>
 <a class="skip-link" href="#board">Skip to leaderboard</a>
 <div class="field" aria-hidden="true"></div><div class="watermarks" data-watermarks aria-hidden="true"></div>

@@ -132,6 +132,26 @@ table.admin-table td.note{max-width:260px;color:var(--ink-soft)}
 .logo-preview{width:44px;height:44px;object-fit:contain;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2)}
 .color-row{display:flex;align-items:center;gap:8px}
 .color-row input[type=color]{width:44px;height:34px;padding:2px;border:1px solid var(--line-2);border-radius:8px;background:var(--panel);cursor:pointer}
+.template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.template-card{overflow:hidden;border:1px solid var(--line-2);border-radius:12px;background:var(--panel-2);transition:border-color .16s,box-shadow .16s}
+.template-card:hover{border-color:var(--ink-mute)}
+.template-card.is-selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.template-preview{height:230px;overflow:hidden;background:#050507;cursor:pointer;border-bottom:1px solid var(--line)}
+.template-preview iframe{display:block;width:312.5%;height:312.5%;border:0;pointer-events:none;transform:scale(.32);transform-origin:0 0}
+.template-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px}
+.template-meta>div{display:flex;min-width:0;flex-direction:column;gap:2px}
+.template-meta b{font-size:14px}
+.template-meta span{color:var(--ink-mute);font-size:12px;line-height:1.35}
+.template-status{min-height:18px;margin-top:12px}
+.preset-list{display:flex;flex-wrap:wrap;gap:8px}
+.preset-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:9px;background:var(--panel-2);color:var(--ink-soft);font:600 12px var(--sans);padding:7px 10px;cursor:pointer}
+.preset-btn:hover{border-color:var(--ink-mute);color:var(--ink)}
+.preset-btn.is-selected{border-color:var(--accent);color:var(--ink);box-shadow:0 0 0 1px var(--accent)}
+.preset-swatch{display:flex;width:32px;height:18px;overflow:hidden;border-radius:5px;border:1px solid rgba(255,255,255,.12)}
+.preset-swatch i{display:block;width:50%;height:100%}
+.advanced-colors{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.advanced-colors summary{color:var(--ink-soft);font-size:12px;cursor:pointer;margin-bottom:10px}
+@media(max-width:720px){.template-grid{grid-template-columns:1fr}.template-preview{height:220px}}
 
 /* --- past winners / archives --- */
 .arch-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
