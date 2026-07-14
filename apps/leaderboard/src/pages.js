@@ -180,7 +180,34 @@ export const PAGES = {
 <div class="card mt-18"><div class="skeleton skeleton-block skel-h-300"></div></div>
 </div>
 <div id="dash" hidden>
-<div class="dash-head"><div><h1>Your leaderboard</h1><p class="live-link">Live at <a id="liveLink" href="#" target="_blank">…</a></p></div><span class="label" id="planBadge">FREE PLAN</span></div>
+<div class="lb-shell">
+<aside class="lb-side" id="lbSide" aria-label="Dashboard sections">
+<span class="lb-side-grp">Manage</span>
+<button class="lb-nav is-on" type="button" data-nav="overview"><span class="lb-nav-ic" aria-hidden="true">◱</span>Overview</button>
+<button class="lb-nav" type="button" data-nav="board"><span class="lb-nav-ic" aria-hidden="true">🏆</span>Prize &amp; players</button>
+<button class="lb-nav" type="button" data-nav="design"><span class="lb-nav-ic" aria-hidden="true">🎨</span>Design</button>
+<span class="lb-side-grp">Grow</span>
+<button class="lb-nav" type="button" data-nav="growth"><span class="lb-nav-ic" aria-hidden="true">📈</span>Analytics</button>
+<button class="lb-nav" type="button" data-nav="integrations"><span class="lb-nav-ic" aria-hidden="true">🔌</span>Integrations</button>
+<button class="lb-nav" type="button" data-nav="manage"><span class="lb-nav-ic" aria-hidden="true">⚙</span>Periods &amp; plan</button>
+<div class="lb-side-foot"><span class="label">Editing</span><p class="live-link"><a id="liveLink" href="#" target="_blank">…</a></p><span class="label" id="planBadge">FREE PLAN</span></div>
+</aside>
+<div class="lb-main">
+<section class="lb-page is-on" data-page="overview">
+<div class="lb-phead"><button class="lb-menu" id="lbMenu" type="button" aria-label="Show sections">☰</button><div><h1>Overview</h1><p class="lb-psub">Your leaderboard at a glance</p></div></div>
+<div class="stat-tiles">
+<div class="stat-tile"><span class="stat-num" id="ov_pool">–</span><span class="stat-lbl">Prize pool</span></div>
+<div class="stat-tile"><span class="stat-num" id="ov_players">–</span><span class="stat-lbl">Players</span></div>
+<div class="stat-tile"><span class="stat-num" id="ov_views7">–</span><span class="stat-lbl">Views · 7d</span></div>
+<div class="stat-tile"><span class="stat-num" id="ov_resets">–</span><span class="stat-lbl">Resets in</span></div>
+</div>
+<div class="card"><div class="lb-cardhd"><h2>Daily views · 14 days</h2><a href="/dashboard/analytics" class="lb-cardlink">Full analytics →</a></div><div class="stat-chart"><div class="stat-bars" id="ov_bars" title="Daily views, last 14 days"></div><div class="stat-chart-lbl"><span id="ov_barsFrom"></span><span>today</span></div></div><p class="hint" id="ov_barsEmpty" hidden>No views yet — share your page link to get it moving.</p></div>
+<div class="card"><div class="lb-cardhd"><h2>Top players</h2><button class="lb-cardlink" type="button" data-jump="board">Manage all →</button></div><div class="lb-toplist" id="ov_top"></div><div class="empty" id="ov_topEmpty" hidden>No players yet. <button class="lb-linkbtn" type="button" data-jump="board">Add your first one →</button></div></div>
+<div class="card"><h2>Finish setup</h2><p class="card-sub">A few steps to a page worth sharing.</p><div class="lb-steps" id="ov_steps">
+<div class="lb-step" id="ov_step_brand"><span class="lb-step-n">Step 1</span><span class="lb-step-t">Brand &amp; prize</span><span class="lb-step-d">Set your name, code and prize in <button class="lb-linkbtn" type="button" data-jump="board">Prize &amp; players</button>.</span></div>
+<div class="lb-step" id="ov_step_players"><span class="lb-step-n">Step 2</span><span class="lb-step-t">Add players</span><span class="lb-step-d">Add or import your ranked list.</span></div>
+<div class="lb-step" id="ov_step_share"><span class="lb-step-n">Step 3</span><span class="lb-step-t">Share your link</span><span class="lb-step-d">Drop your page URL in your stream panels and Discord.</span></div>
+</div></div>
 <div class="card" id="boardSwitcher"><h2>Boards</h2><p class="card-sub">Switch between your leaderboards. <span class="hint" id="boardCount"></span></p>
 <div class="board-list" id="boardList"></div>
 <div class="mt-10 d-flex gap-8 flex-wrap"><button class="btn btn--sm" id="newBoard" type="button" hidden>+ New board</button></div>
@@ -191,7 +218,10 @@ export const PAGES = {
 <button class="btn btn--sm btn--ghost" id="nb_cancel" type="button">Cancel</button>
 <div class="hint w-full" id="nb_err" role="alert" aria-live="assertive"></div>
 </div></div>
-<div class="card"><h2>Analytics</h2><p class="card-sub">Last 30 days on your page. Views count every visit; copies and clicks are people grabbing your code or hitting Join.</p>
+</section>
+<section class="lb-page" data-page="growth">
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu>☰</button><div><h1>Analytics</h1><p class="lb-psub">How your page is performing</p></div></div>
+<div class="card"><p class="card-sub">Last 30 days on your page. Views count every visit; copies and clicks are people grabbing your code or hitting Join.</p>
 <div class="stat-tiles">
 <div class="stat-tile"><span class="stat-num" id="st_views7">–</span><span class="stat-lbl">Views · 7d</span></div>
 <div class="stat-tile"><span class="stat-num" id="st_views30">–</span><span class="stat-lbl">Views · 30d</span></div>
@@ -199,6 +229,9 @@ export const PAGES = {
 <div class="stat-tile"><span class="stat-num" id="st_clicks30">–</span><span class="stat-lbl">Join clicks · 30d</span></div></div>
 <div class="stat-chart"><div class="stat-bars" id="statBars" title="Daily views, last 14 days"></div><div class="stat-chart-lbl"><span id="statFrom"></span><span>Daily views, last 14 days</span><span>today</span></div></div>
 <p class="hint" id="statsEmpty" hidden>No views yet — share your page link in your stream panels and Discord to get it moving.</p></div>
+</section>
+<section class="lb-page" data-page="board">
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu>☰</button><div><h1>Prize &amp; players</h1><p class="lb-psub">The daily job — headline details and your ranked list</p></div></div>
 <div class="card"><h2>Brand &amp; prize</h2><p class="card-sub">The headline details on your page.</p><div class="grid2">
 <div class="field"><label for="f_name">Display name</label><input id="f_name" /></div>
 <div class="field"><label for="f_tagline">Tagline</label><input id="f_tagline" placeholder="Casino streamer & Stake partner" /></div>
@@ -219,6 +252,9 @@ export const PAGES = {
 <div class="import-foot"><span class="hint" id="importPreview">0 players detected</span>
 <label class="hint chk"><input type="checkbox" id="importReplace" checked /> Replace current list</label>
 <button class="btn btn--sm btn--accent" id="importApply" type="button" disabled>Add to table</button></div></div></div>
+</section>
+<section class="lb-page" data-page="design">
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu>☰</button><div><h1>Design</h1><p class="lb-psub">How your public page looks</p></div></div>
 <div class="card" id="brandCard"><h2>Branding <span class="pill pill--info ml-6">PRO</span></h2><p class="card-sub">Your logo and page colors. Free pages use the default look.</p>
 <div id="brandBody">
 <div class="grid2">
@@ -231,6 +267,9 @@ export const PAGES = {
 <span class="hint">Drives the big name gradient and buttons on your page. Save to apply.</span></div>
 </div></div>
 <div class="empty" id="brandLock" hidden>Branding is a Pro feature. <a href="#" id="brandUpgrade">Upgrade to unlock it</a>.</div></div>
+</section>
+<section class="lb-page" data-page="integrations">
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu>☰</button><div><h1>Integrations</h1><p class="lb-psub">Overlay, domain and alerts — connect and check status in one place</p></div></div>
 <div class="card" id="overlayCard"><h2>OBS Stream Overlay <span class="pill pill--info ml-6">PRO</span></h2><p class="card-sub">Add a live leaderboard overlay to your stream. It auto-updates every 15 seconds with smooth rank animations.</p>
 <div id="overlayBody">
 <div class="field"><label>Overlay URL</label>
@@ -278,6 +317,9 @@ export const PAGES = {
 </div>
 </div>
 <div class="empty" id="notifyLock" hidden>Notifications are a Pro feature. <a href="#" id="notifyUpgrade">Upgrade to unlock them</a>.</div></div>
+</section>
+<section class="lb-page" data-page="manage">
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu>☰</button><div><h1>Periods &amp; plan</h1><p class="lb-psub">Close out a period and manage your plan</p></div></div>
 <div class="card" id="archiveCard"><h2>Past winners</h2><p class="card-sub">When a period ends, close it out: the current board is saved and shown on your page under "Past Winners". Saves your unsaved edits first.</p>
 <div class="arch-form">
 <div class="field field-flex"><label for="a_label">Label</label><input id="a_label" placeholder="July 2026" /></div>
@@ -289,6 +331,9 @@ export const PAGES = {
 <div class="plan-row"><div><div class="plan-name" id="planName">Free</div><div class="hint" id="planMeta">Up to 10 players · YourRank badge on your page</div></div>
 <button class="btn btn--accent" id="goPro">Upgrade</button></div>
 <p class="hint" id="planHint">Pay with crypto (BTC, ETH, USDT and 100+ more). Activates automatically once the network confirms — usually a few minutes. <a href="/dashboard/billing">See all plans</a>.</p></div>
+</section>
+</div>
+</div>
 <div class="savebar"><label class="hint chk mr-auto"><input type="checkbox" id="pubToggle" checked /> Page published</label><span class="status" id="status" role="status" aria-live="polite"></span><a class="btn btn--ghost" id="viewLive" href="#" target="_blank">View live page</a><button class="btn btn--accent" id="save">Save changes</button></div></div></main>
 <script src="/assets/dashboard.js?v=3"></script></body></html>`,
 
