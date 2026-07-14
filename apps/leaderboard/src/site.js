@@ -115,9 +115,22 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 const LOGO_RE = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_LOGO = 250000; // chars of data URI (~180KB image)
 
-// theme_json is JSONB — pg returns it as a JS object already (or null). No parse.
+// theme_json / extra_json / snapshot_json are JSONB. postgres.js returns them
+// already parsed (object/array). But a value that is pre-stringified with
+// JSON.stringify() and then bound to a `::jsonb` parameter gets JSON-encoded a
+// SECOND time by the driver, so it lands in the column as a JSON *string*
+// instead of an object. Legacy rows written that way come back as strings;
+// coerce them back so both new (object) and old (string) rows read correctly.
+export function fromJsonb(value) {
+  if (typeof value === "string") {
+    try { return JSON.parse(value); } catch { return null; }
+  }
+  return value;
+}
+
 function parseTheme(site) {
-  const t = (site.theme_json && typeof site.theme_json === "object") ? site.theme_json : {};
+  const raw = fromJsonb(site.theme_json);
+  const t = (raw && typeof raw === "object") ? raw : {};
   return {
     accentA: HEX.test(t.accentA || "") ? t.accentA : null,
     accentB: HEX.test(t.accentB || "") ? t.accentB : null,
@@ -126,7 +139,8 @@ function parseTheme(site) {
 }
 
 function archiveShape(a) {
-  let top = Array.isArray(a.snapshot_json) ? a.snapshot_json : [];
+  const snap = fromJsonb(a.snapshot_json);
+  let top = Array.isArray(snap) ? snap : [];
   top = top.slice().sort((x, y) => (y.wagered || 0) - (x.wagered || 0)).slice(0, 3)
     .map((p) => ({ name: String(p.name || ""), wagered: Number(p.wagered) || 0, prize: Number(p.prize) || 0 }));
   return { label: a.label, at: a.created_at, top };
@@ -146,7 +160,8 @@ async function getArchives(env, siteId, limit = 6) {
   }
 
 export function publicShape(site, players, archives = [], hasLogo = false) {
-  const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
+  const rawExtra = fromJsonb(site.extra_json);
+  const extra = (rawExtra && typeof rawExtra === "object") ? rawExtra : {};
   const m = { ...DEFAULT_EXTRA, ...extra };
   const theme = parseTheme(site);
   return {
@@ -191,7 +206,8 @@ export async function getUserSite(env, uid, plan) {
       const archiveLimit = ARCHIVE_LIMITS[plan || "free"] || 6;
       // PERF-005: has_logo is now in SITE_COLUMNS — no separate query needed.
       const archives = await getArchives(env, site.id, archiveLimit);
-    const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
+    const rawExtra = fromJsonb(site.extra_json);
+    const extra = (rawExtra && typeof rawExtra === "object") ? rawExtra : {};
     return {
         id: site.id, slug: site.slug, published: !!site.published,
         data: publicShape(site, await getPlayers(env, site.id), archives.slice(0, archiveLimit), !!site.has_logo),
@@ -204,7 +220,8 @@ export async function getUserSite(env, uid, plan) {
           telegram_notify: !!extra.telegram_notify,
         },
         archives: archives.map((a) => {
-          const n = Array.isArray(a.snapshot_json) ? a.snapshot_json.length : 0;
+          const snap = fromJsonb(a.snapshot_json);
+          const n = Array.isArray(snap) ? snap.length : 0;
           return { id: a.id, label: a.label, at: a.created_at, players: n };
         }),
       };
@@ -229,7 +246,8 @@ export async function getUserSiteById(env, uid, siteId, plan) {
     const archiveLimit = ARCHIVE_LIMITS[plan || "free"] || 6;
     // PERF-005: has_logo is now in SITE_COLUMNS — no separate query needed.
     const archives = await getArchives(env, site.id, archiveLimit);
-  const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
+  const rawExtra = fromJsonb(site.extra_json);
+  const extra = (rawExtra && typeof rawExtra === "object") ? rawExtra : {};
   return {
     id: site.id, slug: site.slug, published: !!site.published,
     data: publicShape(site, await getPlayers(env, site.id), archives.slice(0, archiveLimit), !!site.has_logo),
@@ -242,7 +260,8 @@ export async function getUserSiteById(env, uid, siteId, plan) {
         telegram_notify: !!extra.telegram_notify,
       },
       archives: archives.map((a) => {
-        const n = Array.isArray(a.snapshot_json) ? a.snapshot_json.length : 0;
+        const snap = fromJsonb(a.snapshot_json);
+        const n = Array.isArray(snap) ? snap.length : 0;
         return { id: a.id, label: a.label, at: a.created_at, players: n };
       }),
     };
@@ -263,7 +282,7 @@ export async function createBoard(env, uid, { slug, name } = {}) {
   const siteId = crypto.randomUUID();
   await exec(
     "INSERT INTO sites (id,user_id,slug,name,casino,prize_pool,period,published,extra_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)",
-    [siteId, uid, slug, name || slug, "", "$0", "Monthly", true, JSON.stringify(DEFAULT_EXTRA)]
+    [siteId, uid, slug, name || slug, "", "$0", "Monthly", true, DEFAULT_EXTRA]
   );
   // If the user has no active board, make the new one active.
   await exec("UPDATE users SET active_site_id=$1, updated_at=now() WHERE id=$2 AND active_site_id IS NULL", [siteId, uid]);
@@ -283,7 +302,7 @@ export async function createArchive(env, uid, { label, clear, siteId } = {}) {
   const lab = String(label || "").trim().slice(0, 60) ||
     new Date().toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   const archiveId = crypto.randomUUID();
-  const snapshotJson = JSON.stringify(players).slice(0, 200000);
+  const snapshotJson = players;
   // QA-005: Atomic limit check — the count + INSERT happen in a single
   // statement so two concurrent archive-creation requests can't both pass
   // the count check and exceed the plan limit.
@@ -310,7 +329,8 @@ export async function createArchive(env, uid, { label, clear, siteId } = {}) {
   if (limitReached) return { error: `Archive limit reached (${maxArchives}). Delete an old one first. Upgrade for more.` };
   // Send reset notification
   try {
-    const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
+    const rawNotify = fromJsonb(site.extra_json);
+    const extra = (rawNotify && typeof rawNotify === "object") ? rawNotify : {};
     if (extra.discord_webhook_url || (extra.telegram_bot_token && extra.telegram_chat_id && extra.telegram_notify)) {
       await notifyReset({ one, query }, env, site.id, site.name || site.slug, players, lab);
     }
@@ -399,7 +419,7 @@ export async function saveSite(env, user, payload, siteId) {
   }
   // Keep the top-level site name in sync with brand.name (dashboard sends both).
   const siteName = String(payload.name ?? b.name ?? site.name).trim().slice(0, 80) || site.name;
-  const extra = JSON.stringify({
+  const extra = {
     chips: payload.chips || DEFAULT_EXTRA.chips,
     whyStats: payload.whyStats || DEFAULT_EXTRA.whyStats,
     rules: payload.rules || DEFAULT_EXTRA.rules,
@@ -408,12 +428,13 @@ export async function saveSite(env, user, payload, siteId) {
     telegram_bot_token: payload.telegram_bot_token ?? undefined,
     telegram_chat_id: payload.telegram_chat_id ?? undefined,
     telegram_notify: payload.telegram_notify ?? undefined,
-  });
+  };
 
   // Fetch logo_data separately since the shared query no longer includes it (PERF-004).
   const existingLogoRow = await one("SELECT logo_data FROM sites WHERE id=$1", [site.id]);
   let logoData = existingLogoRow?.logo_data ?? "";
-  let themeObj = (site.theme_json && typeof site.theme_json === "object") ? site.theme_json : {};
+  const rawThemeObj = fromJsonb(site.theme_json);
+  let themeObj = (rawThemeObj && typeof rawThemeObj === "object") ? rawThemeObj : {};
   const br = payload.branding;
   // Template selection is available on every plan. Whitelisted ids only.
   if (br && typeof br.template === "string" && TEMPLATE_IDS.includes(br.template)) {
@@ -432,7 +453,7 @@ export async function saveSite(env, user, payload, siteId) {
     if (themeObj.template && themeObj.template !== "classic") t.template = themeObj.template;
     themeObj = t;
   }
-  const themeJson = JSON.stringify(themeObj);
+  const themeJson = themeObj;
 
   // Invalidate cache before write (both L1 and L2 for cross-isolate consistency)
   invalidateSiteCache(env, site.slug, uid, siteId);
@@ -547,7 +568,8 @@ export async function updateSiteTheme(env, user, payload = {}) {
     return { error: "Choose a valid page template.", code: "invalid_template" };
   }
 
-  const theme = (site.theme_json && typeof site.theme_json === "object") ? { ...site.theme_json } : {};
+  const rawTheme = fromJsonb(site.theme_json);
+  const theme = (rawTheme && typeof rawTheme === "object") ? { ...rawTheme } : {};
   theme.template = payload.template;
   const plan = effectivePlan(user);
   if (plan !== "free" && (payload.accentA != null || payload.accentB != null)) {
@@ -560,7 +582,7 @@ export async function updateSiteTheme(env, user, payload = {}) {
 
   await exec(
     "UPDATE sites SET theme_json=$1::jsonb, updated_at=now() WHERE id=$2 AND user_id=$3",
-    [JSON.stringify(theme), site.id, user.id]
+    [theme, site.id, user.id]
   );
   invalidateSiteCache(env, site.slug, user.id, site.id);
   invalidateUserCache(env, user.id);
