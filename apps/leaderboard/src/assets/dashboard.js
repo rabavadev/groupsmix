@@ -53,6 +53,8 @@ async function init(){
   $("a_label").placeholder = new Date().toLocaleString("en-US",{month:"long",year:"numeric",timeZone:"UTC"});
   $("liveLink").textContent = location.host + "/" + SLUG; $("liveLink").href = "/" + SLUG; $("viewLive").href = "/" + SLUG;
   $("loading").hidden=true; $("dash").hidden=false;
+  setupShell();
+  renderOverviewSummary();
   // FE-002-v9: track unsaved changes
   $("dash").addEventListener("input", ()=>{ _dirty = true; });
   $("dash").addEventListener("change", ()=>{ _dirty = true; });
@@ -530,6 +532,20 @@ async function loadStats(){
   }).join("");
   if (days.length) $("statFrom").textContent = new Date(days[0].day+"T00:00:00Z").toUTCString().slice(5,11);
   if (s.last30.views===0 && s.last30.copies===0 && s.last30.clicks===0) $("statsEmpty").hidden = false;
+  // Mirror the headline view figures onto the Overview tab.
+  const ov7 = $("ov_views7"); if (ov7) ov7.textContent = fmt(s.last7.views);
+  const ovBars = $("ov_bars");
+  if (ovBars) {
+    ovBars.innerHTML = days.map(x=>{
+      const h = Math.max(2, Math.round((x.views/max)*100));
+      const nice = new Date(x.day+"T00:00:00Z").toUTCString().slice(5,11);
+      return `<div class="stat-bar" style="height:${h}%" title="${nice}: ${x.views} views"></div>`;
+    }).join("");
+    if (days.length) $("ov_barsFrom").textContent = new Date(days[0].day+"T00:00:00Z").toUTCString().slice(5,11);
+    if (!days.length || s.last30.views===0) $("ov_barsEmpty").hidden = false;
+  }
+  const shareStep = $("ov_step_share");
+  if (shareStep && s.last7.views > 0) shareStep.classList.add("is-done");
 }
 
 $("logout")?.addEventListener("click", async (e)=>{ e.preventDefault(); await fetch("/api/auth/logout",{method:"POST",credentials:"include",headers:{"x-csrf-token":getCsrf()}}); location.href="/login"; });
@@ -553,4 +569,61 @@ $("testTelegram")?.addEventListener("click", async () => {
     if(s) s.textContent = d.ok ? "✅ Sent!" : (d.error || "Failed");
   } catch(e) { if(s) s.textContent = "Network error."; }
 });
+/* --- dashboard shell: sidebar navigation + mobile drawer --- */
+function navTo(page){
+  document.querySelectorAll(".lb-nav").forEach(n => n.classList.toggle("is-on", n.dataset.nav === page));
+  document.querySelectorAll(".lb-page").forEach(p => p.classList.toggle("is-on", p.dataset.page === page));
+  closeDrawer();
+  if (page === "overview") renderOverviewSummary();
+  const main = document.querySelector(".lb-main"); if (main) main.scrollIntoView({ block: "start" });
+}
+function openDrawer(){ $("lbSide")?.classList.add("is-open"); document.querySelector(".lb-backdrop")?.classList.add("is-open"); }
+function closeDrawer(){ $("lbSide")?.classList.remove("is-open"); document.querySelector(".lb-backdrop")?.classList.remove("is-open"); }
+function setupShell(){
+  if (setupShell._done) return; setupShell._done = true;
+  let backdrop = document.querySelector(".lb-backdrop");
+  if (!backdrop) { backdrop = document.createElement("div"); backdrop.className = "lb-backdrop"; document.body.appendChild(backdrop); }
+  backdrop.addEventListener("click", closeDrawer);
+  document.querySelectorAll(".lb-nav").forEach(btn => btn.addEventListener("click", () => navTo(btn.dataset.nav)));
+  document.querySelectorAll("[data-jump]").forEach(el => el.addEventListener("click", () => navTo(el.dataset.jump)));
+  document.querySelectorAll(".lb-menu").forEach(btn => btn.addEventListener("click", (e) => { e.stopPropagation(); openDrawer(); }));
+}
+
+/* --- Overview summary tiles / top players / setup checklist --- */
+function currentPlayers(){
+  return [...$("rows").children].map(tr => ({
+    name: tr.querySelector(".p-name").value.trim(),
+    wagered: parseFloat(tr.querySelector(".p-wager").value) || 0,
+    prize: parseFloat(tr.querySelector(".p-prize").value) || 0,
+  })).filter(p => p.name);
+}
+function fmtMoney(n){ return n ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "0"; }
+function resetsIn(){
+  const v = $("f_ends")?.value; if (!v) return "—";
+  const end = new Date(v); if (isNaN(end)) return "—";
+  const ms = end.getTime() - Date.now();
+  if (ms <= 0) return "Ended";
+  const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000);
+  return d >= 1 ? `${d}d` : `${h}h`;
+}
+function renderOverviewSummary(){
+  if (!$("ov_pool")) return;
+  const players = currentPlayers();
+  $("ov_pool").textContent = ($("f_pool")?.value.trim()) || "—";
+  const cap = ME && ME.limits.players < 999 ? " / " + ME.limits.players : "";
+  $("ov_players").textContent = players.length + cap;
+  $("ov_resets").textContent = resetsIn();
+  const top = $("ov_top"), topEmpty = $("ov_topEmpty");
+  if (top) {
+    const sorted = [...players].sort((a, b) => b.wagered - a.wagered).slice(0, 5);
+    top.innerHTML = sorted.map((p, i) => `<div class="lb-toprow"><span class="lb-tr-rank">${String(i + 1).padStart(2, "0")}</span><div><div class="lb-tr-name">${esc(p.name)}</div><div class="lb-tr-sub">$${fmtMoney(p.wagered)} wagered</div></div><span class="lb-tr-prize">${p.prize ? "$" + fmtMoney(p.prize) : "—"}</span></div>`).join("");
+    top.hidden = sorted.length === 0;
+    if (topEmpty) topEmpty.hidden = sorted.length > 0;
+  }
+  const nameSet = !!($("f_name")?.value.trim());
+  const codeSet = !!($("f_code")?.value.trim() || $("f_pool")?.value.trim());
+  $("ov_step_brand")?.classList.toggle("is-done", nameSet && codeSet);
+  $("ov_step_players")?.classList.toggle("is-done", players.length > 0);
+}
+
 init();
