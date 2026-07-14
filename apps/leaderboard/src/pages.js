@@ -255,6 +255,10 @@ export const PAGES = {
 </section>
 <section class="lb-page" data-page="design">
 <div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu>☰</button><div><h1>Design</h1><p class="lb-psub">How your public page looks</p></div></div>
+<div class="card" id="templateCard"><h2>Page template</h2><p class="card-sub">Live previews use this board's real name, prize pool and players. Click a design to publish it instantly.</p>
+<input type="hidden" id="f_template" value="classic" />
+<div class="template-grid" id="templateGallery" aria-label="Page templates"></div>
+<p class="hint template-status" id="templateStatus" role="status" aria-live="polite"></p></div>
 <div class="card" id="brandCard"><h2>Branding <span class="pill pill--info ml-6">PRO</span></h2><p class="card-sub">Your logo and page colors. Free pages use the default look.</p>
 <div id="brandBody">
 <div class="grid2">
@@ -262,9 +266,12 @@ export const PAGES = {
 <div class="logo-row"><img id="logoPreview" class="logo-preview" alt="" hidden /><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" hidden />
 <button class="btn btn--sm" id="logoPick" type="button">Upload logo</button><button class="btn btn--sm btn--ghost" id="logoClear" type="button" hidden>Remove</button></div>
 <span class="hint">PNG, JPG or WebP. Shows in your page header and as the link preview image when your page gets shared. Square works best.</span></div>
-<div class="field"><label for="c_a">Page accent colors</label>
-<div class="color-row"><label for="c_a" class="sr-only">Accent color start</label><input type="color" id="c_a" value="#5ad9ff" /><label for="c_b" class="sr-only">Accent color end</label><input type="color" id="c_b" value="#7b8cff" /><button class="btn btn--sm btn--ghost" id="colorsReset" type="button">Reset to default</button></div>
-<span class="hint">Drives the big name gradient and buttons on your page. Save to apply.</span></div>
+<div class="field"><label>Curated color presets</label>
+<div class="preset-list" id="colorPresets"></div>
+<span class="hint">Each template includes ready-made combinations. Click one to publish it instantly.</span>
+<details class="advanced-colors"><summary>Advanced custom colors</summary>
+<div class="color-row"><label for="c_a" class="sr-only">Accent color start</label><input type="color" id="c_a" value="#5ad9ff" /><label for="c_b" class="sr-only">Accent color end</label><input type="color" id="c_b" value="#7b8cff" /><button class="btn btn--sm btn--ghost" id="applyCustomColors" type="button">Apply colors</button><button class="btn btn--sm btn--ghost" id="colorsReset" type="button">Template default</button></div>
+</details></div>
 </div></div>
 <div class="empty" id="brandLock" hidden>Branding is a Pro feature. <a href="#" id="brandUpgrade">Upgrade to unlock it</a>.</div></div>
 </section>

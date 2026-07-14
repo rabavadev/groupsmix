@@ -1,8 +1,9 @@
 // Site handlers: get, put, list, create, archive, stats, heatmap, notifications, custom domain
 import { requireUser, json, bad, ok, readJson, rateLimit, slugify, clientIp } from "../auth.js";
-import { getByUser, getUserSite, getUserSiteById, getUserBoardsList, createBoard, createArchive, deleteArchive, deleteBoard, setActiveBoard, invalidateSiteCache, invalidateUserCache, getBoardById, saveSite } from "../site.js";
+import { getByUser, getUserSite, getUserSiteById, getUserBoardsList, createBoard, createArchive, deleteArchive, deleteBoard, setActiveBoard, updateSiteTheme, invalidateSiteCache, invalidateUserCache, getBoardById, saveSite } from "../site.js";
 import { bumpStat, getStats, getHeatmap, getTopReferrers } from "../stats.js";
 import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS } from "../billing.js";
+import { templateCatalog } from "../templates/index.js";
 import { one, exec } from "../../../../shared/db.js";
 import { buildTop3Embed, sendDiscordWebhook, sendTelegramMessage } from "../../../../shared/notifications.js";
 import { decryptToken } from "../../../../shared/crypto.js";
@@ -78,7 +79,7 @@ export async function handleGetSite(request, env) {
   }
   if (!s) return bad("No site for this account", 404);
   const boards = await getUserBoardsList(env, user.id);
-  return json({ ok: true, slug: s.slug, published: s.published, plan: plan, data: s.data, notify: s.notify || {}, archives: s.archives, boards, siteId: s.id, customDomain: s.customDomain || "", domainStatus: s.domainStatus || "pending" });
+  return json({ ok: true, slug: s.slug, published: s.published, plan: plan, data: s.data, notify: s.notify || {}, archives: s.archives, boards, siteId: s.id, customDomain: s.customDomain || "", domainStatus: s.domainStatus || "pending", templates: templateCatalog() });
 }
 
 export async function handleListBoards(request, env) {
@@ -135,6 +136,17 @@ export async function handlePutSite(request, env) {
   if (!payload) return bad("Invalid request");
   const r = await saveSite(env, user, payload, payload.siteId || null);
   return r.error ? bad(r.error, 400) : json({ ok: true, updatedAt: r.updatedAt, slug: r.slug });
+}
+
+export async function handlePutTheme(request, env) {
+  const { user, res } = await requireUser(request, env);
+  if (res) return res;
+  if (user.status === "suspended") return bad("This account is suspended.", 403);
+  if (!(await rateLimit(env, `save-theme:${user.id}`, 30, 60)).ok) return bad("Too many theme changes. Try again shortly.", 429);
+  const payload = await readJson(request);
+  if (!payload) return bad("Invalid request");
+  const r = await updateSiteTheme(env, user, payload);
+  return r.error ? bad(r.error, 400) : json({ ok: true, branding: r.branding });
 }
 
 // DELETE /api/site — { siteId }

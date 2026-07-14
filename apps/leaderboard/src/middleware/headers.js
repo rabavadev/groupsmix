@@ -36,7 +36,7 @@ export const SECURE_HTML = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "SAMEORIGIN",
-  "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; script-src 'self' https://telegram.org https://static.cloudflareinsights.com; connect-src 'self' https://telegram.org https://cloudflareinsights.com; frame-src https://telegram.org; frame-ancestors 'self'",
+  "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; script-src 'self' https://telegram.org https://static.cloudflareinsights.com; connect-src 'self' https://telegram.org https://cloudflareinsights.com; frame-src 'self' https://telegram.org; frame-ancestors 'self'",
 };
 
 // HTML-escape a value for interpolation into text/attribute context
@@ -66,4 +66,3 @@ export function suspendedPage(nonce) {
 <style${n}>body{background:#0b0b0c;color:#ededf0;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.b{text-align:center}a{color:#c8ff00}</style></head>
 <body><div class="b"><h1>This page is unavailable</h1><p>The owner's account is suspended.</p><p><a href="/">YourRank</a></p></div><script src="/assets/cookie-consent.js" defer></script></body></html>`;
 }
-

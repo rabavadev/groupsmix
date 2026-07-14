@@ -4,10 +4,11 @@ function getCsrf() { const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)
 // E2E-005: Redirect to login on session expiry instead of showing stale "Save failed"
 function guardAuth(res) { if (res.status === 401) { location.href = "/login"; throw new Error("session expired"); } return res; }
 const $ = (id) => document.getElementById(id);
-let SLUG = null, EXTRA = {}, ME = null, ACTIVE_SITE_ID = null, BOARDS = [];
+let SLUG = null, EXTRA = {}, ME = null, ACTIVE_SITE_ID = null, BOARDS = [], TEMPLATE_CATALOG = [];
+let CURRENT_BRANDING = { template: "classic", accentA: null, accentB: null };
+let THEME_SAVING = false;
 let LOGO; // undefined = unchanged, null = remove, string = new data URI
 let _dirty = false; // FE-002-v9: track unsaved changes for beforeunload warning
-const DEFAULT_A = "#5ad9ff", DEFAULT_B = "#7b8cff";
 function toLocalInput(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return ""; const p=(n)=>String(n).padStart(2,"0"); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
 function fromLocalInput(v){ if(!v) return ""; const d = new Date(v); return isNaN(d) ? "" : d.toISOString(); }
 const slugify=(s)=>String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
@@ -31,6 +32,7 @@ async function init(){
   }
   SLUG = p.slug; ACTIVE_SITE_ID = p.siteId || null;
   BOARDS = p.boards || [];
+  TEMPLATE_CATALOG = Array.isArray(p.templates) ? p.templates : [];
   renderBoardSwitcher();
   const d = p.data||{}; const b = d.brand||{};
   loadStats(); // non-blocking; fills the analytics card when it lands
@@ -240,28 +242,108 @@ function collect(){
   return out;
 }
 
-/* --- branding (paid) --- */
-function ensureTemplateCard(){
-  if ($("templateCard")) return;
-  const anchor = $("brandCard");
-  if (!anchor || !anchor.parentNode) return;
-  const card = document.createElement("div");
-  card.className = "card"; card.id = "templateCard";
-  card.innerHTML = '<h2>Page template</h2><p class="card-sub">The overall look of your public page. Available on every plan.</p>' +
-    '<div class="field"><label for="f_template">Template</label><select id="f_template">' +
-    '<option value="classic">Classic \u2014 purple night, cyan gradient</option>' +
-    '<option value="midnight">Midnight Gold \u2014 black felt, molten gold</option>' +
-    '</select><span class="hint">Save to apply. Pro accent colors and logo work on top of any template.</span></div>';
-  anchor.parentNode.insertBefore(card, anchor);
+/* --- templates + branding --- */
+function currentTemplate(){
+  return TEMPLATE_CATALOG.find((template) => template.id === CURRENT_BRANDING.template) || TEMPLATE_CATALOG[0];
+}
+function previewUrl(template, accentA, accentB){
+  const params = new URLSearchParams({ board: ACTIVE_SITE_ID, template });
+  if (accentA && accentB) { params.set("accentA", accentA); params.set("accentB", accentB); }
+  return "/dashboard/preview?" + params.toString();
+}
+function renderTemplateGallery(){
+  const gallery = $("templateGallery");
+  if (!gallery) return;
+  gallery.innerHTML = "";
+  TEMPLATE_CATALOG.forEach((template) => {
+    const selected = template.id === CURRENT_BRANDING.template;
+    const defaultPreset = template.presets?.[0] || {};
+    const accentA = selected && CURRENT_BRANDING.accentA ? CURRENT_BRANDING.accentA : defaultPreset.accentA;
+    const accentB = selected && CURRENT_BRANDING.accentB ? CURRENT_BRANDING.accentB : defaultPreset.accentB;
+    const card = document.createElement("article");
+    card.className = "template-card" + (selected ? " is-selected" : "");
+    card.dataset.template = template.id;
+    card.innerHTML = `<div class="template-preview"><iframe loading="lazy" tabindex="-1" aria-hidden="true" title="${esc(template.name)} preview"></iframe></div><div class="template-meta"><div><b>${esc(template.name)}</b><span>${esc(template.description)}</span></div><button class="btn btn--sm ${selected ? "btn--accent" : "btn--ghost"}" type="button" aria-pressed="${selected}">${selected ? "Applied" : "Apply"}</button></div>`;
+    const iframe = card.querySelector("iframe");
+    iframe.src = previewUrl(template.id, accentA, accentB);
+    const apply = () => applyTemplate(template);
+    card.querySelector("button").addEventListener("click", apply);
+    card.querySelector(".template-preview").addEventListener("click", apply);
+    gallery.appendChild(card);
+  });
+}
+function renderColorPresets(){
+  const list = $("colorPresets");
+  const template = currentTemplate();
+  if (!list || !template) return;
+  list.innerHTML = "";
+  (template.presets || []).forEach((preset) => {
+    const active = preset.accentA.toLowerCase() === String(CURRENT_BRANDING.accentA || "").toLowerCase()
+      && preset.accentB.toLowerCase() === String(CURRENT_BRANDING.accentB || "").toLowerCase();
+    const button = document.createElement("button");
+    button.className = "preset-btn" + (active ? " is-selected" : "");
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(active));
+    button.innerHTML = `<span class="preset-swatch"><i data-color="${esc(preset.accentA)}"></i><i data-color="${esc(preset.accentB)}"></i></span><span>${esc(preset.name)}</span>`;
+    button.querySelectorAll("[data-color]").forEach((swatch) => { swatch.style.background = swatch.dataset.color; });
+    button.addEventListener("click", () => saveTheme(template.id, preset.accentA, preset.accentB, preset.name));
+    list.appendChild(button);
+  });
+}
+function updateThemeSelection(){
+  const tpl = $("f_template"); if (tpl) tpl.value = CURRENT_BRANDING.template;
+  if (CURRENT_BRANDING.accentA) $("c_a").value = CURRENT_BRANDING.accentA;
+  if (CURRENT_BRANDING.accentB) $("c_b").value = CURRENT_BRANDING.accentB;
+  renderTemplateGallery();
+  renderColorPresets();
+}
+async function saveTheme(template, accentA, accentB, label){
+  if (THEME_SAVING) return;
+  THEME_SAVING = true;
+  const status = $("templateStatus");
+  if (status) status.textContent = "Applying…";
+  document.querySelectorAll(".template-card button,.preset-btn,#applyCustomColors,#colorsReset").forEach((button) => { button.disabled = true; });
+  const body = { siteId: ACTIVE_SITE_ID, template };
+  if (ME.plan !== "free" && accentA && accentB) { body.accentA = accentA; body.accentB = accentB; }
+  try {
+    const res = await fetch("/api/site/theme", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json", "x-csrf-token": getCsrf() },
+      body: JSON.stringify(body),
+    }).then(guardAuth);
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      if (status) status.textContent = data.error || "Could not apply that design.";
+      return;
+    }
+    CURRENT_BRANDING = { ...CURRENT_BRANDING, ...data.branding, template };
+    if (ME.plan !== "free" && accentA && accentB) {
+      CURRENT_BRANDING.accentA = accentA;
+      CURRENT_BRANDING.accentB = accentB;
+    }
+    updateThemeSelection();
+    if (status) status.textContent = `${label || currentTemplate()?.name || "Design"} applied to /${SLUG}.`;
+  } catch {
+    if (status) status.textContent = "Network error. Try again.";
+  } finally {
+    THEME_SAVING = false;
+    document.querySelectorAll(".template-card button,.preset-btn,#applyCustomColors,#colorsReset").forEach((button) => { button.disabled = false; });
+  }
+}
+function applyTemplate(template){
+  const preset = template.presets?.[0];
+  saveTheme(template.id, preset?.accentA, preset?.accentB, template.name);
 }
 function renderBranding(br){
-  ensureTemplateCard();
+  CURRENT_BRANDING = {
+    template: br.template || "classic",
+    accentA: br.accentA || null,
+    accentB: br.accentB || null,
+  };
   const paid = ME.plan !== "free";
   $("brandBody").hidden = !paid; $("brandLock").hidden = paid;
-  const tplSel = $("f_template");
-  if (tplSel) tplSel.value = br.template || "classic";
-  if (br.accentA) $("c_a").value = br.accentA;
-  if (br.accentB) $("c_b").value = br.accentB;
+  updateThemeSelection();
   if (br.hasLogo) { $("logoPreview").src = "/logo/" + SLUG + "?t=" + Date.now(); $("logoPreview").hidden = false; $("logoClear").hidden = false; }
 }
 $("logoPick").setAttribute("aria-label", "Upload logo");
@@ -288,7 +370,8 @@ $("logoFile").addEventListener("change",()=>{
   img.src = URL.createObjectURL(f);
   $("logoFile").value = "";
 });
-$("colorsReset").addEventListener("click",()=>{ $("c_a").value = DEFAULT_A; $("c_b").value = DEFAULT_B; $("status").textContent = "Colors reset — hit Save to apply."; });
+$("applyCustomColors").addEventListener("click",()=>saveTheme(CURRENT_BRANDING.template,$("c_a").value,$("c_b").value,"Custom colors"));
+$("colorsReset").addEventListener("click",()=>{ const preset=currentTemplate()?.presets?.[0]; if(preset) saveTheme(CURRENT_BRANDING.template,preset.accentA,preset.accentB,preset.name); });
 $("brandUpgrade").addEventListener("click",(e)=>{ e.preventDefault(); checkout($("goPro")); });
 
 /* --- paste / import --- */
