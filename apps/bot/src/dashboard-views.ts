@@ -4,39 +4,105 @@
 import { shellNavHtml, SHELL_NAV_CSS } from "../../../shared/shell-nav.js";
 
 const BASE_CSS = `
-  :root { --bg:#0d1117; --panel:#161b22; --border:#30363d; --fg:#e6edf3; --dim:#8b949e;
-          --accent:#f0b429; --green:#3fb950; --red:#f85149; }
+  :root { --bg:#0d1117; --panel:#161b22; --panel-2:#1b222b; --border:#2a313a; --border-2:#3a434f;
+          --fg:#e9eef4; --dim:#9aa4b0; --mute:#6e7681;
+          --accent:#f0b429; --accent-ink:#1a1205; --green:#3fb950; --red:#f85149;
+          --mono:ui-monospace,SFMono-Regular,Menlo,monospace; }
   * { box-sizing:border-box; margin:0; }
   body { background:var(--bg); color:var(--fg); font:15px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif; }
-  .wrap { max-width:1040px; margin:0 auto; padding:24px 16px; }
-  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px; }
-  h1 { font-size:20px; } h2 { font-size:16px; margin-bottom:12px; color:var(--accent); }
-  input, textarea, select { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border);
-          border-radius:6px; padding:8px 10px; margin-bottom:10px; font:inherit; }
+
+  /* ---- shell: sidebar + main ---- */
+  .shell { display:flex; align-items:flex-start; }
+  .side { width:212px; flex:none; border-right:1px solid var(--border); padding:16px 12px;
+          position:sticky; top:56px; height:calc(100vh - 56px); display:flex; flex-direction:column; gap:3px; }
+  .side .snav a { display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px;
+          text-decoration:none; color:var(--dim); font-size:14px; }
+  .side .snav a .ic { width:17px; text-align:center; opacity:.85; }
+  .side .snav a:hover { background:var(--panel); color:var(--fg); }
+  .side .snav a.active { background:var(--panel); color:var(--fg); box-shadow:inset 2px 0 0 var(--accent); }
+  .side .sfoot { margin-top:auto; border-top:1px solid var(--border); padding-top:12px; font-size:12px; color:var(--mute); }
+  .side .sfoot .nm { color:var(--fg); font-weight:600; }
+  .side .sfoot button { margin-top:10px; width:100%; }
+  .main { flex:1; min-width:0; }
+  .wrap { max-width:1040px; margin:0 auto; padding:22px 20px 60px; }
+  .pagehead { margin-bottom:20px; }
+  .pagehead h1 { font-size:20px; } .pagehead p { font-size:13px; color:var(--dim); margin-top:2px; }
+
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px 18px; margin-bottom:18px; }
+  h1 { font-size:20px; }
+  h2 { font-size:12px; letter-spacing:.03em; text-transform:uppercase; margin-bottom:12px; color:var(--dim); font-weight:600; }
+  h3 { color:var(--fg); }
+  input, textarea, select { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border-2);
+          border-radius:8px; padding:9px 11px; margin-bottom:10px; font:inherit; }
   select { cursor:pointer; }
-  button { background:var(--accent); color:#000; border:0; border-radius:6px; padding:8px 16px;
+  button { background:var(--accent); color:var(--accent-ink); border:0; border-radius:8px; padding:9px 15px;
            font:600 14px/1 inherit; cursor:pointer; }
-  button.ghost { background:transparent; color:var(--dim); border:1px solid var(--border); }
-  button.danger { background:transparent; color:var(--red); border:1px solid var(--red); }
+  button.ghost { background:transparent; color:var(--dim); border:1px solid var(--border-2); padding:8px 12px; }
+  button.ghost:hover { color:var(--fg); }
+  button.danger { background:transparent; color:var(--red); border:1px solid var(--red); padding:8px 12px; }
   table { width:100%; border-collapse:collapse; font-size:14px; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
-  th { color:var(--dim); font-weight:500; }
+  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--dim); font-weight:500; font-size:12px; }
   .muted { color:var(--dim); } .ok { color:var(--green); } .off { color:var(--red); }
-  .row { display:flex; gap:16px; flex-wrap:wrap; } .row > * { flex:1; min-width:220px; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; } .row > * { flex:1; min-width:220px; }
   .stat { font-size:28px; font-weight:700; } .copy { cursor:pointer; text-decoration:underline dotted; }
   #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent);
-           color:#000; padding:10px 18px; border-radius:8px; font-weight:600; display:none; }
+           color:var(--accent-ink); padding:10px 18px; border-radius:8px; font-weight:600; display:none; }
   button:disabled, .copy:disabled { opacity:0.6; cursor:not-allowed; }
-  .subnav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px; }
-  .subnav a { color:var(--dim); text-decoration:none; padding:6px 10px; border-radius:6px; font-size:13px; }
-  .subnav a:hover { color:var(--fg); }
-  .subnav a.active { background:var(--panel); color:var(--accent); border:1px solid var(--border); }
+
+  /* ---- KPI cards (overview) ---- */
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+  .kpi { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:15px 16px; }
+  .kpi .lbl { font-size:12px; color:var(--dim); }
+  .kpi .stat { font:700 30px/1.1 var(--mono); letter-spacing:-.02em; margin-top:6px; }
+  .kpi .sub { font-size:12px; color:var(--mute); margin-top:5px; min-height:16px; }
+  .kpi .sub .up { color:var(--green); }
+
+  /* ---- two-column content grid ---- */
+  .grid2 { display:grid; grid-template-columns:1.6fr 1fr; gap:18px; }
+  .grid2 .panel { margin-bottom:0; }
+  .cardhd { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .cardhd h2 { margin:0; }
+  .cardhd a { font-size:12px; color:var(--dim); text-decoration:none; }
+  .cardhd a:hover { color:var(--fg); }
+
+  /* ---- compact summary rows (overview) ---- */
+  .lrow { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 2px; border-top:1px solid var(--border); }
+  .lrow:first-child { border-top:0; }
+  .lrow .l { min-width:0; } .lrow .l .nm { font-weight:600; font-size:14px; }
+  .lrow .l .ds { font-size:12px; color:var(--dim); }
+  .badge { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid var(--border-2); color:var(--dim); }
+  .badge.on { color:var(--green); border-color:rgba(63,185,80,.4); }
+  .badge.off { color:var(--red); border-color:rgba(248,81,73,.4); }
+
+  /* ---- setup checklist (overview) ---- */
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .step { border:1px solid var(--border); border-radius:10px; padding:12px; }
+  .step .n { font-size:11px; color:var(--mute); font-family:var(--mono); }
+  .step .t { font-weight:600; font-size:14px; margin:3px 0; }
+  .step .d { font-size:12px; color:var(--dim); }
+  .step.done { opacity:.55; }
+  .step.done .t::before { content:"\\2713 "; color:var(--green); }
+
   .bot-card { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px;
               padding:12px; border:1px solid var(--border); border-radius:8px; }
   .bot-card .meta { flex:1; min-width:180px; }
   .bot-card .actions { display:flex; gap:8px; flex-wrap:wrap; }
   .bot-card button { padding:6px 12px; font-size:13px; }
-  .code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; background:var(--bg); padding:2px 6px; border-radius:4px; }
+  .code { font-family:var(--mono); font-size:12px; background:var(--panel-2); padding:2px 6px; border-radius:5px; }
+
+  .menu-btn { display:none; }
+  @media (max-width:860px) {
+    .side { position:fixed; left:0; top:0; height:100vh; z-index:60; background:var(--bg);
+            transform:translateX(-100%); transition:transform .2s; box-shadow:2px 0 18px rgba(0,0,0,.5); }
+    .side.open { transform:none; }
+    .menu-btn { display:inline-grid; place-items:center; width:36px; height:36px; border-radius:8px;
+                border:1px solid var(--border-2); background:transparent; color:var(--fg); padding:0; }
+    .kpis { grid-template-columns:1fr 1fr; }
+    .grid2 { grid-template-columns:1fr; }
+    .steps { grid-template-columns:1fr; }
+    .wrap { padding:16px 14px 48px; }
+  }
 `;
 
 function escHtml(s: string): string {
@@ -101,20 +167,32 @@ document.addEventListener('click', (e) => {
 }
 
 const pageLinks = [
-  { key: "overview", label: "Overview", href: "/bot/dashboard" },
-  { key: "bots", label: "Bots", href: "/bot/bots" },
-  { key: "offers", label: "Offers", href: "/bot/offers" },
-  { key: "commands", label: "Commands", href: "/bot/commands" },
-  { key: "broadcasts", label: "Broadcasts", href: "/bot/broadcasts" },
-  { key: "settings", label: "Settings", href: "/bot/settings" },
+  { key: "overview", label: "Overview", href: "/bot/dashboard", ic: "\u25F1", sub: "Your bot at a glance — last 14 days" },
+  { key: "bots", label: "Bots", href: "/bot/bots", ic: "\u{1F916}", sub: "Connect and customize your Telegram bots" },
+  { key: "offers", label: "Offers", href: "/bot/offers", ic: "\u{1F381}", sub: "Casino offers and tracked links" },
+  { key: "commands", label: "Commands", href: "/bot/commands", ic: "\u2318", sub: "Custom slash-commands your viewers can send" },
+  { key: "broadcasts", label: "Broadcasts", href: "/bot/broadcasts", ic: "\u{1F4E3}", sub: "Message all your subscribers" },
+  { key: "settings", label: "Settings", href: "/bot/settings", ic: "\u2699", sub: "Conversions, postbacks and plan" },
 ];
 
-function subNav(active: string): string {
-  return `<nav class="subnav" aria-label="Bot dashboard navigation">` +
-    pageLinks.map(p =>
-      `<a href="${escHtml(p.href)}" class="${p.key === active ? 'active' : ''}">${escHtml(p.label)}</a>`
-    ).join("") +
-    `</nav>`;
+function sideNav(active: string, user: { display_name: string; plan: string }): string {
+  const links = pageLinks.map(p =>
+    `<a href="${escHtml(p.href)}" class="${p.key === active ? 'active' : ''}"${p.key === active ? ' aria-current="page"' : ''}>` +
+    `<span class="ic" aria-hidden="true">${p.ic}</span> ${escHtml(p.label)}</a>`
+  ).join("");
+  const plan = escHtml((user.plan || "free").replace(/^./, c => c.toUpperCase()));
+  return `<aside class="side" id="side" aria-label="Bot dashboard navigation">
+    <nav class="snav">${links}</nav>
+    <div class="sfoot">Signed in as<br><span class="nm">${escHtml(user.display_name || 'Streamer')}</span> · ${plan}
+      <button class="ghost" data-action="logout" type="button">Log out</button></div>
+  </aside>`;
+}
+
+function pageHead(active: string): string {
+  const p = pageLinks.find(l => l.key === active) || pageLinks[0];
+  return `<div class="pagehead"><div style="display:flex;align-items:center;gap:12px">
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu">\u2630</button>
+    <div><h1>${escHtml(p.label)}</h1><p>${escHtml(p.sub)}</p></div></div></div>`;
 }
 
 export function appHtml(
@@ -127,35 +205,48 @@ export function appHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Streamer Dashboard</title><style>${SHELL_NAV_CSS}${BASE_CSS}</style></head><body data-page="${page}">
 ${shellNavHtml({ activePath: "/bot" + (page === "overview" ? "/dashboard" : "/" + page), user, logoutAction: "/bot/auth/logout" })}
-<div class="wrap" id="main-content">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-    <h1>🎰 Bot Dashboard</h1>
-    <div><span id="whoami" class="muted"></span>
-    <button class="ghost" data-action="logout" type="button" style="margin-left:10px">Log out</button></div>
-  </div>
-
-  ${subNav(page)}
+<div class="shell">
+${sideNav(page, user)}
+<div class="main"><div class="wrap" id="main-content">
+  ${pageHead(page)}
+  <span id="whoami" class="muted" style="display:none"></span>
 
   <!-- Overview stats -->
-  <div class="row" data-page="overview">
-    <div class="panel"><h2>Clicks (14d)</h2><div class="stat" id="totClicks">–</div></div>
-    <div class="panel"><h2>Unique (14d)</h2><div class="stat" id="totUnique">–</div></div>
-    <div class="panel"><h2>Active offers</h2><div class="stat" id="totOffers">–</div></div>
-    <div class="panel"><h2>Subscribers</h2><div class="stat" id="totSubs">–</div><div class="muted" id="subsNew" style="font-size:12px"></div></div>
+  <div class="kpis" data-page="overview">
+    <div class="kpi"><div class="lbl">Clicks · 14d</div><div class="stat" id="totClicks">–</div><div class="sub" id="clicksSub"></div></div>
+    <div class="kpi"><div class="lbl">Unique · 14d</div><div class="stat" id="totUnique">–</div><div class="sub" id="uniqueSub"></div></div>
+    <div class="kpi"><div class="lbl">Subscribers</div><div class="stat" id="totSubs">–</div><div class="sub" id="subsNew"></div></div>
+    <div class="kpi"><div class="lbl">Active offers</div><div class="stat" id="totOffers">–</div><div class="sub" id="offersSub"></div></div>
   </div>
 
-  <div class="panel" data-page="overview"><h2>Daily clicks</h2><svg id="chart" role="img" aria-label="Daily clicks chart" width="100%" height="120" preserveAspectRatio="none"></svg>
-    <div id="chartLabels" class="muted" style="display:flex;justify-content:space-between;font-size:11px"></div></div>
-
-  <!-- Subscriber attribution (overview) -->
-  <div class="panel" data-page="overview"><h2>Where subscribers came from</h2>
-    <p class="muted" style="font-size:13px;margin-bottom:10px">Share a deep link like <code id="deepLinkExample">t.me/&lt;yourbot&gt;?start=twitch</code> in your bio, stream, or posts — anyone who taps it and starts your bot is tagged with that source, so you can see which channel drives subscribers. <b>direct</b> = started the bot without a link.</p>
-    <table><thead><tr><th>Source</th><th style="text-align:right">Subscribers</th></tr></thead>
-    <tbody id="subSources"><tr><td colspan="2" class="muted">Loading…</td></tr></tbody></table>
+  <div class="grid2" data-page="overview" style="margin-bottom:18px">
+    <div class="panel"><div class="cardhd"><h2>Daily clicks</h2><span class="muted" style="font-size:12px">14 days</span></div>
+      <svg id="chart" role="img" aria-label="Daily clicks chart" width="100%" height="120" preserveAspectRatio="none"></svg>
+      <div id="chartLabels" class="muted" style="display:flex;justify-content:space-between;font-size:11px"></div></div>
+    <div class="panel"><div class="cardhd"><h2>Where subscribers came from</h2></div>
+      <table><thead><tr><th>Source</th><th style="text-align:right">Subscribers</th></tr></thead>
+      <tbody id="subSources"><tr><td colspan="2" class="muted">Loading…</td></tr></tbody></table>
+      <p class="muted" style="font-size:12px;margin-top:10px">Share <code id="deepLinkExample">t.me/&lt;yourbot&gt;?start=twitch</code> to tag a source. <b>direct</b> = no link.</p>
+    </div>
   </div>
 
-  <!-- Bot list + connect (overview, bots) -->
-  <div class="panel" data-page="overview bots"><h2>Your bots</h2>
+  <div class="grid2" data-page="overview" style="margin-bottom:18px">
+    <div class="panel"><div class="cardhd"><h2>Your bots</h2><a href="/bot/bots">Manage →</a></div>
+      <div id="ovBots" class="muted">Loading…</div></div>
+    <div class="panel"><div class="cardhd"><h2>Top offers</h2><a href="/bot/offers">All offers →</a></div>
+      <div id="ovOffers" class="muted">Loading…</div></div>
+  </div>
+
+  <div class="panel" data-page="overview"><div class="cardhd"><h2>Finish setup</h2></div>
+    <div class="steps" id="ovSetup">
+      <div class="step" id="stepBot"><div class="n">STEP 1</div><div class="t">Connect a bot</div><div class="d">Add your Telegram bot token in <a href="/bot/bots">Bots</a>.</div></div>
+      <div class="step" id="stepOffer"><div class="n">STEP 2</div><div class="t">Create an offer</div><div class="d">Add a casino offer with a tracked link in <a href="/bot/offers">Offers</a>.</div></div>
+      <div class="step" id="stepPb"><div class="n">STEP 3</div><div class="t">Set up postbacks</div><div class="d">Attribute deposits to clicks in <a href="/bot/settings">Settings</a>.</div></div>
+    </div>
+  </div>
+
+  <!-- Bot list + connect (bots) -->
+  <div class="panel" data-page="bots"><h2>Your bots</h2>
     <div id="botList" class="muted">Loading…</div>
     <div id="connectForm" style="margin-top:12px">
       <label for="botToken" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Bot Token</label>
@@ -183,8 +274,8 @@ ${shellNavHtml({ activePath: "/bot" + (page === "overview" ? "/dashboard" : "/" 
     <button class="ghost" data-action="cancelTestMessage" type="button">Cancel</button>
   </div>
 
-  <!-- Customization (overview, bots, commands) -->
-  <div class="panel" data-page="overview bots commands" id="customizePanel">
+  <!-- Customization (bots, commands) -->
+  <div class="panel" data-page="bots commands" id="customizePanel">
     <h2>Customize <select id="botSelect" style="width:auto;min-width:160px;display:inline-block;margin-left:8px"><option>Loading…</option></select></h2>
     <div id="custDisabledNote" class="muted" style="display:none;margin-bottom:12px;color:var(--accent)">This bot is disconnected — reconnect it to customize.</div>
     <p class="muted" style="margin-bottom:12px">Personalize what the selected bot says to viewers. Changes apply instantly — no redeploy needed.</p>
@@ -206,8 +297,8 @@ ${shellNavHtml({ activePath: "/bot" + (page === "overview" ? "/dashboard" : "/" 
     <tbody id="cmdList"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody></table>
   </div>
 
-  <!-- Offers (overview, offers) -->
-  <div class="panel" data-page="overview offers"><h2>New offer</h2>
+  <!-- Offers (offers) -->
+  <div class="panel" data-page="offers"><h2>New offer</h2>
     <div class="row">
       <label for="oCasino" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Casino</label>
       <input id="oCasino" placeholder="Casino (e.g. Stake)">
@@ -225,13 +316,13 @@ ${shellNavHtml({ activePath: "/bot" + (page === "overview" ? "/dashboard" : "/" 
     <button data-action="createOffer" type="button">Create offer</button>
   </div>
 
-  <div class="panel" data-page="overview offers"><h2>Offers</h2>
+  <div class="panel" data-page="offers"><h2>Offers</h2>
     <table><thead><tr><th>Offer</th><th>Link</th><th>Clicks</th><th>Unique</th><th>Status</th><th></th></tr></thead>
     <tbody id="offers"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table>
   </div>
 
-  <!-- Broadcasts (overview, broadcasts) -->
-  <div class="panel" data-page="overview broadcasts"><h2>Broadcast to subscribers</h2>
+  <!-- Broadcasts (broadcasts) -->
+  <div class="panel" data-page="broadcasts"><h2>Broadcast to subscribers</h2>
     <div id="bcGate" class="muted" style="margin-bottom:10px"></div>
     <label for="bcBotSelect" style="display:block;font-size:13px" class="muted">From bot</label>
     <select id="bcBotSelect" style="max-width:300px"><option value="">Loading bots…</option></select>
@@ -249,8 +340,8 @@ ${shellNavHtml({ activePath: "/bot" + (page === "overview" ? "/dashboard" : "/" 
     <tbody id="bcList"></tbody></table>
   </div>
 
-  <!-- Settings (overview, settings) -->
-  <div class="panel" data-page="overview settings"><h2>Conversions (postbacks)</h2>
+  <!-- Settings (settings) -->
+  <div class="panel" data-page="settings"><h2>Conversions (postbacks)</h2>
     <p class="muted" style="margin-bottom:10px">Give your affiliate manager this postback URL and add
       <code>{click_ref}</code> anywhere in your affiliate URL to attribute deposits to clicks.</p>
     <p class="muted" style="margin-bottom:10px;font-size:12px">Your network supports request signing? Use <code>POST ${publicBaseUrl}/pb</code> with headers
@@ -261,11 +352,11 @@ ${shellNavHtml({ activePath: "/bot" + (page === "overview" ? "/dashboard" : "/" 
     <tbody id="convList"></tbody></table>
   </div>
 
-  <div class="panel" data-page="overview settings"><h2>Plan</h2>
+  <div class="panel" data-page="settings"><h2>Plan</h2>
     <div id="planInfo" class="muted">Loading…</div>
     <div id="planButtons" style="margin-top:12px"></div>
   </div>
-</div>
+</div></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <script${nonce ? ` nonce="${nonce}"` : ""}>
 const $ = (id) => document.getElementById(id);
@@ -320,9 +411,15 @@ async function load() {
 
   // overview stats
   if (page === 'overview') {
-    setText('totClicks', (daily||[]).reduce((s,d)=>s+d.clicks,0));
-    setText('totUnique', (daily||[]).reduce((s,d)=>s+d.unique_clicks,0));
-    setText('totOffers', (offers||[]).filter(o=>o.is_active).length);
+    const totClicks = (daily||[]).reduce((s,d)=>s+d.clicks,0);
+    const totUnique = (daily||[]).reduce((s,d)=>s+d.unique_clicks,0);
+    const activeOffers = (offers||[]).filter(o=>o.is_active).length;
+    setText('totClicks', totClicks);
+    setText('totUnique', totUnique);
+    setText('totOffers', activeOffers);
+    setText('uniqueSub', totClicks > 0 ? Math.round(totUnique/totClicks*100) + '% of clicks' : '');
+    setText('offersSub', (offers||[]).length ? 'of ' + (offers||[]).length + ' total' : 'none yet');
+    renderOverviewSummary(bots, offers);
 
     const max = Math.max(1, ...(daily||[]).map(d=>d.clicks));
     const w = daily.length ? 100/daily.length : 10;
@@ -347,13 +444,44 @@ async function load() {
   renderOffers();
 }
 
+// Compact bot + offer summaries and the setup checklist (overview only).
+function renderOverviewSummary(bots, offers){
+  const ov = $('ovBots');
+  if (ov) {
+    const list = (bots||[]).slice(0,4);
+    ov.innerHTML = list.length
+      ? list.map(b=>{
+          const on = b.status === 'active';
+          return '<div class="lrow"><div class="l"><div class="nm">@'+esc(b.username)+'</div>'+
+            '<div class="ds">'+(on?'webhook active':'disconnected')+'</div></div>'+
+            '<span class="badge '+(on?'on':'off')+'">'+(on?'active':'off')+'</span></div>';
+        }).join('')
+      : '<p class="muted" style="font-size:13px">No bot connected yet. <a href="/bot/bots">Connect one →</a></p>';
+  }
+  const oo = $('ovOffers');
+  if (oo) {
+    const top = (offers||[]).slice().sort((a,b)=>(b.clicks||0)-(a.clicks||0)).slice(0,4);
+    oo.innerHTML = top.length
+      ? top.map(o=>{
+          const on = o.is_active;
+          return '<div class="lrow"><div class="l"><div class="nm">'+esc(o.casino)+'</div>'+
+            '<div class="ds">'+esc(o.label||'')+' · '+esc(String(o.clicks||0))+' clicks</div></div>'+
+            '<span class="badge '+(on?'on':'off')+'">'+(on?'active':'off')+'</span></div>';
+        }).join('')
+      : '<p class="muted" style="font-size:13px">No offers yet. <a href="/bot/offers">Create one →</a></p>';
+  }
+  markStep('stepBot', (bots||[]).some(b=>b.status==='active'));
+  markStep('stepOffer', (offers||[]).length > 0);
+}
+function markStep(id, done){ const el = $(id); if (el) el.classList.toggle('done', !!done); }
+
 // Subscriber totals + deep-link attribution (overview only).
 async function loadSubscribers(bots){
   const s = await api('/stats/subscribers');
   if (!s || s.error) return;
   const t = s.totals || {};
   setText('totSubs', t.active ?? 0);
-  setText('subsNew', (t.new_7d ?? 0) + ' new in 7d');
+  setText('subsNew', (t.new_7d ?? 0) > 0 ? '+' + (t.new_7d ?? 0) + ' new in 7d' : 'no new in 7d');
   const rows = (s.sources || []);
   setHtml('subSources', rows.length
     ? rows.map(r=>'<tr><td>'+esc(r.source)+'</td><td style="text-align:right">'+esc(String(r.count))+'</td></tr>').join('')
@@ -416,6 +544,8 @@ async function loadExtras(){
       '<td>'+(v.amount?esc(v.amount)+' '+esc(v.currency):'–')+'</td><td>'+esc(v.offer||'–')+'</td></tr>').join('')
       || '<tr><td colspan="4" class="muted">No conversions reported yet.</td></tr>';
   }
+
+  if (typeof markStep === 'function') markStep('stepPb', (convs||[]).length > 0);
 }
 
 async function copyLink(target){ navigator.clipboard.writeText(location.origin+'/r/'+target.dataset.slug); toast('Link copied'); }
@@ -554,7 +684,7 @@ function renderBots(bots, loadCmds = true){
   if (cf) cf.style.display = (bots.filter(b => b.status === 'active').length >= __maxBots) ? 'none' : '';
 
   // customize panel (only on pages that show it)
-  if ($('customizePanel') && (page === 'overview' || page === 'bots' || page === 'commands')) {
+  if ($('customizePanel') && (page === 'bots' || page === 'commands')) {
     const bot = custBotId ? (bots.find(b => b.id === custBotId) || bots[0]) : null;
     if (bot) {
       $('customizePanel').style.display='';
@@ -794,6 +924,15 @@ async function handleAction(e) {
 }
 
 document.addEventListener('click', handleAction);
+// Mobile sidebar drawer: toggle with the hamburger, close when tapping outside.
+const menuBtn = $('menuBtn');
+const side = $('side');
+if (menuBtn && side) {
+  menuBtn.addEventListener('click', (e) => { e.stopPropagation(); side.classList.toggle('open'); });
+  document.addEventListener('click', (e) => {
+    if (side.classList.contains('open') && !side.contains(e.target) && e.target !== menuBtn) side.classList.remove('open');
+  });
+}
 const logoutForm = document.querySelector('.gm-logout-form');
 if (logoutForm) {
   logoutForm.addEventListener('submit', (e) => { e.preventDefault(); logout(e.submitter); });
