@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { renderLeaderboard } from "../render.js";
 import { TEMPLATE_IDS, TEMPLATES, templateCatalog, validTemplate } from "../templates/index.js";
+import { fromJsonb, publicShape } from "../site.js";
 
 const DATA = {
   brand: {
@@ -59,5 +60,35 @@ describe("template previews", () => {
       const html = renderLeaderboard({ ...DATA, branding: { template } }, { nonce: "test123" });
       expect(html).toContain(`body data-template="${template}"`);
     }
+  });
+});
+
+describe("theme_json / extra_json persistence (BUG: double-encoded JSONB)", () => {
+  const SITE = {
+    name: "Actual Streamer", tagline: "", code: "RANK", prize_pool: "$5,000",
+    period: "Monthly", casino: "Stake", cta_url: "", reset_note: "", blurb: "", ends_at: null,
+  };
+
+  it("coerces a double-encoded JSONB string back to its value", () => {
+    expect(fromJsonb('{"template":"neon"}')).toEqual({ template: "neon" });
+    expect(fromJsonb({ template: "neon" })).toEqual({ template: "neon" });
+    expect(fromJsonb(null)).toBe(null);
+    expect(fromJsonb("not json")).toBe(null);
+  });
+
+  it("resolves the template from a proper JSONB object row", () => {
+    const shaped = publicShape({ ...SITE, theme_json: { template: "midnight" }, extra_json: {} }, []);
+    expect(shaped.branding.template).toBe("midnight");
+  });
+
+  it("resolves the template from a legacy double-encoded string row", () => {
+    const shaped = publicShape({ ...SITE, theme_json: '{"template":"midnight"}', extra_json: {} }, []);
+    expect(shaped.branding.template).toBe("midnight");
+  });
+
+  it("reads socials from a legacy double-encoded extra_json string", () => {
+    const extra = JSON.stringify({ socials: [{ label: "X", url: "https://x.com/a" }] });
+    const shaped = publicShape({ ...SITE, theme_json: {}, extra_json: extra }, []);
+    expect(shaped.socials).toEqual([{ label: "X", url: "https://x.com/a" }]);
   });
 });

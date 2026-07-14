@@ -145,7 +145,9 @@ describe("updateSiteTheme validation and plan behavior", () => {
       accentB: "#ff2cd0",
     });
     expect(r.ok).toBe(true);
-    const savedTheme = JSON.parse(mockExec.mock.calls[0][1][0]);
+    // Passed as a plain object (not a pre-stringified string) so postgres.js
+    // stores it as a real JSONB object rather than a double-encoded string.
+    const savedTheme = mockExec.mock.calls[0][1][0];
     expect(savedTheme).toEqual({
       template: "neon",
       accentA: "#111111",
@@ -173,7 +175,7 @@ describe("updateSiteTheme validation and plan behavior", () => {
       accentB: "#ff2cd0",
     });
     expect(valid.ok).toBe(true);
-    const savedTheme = JSON.parse(mockExec.mock.calls[0][1][0]);
+    const savedTheme = mockExec.mock.calls[0][1][0];
     expect(savedTheme).toEqual({
       template: "neon",
       accentA: "#00ffd1",

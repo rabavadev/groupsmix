@@ -37,7 +37,7 @@ async function logAdminAction(env, adminId, action, targetUserId = null, details
     await exec(
       `INSERT INTO admin_audit (admin_id, target_user_id, action, details, ip_address, user_agent)
        VALUES ($1, $2, $3, $4::jsonb, $5, $6)`,
-      [adminId, targetUserId, action, JSON.stringify(sanitizeAuditDetails(details || {})), ipAddress, userAgent]
+      [adminId, targetUserId, action, sanitizeAuditDetails(details || {}), ipAddress, userAgent]
     );
   } catch (e) {
     // Degrade gracefully: log to console if DB write fails

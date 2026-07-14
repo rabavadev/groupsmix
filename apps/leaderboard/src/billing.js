@@ -212,7 +212,7 @@ export async function handleIpn(request, env) {
 
     await tx.unsafe(
       "UPDATE payments SET status=$1, payload_json=$2::jsonb, updated_at=now() WHERE id=$3",
-      [status, JSON.stringify(body), pay.id]
+      [status, body, pay.id]
     );
 
     const PAID = ["confirmed", "finished"];

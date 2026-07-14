@@ -1,6 +1,6 @@
 // Site handlers: get, put, list, create, archive, stats, heatmap, notifications, custom domain
 import { requireUser, json, bad, ok, readJson, rateLimit, slugify, clientIp } from "../auth.js";
-import { getByUser, getUserSite, getUserSiteById, getUserBoardsList, createBoard, createArchive, deleteArchive, deleteBoard, setActiveBoard, updateSiteTheme, invalidateSiteCache, invalidateUserCache, getBoardById, saveSite } from "../site.js";
+import { getByUser, getUserSite, getUserSiteById, getUserBoardsList, createBoard, createArchive, deleteArchive, deleteBoard, setActiveBoard, updateSiteTheme, invalidateSiteCache, invalidateUserCache, getBoardById, saveSite, fromJsonb } from "../site.js";
 import { bumpStat, getStats, getHeatmap, getTopReferrers } from "../stats.js";
 import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS } from "../billing.js";
 import { templateCatalog } from "../templates/index.js";
@@ -188,7 +188,8 @@ export async function handleNotifyTest(request, env) {
 
   const site = await getByUser(env, user.id);
   if (!site) return bad("No site found", 404);
-  const extra = (site.extra_json && typeof site.extra_json === "object") ? site.extra_json : {};
+  const rawExtra = fromJsonb(site.extra_json);
+  const extra = (rawExtra && typeof rawExtra === "object") ? rawExtra : {};
 
   if (channel === "discord") {
     const webhookUrl = String(body.webhook_url || extra.discord_webhook_url || "").trim();
