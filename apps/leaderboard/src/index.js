@@ -20,6 +20,7 @@ import {
   HTML, SECURE_HTML, notFoundPage, suspendedPage, withNonce
 } from "./middleware/index.js";
 import { findSiteLogoData, findSiteStatus, findUserTotpSecret } from "./data/sites.js";
+import { detectImageMime } from "./site.js";
 import { one } from "../../../shared/db.js";
 import { hashToken } from "../../../shared/crypto.js";
 import { handleDashboardPreview } from "./handlers/preview.js";
@@ -50,7 +51,11 @@ async function serveLogo(request, path) {
   if (ifNoneMatch === etag) return new Response(null, { status: 304, headers: { etag, "cache-control": "public, max-age=86400" } });
   let bytes;
   try { bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0)); } catch { return new Response("not found", { status: 404 }); }
-  return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=86400", etag } });
+  // H-19: validate magic bytes even on read so a legacy invalid blob cannot be
+  // served under an image MIME type.
+  const detected = detectImageMime(bytes);
+  if (!detected) return new Response("not found", { status: 404 });
+  return new Response(bytes, { headers: { "content-type": detected, "cache-control": "public, max-age=86400", etag } });
 }
 
 export default {
