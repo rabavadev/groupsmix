@@ -10,5 +10,5 @@ export async function findSiteStatus(slug) {
 }
 
 export async function findUserTotpSecret(userId) {
-  return await one("SELECT totp_secret FROM users WHERE id=$1", [userId]);
+  return await one("SELECT totp_secret, totp_pending_secret, totp_pending_at, totp_enabled_at, totp_locked_until FROM users WHERE id=$1", [userId]);
 }

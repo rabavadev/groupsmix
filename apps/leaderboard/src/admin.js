@@ -5,11 +5,17 @@ import { sendEmail, resetEmail } from "./email.js";
 import { query, one, exec } from "../../../shared/db.js";
 import { logAudit } from "../../../shared/audit.js";
 import { generateSecret, verifyCode, generateOtpauthUri } from "./totp.js";
-import { encrypt, decrypt, hashToken } from "../../../shared/crypto.js";
+import { encrypt, decrypt, hashToken, bytesToHex, safeEqual } from "../../../shared/crypto.js";
 import { listFeatureFlags, setFeatureFlag, setUserFeatureOverride } from "../../../shared/features.js";
 
 // QUALITY-007: Named timing constants (no magic numbers)
 const RESET_TOKEN_TTL_S = 86400;   // 24 hours — admin-initiated password reset link validity
+const STEPUP_FRESH_S = 10 * 60;    // 10 minutes — how long a 2FA verification stays "fresh" for sensitive actions
+const PENDING_TTL_S = 10 * 60;     // 10 minutes — pending TOTP enrollment must be verified within this window
+const MAX_TOTP_FAILS = 5;          // lock 2FA after 5 consecutive failures
+const TOTP_LOCKOUT_S = 30 * 60;    // 30 minutes — 2FA lockout duration
+const RECOVERY_CODE_COUNT = 10;
+const RECOVERY_CODE_BYTES = 8;     // 16 hex chars
 
 // Log admin action to the unified audit_log table for persistent audit trail.
 async function logAdminAction(env, adminId, action, targetUserId = null, details = null, request = null) {
@@ -35,30 +41,72 @@ export async function requireAdmin(request, env) {
   return { admin: u, res: null };
 }
 
+async function isTotpLocked(userId) {
+  const row = await one("SELECT totp_locked_until FROM users WHERE id=$1", [userId]);
+  return row?.totp_locked_until && new Date(row.totp_locked_until) > new Date();
+}
+
+async function recordTotpFailure(userId) {
+  const row = await one(
+    "UPDATE users SET totp_failed_attempts = totp_failed_attempts + 1 WHERE id=$1 RETURNING totp_failed_attempts",
+    [userId]
+  );
+  if (row && row.totp_failed_attempts >= MAX_TOTP_FAILS) {
+    await exec(
+      "UPDATE users SET totp_locked_until=now()+make_interval(secs => $1) WHERE id=$2 AND (totp_locked_until IS NULL OR totp_locked_until <= now())",
+      [TOTP_LOCKOUT_S, userId]
+    );
+  }
+  return row;
+}
+
+async function resetTotpFailures(userId) {
+  await exec("UPDATE users SET totp_failed_attempts=0, totp_locked_until=NULL WHERE id=$1", [userId]);
+}
+
+async function setSession2faVerified(tokenHash) {
+  await exec("UPDATE sessions SET twofa_verified=true, twofa_verified_at=now() WHERE token=$1", [tokenHash]);
+}
+
+async function clearSession2faForUser(userId) {
+  await exec("UPDATE sessions SET twofa_verified=false, twofa_verified_at=NULL WHERE user_id=$1", [userId]);
+}
+
 // Like requireAdmin, but also checks that 2FA is verified if the admin has it enabled.
 // Used by data endpoints (overview, users, leads, payments, action).
 // The 2FA endpoints themselves use plain requireAdmin to avoid chicken-and-egg.
-// 
-// SECURITY: 2FA verification has a 1-hour TTL to balance security and usability.
-// Sensitive actions (plan changes, reset-link generation) require fresh 2FA verification.
+//
+// C-10: Admin MFA is mandatory. Every admin must have totp_secret set, and the
+// session must record a twofa_verified_at timestamp. Sensitive actions require a
+// fresh verification (within STEPUP_FRESH_S); we check the timestamp before
+// authorization instead of clearing the flag after use.
 export async function requireAdminWith2fa(request, env, requireFresh = false) {
   const { admin, res } = await requireAdmin(request, env);
   if (res) return { admin: null, res };
-  // Check if 2FA is required
-  const user = await one("SELECT totp_secret FROM users WHERE id=$1", [admin.id]);
-  if (user?.totp_secret) {
-    const token = readToken(request);
-    const tokenHash = token ? await hashToken(token) : null;
-    const tfaRow = tokenHash ? await one("SELECT twofa_verified FROM sessions WHERE token=$1", [tokenHash]) : null;
-    const tfaVerified = tfaRow?.twofa_verified ? "1" : null;
-    if (tfaVerified !== "1") {
-      return { admin: null, res: bad("2fa_required", 403) };
-    }
-    // For sensitive actions, require fresh verification (clear the flag after use)
-    if (requireFresh && tokenHash) {
-      await exec("UPDATE sessions SET twofa_verified=false WHERE token=$1", [tokenHash]);
+
+  const user = await one("SELECT totp_secret, totp_locked_until FROM users WHERE id=$1", [admin.id]);
+  if (!user?.totp_secret) {
+    return { admin: null, res: bad("2fa_setup_required", 403) };
+  }
+
+  if (user.totp_locked_until && new Date(user.totp_locked_until) > new Date()) {
+    return { admin: null, res: bad("2fa_locked", 423) };
+  }
+
+  const token = readToken(request);
+  const tokenHash = token ? await hashToken(token) : null;
+  const tfaRow = tokenHash ? await one("SELECT twofa_verified_at FROM sessions WHERE token=$1", [tokenHash]) : null;
+  if (!tfaRow?.twofa_verified_at) {
+    return { admin: null, res: bad("2fa_required", 403) };
+  }
+
+  if (requireFresh) {
+    const verifiedAt = new Date(tfaRow.twofa_verified_at).getTime();
+    if (Date.now() - verifiedAt > STEPUP_FRESH_S * 1000) {
+      return { admin: null, res: bad("2fa_stale", 403) };
     }
   }
+
   return { admin, res: null };
 }
 
@@ -157,13 +205,13 @@ export async function handleAction(request, env) {
   // Sensitive actions (plan changes, reset-link) require fresh 2FA verification
   const body = await readJson(request);
   if (!body || !body.userId || !body.action) return bad("userId and action required");
-  
+
   const sensitiveActions = ["starter", "pro", "agency", "free", "reset-link"];
   const requireFresh = sensitiveActions.includes(body.action);
-  
+
   const { admin, res } = await requireAdminWith2fa(request, env, requireFresh);
   if (res) return res;
-  
+
   const target = await one("SELECT id, email, is_admin FROM users WHERE id=$1", [body.userId]);
   if (!target) return bad("No such user", 404);
 
@@ -286,33 +334,97 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// POST /api/admin/2fa/enable — generate a TOTP secret for the admin user.
-// Only admin users (is_admin=true) can enable 2FA.
-// Returns the otpauth:// URI for QR code rendering.
+function normalizeRecoveryCode(raw) {
+  return String(raw || "").replace(/[^0-9a-fA-F]/g, "").toLowerCase();
+}
+
+function generateRecoveryCode() {
+  return bytesToHex(crypto.getRandomValues(new Uint8Array(RECOVERY_CODE_BYTES)));
+}
+
+async function hashRecoveryCode(code) {
+  const data = new TextEncoder().encode(code);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return bytesToHex(new Uint8Array(buf));
+}
+
+async function generateAndStoreRecoveryCodes(userId) {
+  const codes = [];
+  for (let i = 0; i < RECOVERY_CODE_COUNT; i++) codes.push(generateRecoveryCode());
+  for (const code of codes) {
+    const h = await hashRecoveryCode(code);
+    await exec("INSERT INTO admin_recovery_codes (user_id, code_hash) VALUES ($1, $2)", [userId, h]);
+  }
+  return codes;
+}
+
+async function clearRecoveryCodes(userId) {
+  await exec("DELETE FROM admin_recovery_codes WHERE user_id=$1", [userId]);
+}
+
+async function verifyRecoveryCode(userId, rawCode) {
+  const code = normalizeRecoveryCode(rawCode);
+  if (!code || code.length !== RECOVERY_CODE_BYTES * 2) return false;
+  const rows = await query("SELECT id, code_hash FROM admin_recovery_codes WHERE user_id=$1 AND used_at IS NULL", [userId]);
+  const inputHash = await hashRecoveryCode(code);
+  let matchedId = null;
+  for (const row of rows || []) {
+    if (safeEqual(inputHash, row.code_hash)) {
+      matchedId = row.id;
+      break;
+    }
+  }
+  if (!matchedId) return false;
+  const updated = await exec("UPDATE admin_recovery_codes SET used_at=now() WHERE id=$1 AND used_at IS NULL", [matchedId]);
+  return updated && updated.length > 0;
+}
+
+// POST /api/admin/2fa/enable — start TOTP enrollment for the admin user.
+// Stores only a pending secret until handle2faVerify proves the admin can generate
+// a valid code (verified enrollment transaction).
 export async function handle2faEnable(request, env) {
   const { admin, res } = await requireAdmin(request, env);
   if (res) return res;
 
-  // Check if 2FA is already enabled
-  const user = await one("SELECT totp_secret FROM users WHERE id=$1", [admin.id]);
+  if (await isTotpLocked(admin.id)) {
+    return bad("2FA locked due to too many failed attempts. Try again later.", 423);
+  }
+
+  const user = await one("SELECT totp_secret, totp_pending_secret, totp_pending_at FROM users WHERE id=$1", [admin.id]);
   if (user?.totp_secret) {
     return bad("2FA is already enabled. Disable it first to re-generate.", 400);
   }
 
-  // Need TOKEN_ENC_KEY for encryption
   const encKey = env.TOKEN_ENC_KEY;
   if (!encKey) {
     console.error("[2FA] TOKEN_ENC_KEY not configured");
     return bad("Server configuration error. Contact support.", 500);
   }
 
+  // If a pending enrollment exists and has not expired, reuse the same secret.
+  if (user?.totp_pending_secret && user?.totp_pending_at) {
+    const age = (Date.now() - new Date(user.totp_pending_at).getTime()) / 1000;
+    if (age <= PENDING_TTL_S) {
+      try {
+        const existing = await decrypt(user.totp_pending_secret, encKey);
+        const uri = generateOtpauthUri(existing, admin.email);
+        return ok({ uri, secret: existing, pending: true });
+      } catch {
+        // Fall through and generate a fresh pending secret.
+      }
+    }
+  }
+
   const secret = generateSecret();
   const encrypted = await encrypt(secret, encKey);
-  await exec("UPDATE users SET totp_secret=$1, updated_at=now() WHERE id=$2", [encrypted, admin.id]);
+  await exec(
+    "UPDATE users SET totp_pending_secret=$1, totp_pending_at=now(), totp_failed_attempts=0, totp_locked_until=NULL WHERE id=$2",
+    [encrypted, admin.id]
+  );
 
-  await logAdminAction(env, admin.id, "2fa_enable", admin.id, {
+  await logAdminAction(env, admin.id, "2fa_setup_started", admin.id, {
     email: admin.email,
-    details: "2FA enabled for admin account",
+    details: "2FA enrollment started",
   }, request);
 
   const uri = generateOtpauthUri(secret, admin.email);
@@ -320,7 +432,8 @@ export async function handle2faEnable(request, env) {
 }
 
 // POST /api/admin/2fa/verify — verify a TOTP code.
-// Sets a KV flag indicating 2FA is verified for this session.
+// For enrollment, promotes the pending secret and returns recovery codes.
+// For re-verification, sets the session's twofa_verified_at timestamp.
 export async function handle2faVerify(request, env) {
   const { admin, res } = await requireAdmin(request, env);
   if (res) return res;
@@ -336,31 +449,70 @@ export async function handle2faVerify(request, env) {
     return json({ ok: false, error: "Too many verification attempts. Try again in a few minutes." }, 429);
   }
 
-  const user = await one("SELECT totp_secret FROM users WHERE id=$1", [admin.id]);
-  if (!user?.totp_secret) return bad("2FA is not enabled", 400);
+  const user = await one(
+    "SELECT totp_secret, totp_pending_secret, totp_pending_at, totp_failed_attempts, totp_locked_until FROM users WHERE id=$1",
+    [admin.id]
+  );
+  if (!user?.totp_secret && !user?.totp_pending_secret) {
+    return bad("2FA is not enabled or enrollment has not started", 400);
+  }
+  if (user?.totp_locked_until && new Date(user.totp_locked_until) > new Date()) {
+    return bad("2FA locked due to too many failed attempts. Try again later.", 423);
+  }
 
   const encKey = env.TOKEN_ENC_KEY;
   if (!encKey) return bad("Server configuration error.", 500);
 
-  let secret;
-  try {
-    secret = await decrypt(user.totp_secret, encKey);
-  } catch (e) {
-    console.error("[2FA] decrypt failed:", String(e?.message || e));
-    return bad("Failed to verify. Try again.", 500);
+  let secret = null;
+  let mode = "verify";
+  if (user?.totp_secret) {
+    try {
+      secret = await decrypt(user.totp_secret, encKey);
+    } catch (e) {
+      console.error("[2FA] decrypt failed:", String(e?.message || e));
+      return bad("Failed to verify. Try again.", 500);
+    }
+  } else if (user?.totp_pending_secret) {
+    const age = user.totp_pending_at ? (Date.now() - new Date(user.totp_pending_at).getTime()) / 1000 : Infinity;
+    if (age > PENDING_TTL_S) {
+      return bad("Setup expired. Start 2FA enrollment again.", 400);
+    }
+    try {
+      secret = await decrypt(user.totp_pending_secret, encKey);
+      mode = "enroll";
+    } catch (e) {
+      console.error("[2FA] decrypt failed:", String(e?.message || e));
+      return bad("Failed to verify. Try again.", 500);
+    }
   }
 
   const valid = await verifyCode(secret, code);
   if (!valid) {
+    await recordTotpFailure(admin.id);
     console.error(JSON.stringify({ level: "warn", ctx: "admin-totp", outcome: "fail", adminId: admin.id, ip: request.headers.get("cf-connecting-ip") || "unknown" }));
     return bad("Invalid code. Check your authenticator and try again.", 401);
   }
 
-  // Mark 2FA verified in KV for this session token
+  await resetTotpFailures(admin.id);
+
   const token = readToken(request);
-  if (token) {
-    const tokenHash = await hashToken(token);
-    await exec("UPDATE sessions SET twofa_verified=true WHERE token=$1", [tokenHash]);
+  const tokenHash = token ? await hashToken(token) : null;
+  if (tokenHash) {
+    await setSession2faVerified(tokenHash);
+  }
+
+  if (mode === "enroll") {
+    const recoveryCodes = await generateAndStoreRecoveryCodes(admin.id);
+    // Promote pending secret to active only after successful verification.
+    await exec(
+      "UPDATE users SET totp_secret=totp_pending_secret, totp_pending_secret=NULL, totp_pending_at=NULL, totp_enabled_at=now() WHERE id=$1",
+      [admin.id]
+    );
+    await logAdminAction(env, admin.id, "2fa_enable", admin.id, {
+      email: admin.email,
+      details: "2FA enabled for admin account",
+    }, request);
+    return ok({ verified: true, recoveryCodes });
   }
 
   await logAdminAction(env, admin.id, "2fa_verify", admin.id, {
@@ -371,25 +523,78 @@ export async function handle2faVerify(request, env) {
   return ok({ verified: true });
 }
 
+// POST /api/admin/2fa/recovery — verify a single-use recovery code instead of a TOTP.
+// On success the session is marked 2FA-verified, so the admin can access the panel
+// and (re-)configure 2FA.
+export async function handle2faRecovery(request, env) {
+  const { admin, res } = await requireAdmin(request, env);
+  if (res) return res;
+
+  const body = await readJson(request);
+  if (!body || !body.code) return bad("Recovery code required");
+
+  const rawCode = String(body.code).trim();
+  const code = normalizeRecoveryCode(rawCode);
+  if (!code || code.length !== RECOVERY_CODE_BYTES * 2) {
+    return bad("Invalid recovery code format", 400);
+  }
+
+  const user = await one("SELECT totp_secret, totp_failed_attempts, totp_locked_until FROM users WHERE id=$1", [admin.id]);
+  if (!user?.totp_secret) return bad("2FA is not enabled", 400);
+
+  // Rate-limit recovery attempts the same way as TOTP attempts.
+  if (!(await rateLimit(env, `totp:admin:${admin.id}`, 5, 300)).ok) {
+    return json({ ok: false, error: "Too many attempts. Try again in a few minutes." }, 429);
+  }
+
+  const valid = await verifyRecoveryCode(admin.id, code);
+  if (!valid) {
+    await recordTotpFailure(admin.id);
+    return bad("Invalid or already used recovery code.", 401);
+  }
+
+  await resetTotpFailures(admin.id);
+  const token = readToken(request);
+  const tokenHash = token ? await hashToken(token) : null;
+  if (tokenHash) {
+    await setSession2faVerified(tokenHash);
+  }
+
+  await logAdminAction(env, admin.id, "2fa_recovery", admin.id, {
+    email: admin.email,
+    details: "2FA verified via recovery code",
+  }, request);
+
+  return ok({ verified: true });
+}
+
 // GET /api/admin/2fa/status — check if 2FA is enabled and verified for the current session.
 export async function handle2faStatus(request, env) {
   const { admin, res } = await requireAdmin(request, env);
   if (res) return res;
 
-  const user = await one("SELECT totp_secret FROM users WHERE id=$1", [admin.id]);
+  const user = await one("SELECT totp_secret, totp_locked_until FROM users WHERE id=$1", [admin.id]);
   const enabled = !!user?.totp_secret;
+  const locked = user?.totp_locked_until && new Date(user.totp_locked_until) > new Date();
 
   let verified = false;
+  let fresh = false;
+  let recoveryCodesRemaining = 0;
   if (enabled) {
     const token = readToken(request);
     if (token) {
       const tokenHash = await hashToken(token);
-      const tfaRow2 = await one("SELECT twofa_verified FROM sessions WHERE token=$1", [tokenHash]);
-      verified = !!tfaRow2?.twofa_verified;
+      const tfaRow = await one("SELECT twofa_verified_at FROM sessions WHERE token=$1", [tokenHash]);
+      verified = !!tfaRow?.twofa_verified_at;
+      if (verified && tfaRow.twofa_verified_at) {
+        fresh = (Date.now() - new Date(tfaRow.twofa_verified_at).getTime()) <= STEPUP_FRESH_S * 1000;
+      }
     }
+    const rc = await one("SELECT COUNT(*)::int AS n FROM admin_recovery_codes WHERE user_id=$1 AND used_at IS NULL", [admin.id]);
+    recoveryCodesRemaining = rc?.n || 0;
   }
 
-  return ok({ enabled, verified });
+  return ok({ enabled, verified, fresh, locked, recoveryCodesRemaining });
 }
 
 // POST /api/admin/2fa/disable — disable 2FA for the admin user.
@@ -403,14 +608,12 @@ export async function handle2faDisable(request, env) {
     return bad("2FA is not enabled", 400);
   }
 
-  await exec("UPDATE users SET totp_secret=NULL, updated_at=now() WHERE id=$1", [admin.id]);
-
-  // Clear 2FA verification flag from KV
-  const token = readToken(request);
-  if (token) {
-    const tokenHash = await hashToken(token);
-    await exec("UPDATE sessions SET twofa_verified=false WHERE token=$1", [tokenHash]);
-  }
+  await exec(
+    "UPDATE users SET totp_secret=NULL, totp_pending_secret=NULL, totp_pending_at=NULL, totp_enabled_at=NULL WHERE id=$1",
+    [admin.id]
+  );
+  await clearRecoveryCodes(admin.id);
+  await clearSession2faForUser(admin.id);
 
   await logAdminAction(env, admin.id, "2fa_disable", admin.id, {
     email: admin.email,
