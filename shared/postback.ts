@@ -55,22 +55,30 @@ export async function findPostbackOwner(
     [hash]
   );
   if (!row) return null;
-  await exec(
-    `UPDATE postback_keys
-        SET last_used_at = now(),
-            last_signed_used_at = CASE WHEN $2 = 'signed' THEN now() ELSE last_signed_used_at END,
-            last_unsigned_used_at = CASE WHEN $2 = 'unsigned' THEN now() ELSE last_unsigned_used_at END
-      WHERE id = $1`,
-    [row.id, usage || null]
-  ).catch((error) => {
-    console.error(JSON.stringify({
-      level: "error",
-      event: "postback_usage_update_failed",
+  try {
+    await exec(
+      `UPDATE postback_keys
+          SET last_used_at = now(),
+              last_signed_used_at = CASE WHEN $2 = 'signed' THEN now() ELSE last_signed_used_at END,
+              last_unsigned_used_at = CASE WHEN $2 = 'unsigned' THEN now() ELSE last_unsigned_used_at END
+        WHERE id = $1`,
+      [row.id, usage || null]
+    );
+  } catch (error) {
+    const compatibilityFallback = (error as { code?: string })?.code === "42703";
+    if (compatibilityFallback) {
+      await exec("UPDATE postback_keys SET last_used_at = now() WHERE id = $1", [row.id]).catch(() => {});
+    }
+    console[compatibilityFallback ? "warn" : "error"](JSON.stringify({
+      level: compatibilityFallback ? "warn" : "error",
+      event: compatibilityFallback
+        ? "postback_usage_breakdown_unavailable"
+        : "postback_usage_update_failed",
       key_id: row.id,
-      error: String(error?.message || error),
+      error: error instanceof Error ? error.message : String(error),
       ts: new Date().toISOString(),
     }));
-  });
+  }
   return { id: row.id, userId: row.user_id as string };
 }
 
