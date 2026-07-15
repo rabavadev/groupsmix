@@ -130,6 +130,8 @@ jobs:
         run: bun test
       - working-directory: apps/bot
         run: bun run typecheck
+      - name: Build shared TypeScript
+        run: node build-shared.mjs
       - name: Capture current bot version
         id: capture-bot
         continue-on-error: true
@@ -152,8 +154,31 @@ jobs:
           command: deploy
           wranglerVersion: "4.106.0"
 
+  deploy-consumer:
+    name: Deploy queue consumer
+    needs: [migrate, deploy-bot]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: '1.2.15'
+      - run: bun install --frozen-lockfile
+      - name: Audit dependencies
+        run: bun audit --audit-level moderate
+      - name: Build shared TypeScript
+        run: node build-shared.mjs
+      - uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/consumer
+          command: deploy
+          wranglerVersion: "4.106.0"
+
   smoke-test:
-    needs: [deploy-leaderboard, deploy-bot]
+    needs: [deploy-leaderboard, deploy-bot, deploy-consumer]
     runs-on: ubuntu-latest
     steps:
       - name: Wait for Cloudflare propagation

@@ -8,6 +8,7 @@ import { one, exec } from "../../../../shared/db.js";
 import { logAudit } from "../../../../shared/audit.js";
 import { buildTop3Embed, sendDiscordWebhook, sendTelegramMessage } from "../../../../shared/notifications.js";
 import { decryptToken } from "../../../../shared/crypto.js";
+import { createQueueProducer } from "../../../../shared/queue-producer.js";
 
 export async function handleStats(request, env) {
   const { user, res } = await requireUser(request, env);
@@ -58,9 +59,17 @@ export async function handleTrackCopy(request, env, ctx) {
   if (!slug) return json({ ok: true });
   const site = await one("SELECT id FROM sites WHERE slug=$1 AND published=true", [slug]);
   if (site) {
-    const p = bumpStat(env, site.id, "copies");
+    const producer = createQueueProducer(
+      env.EVENTS_QUEUE,
+      async (event) => {
+        if (event.type === "bump") {
+          await bumpStat(event.siteId, event.field, event.referer);
+        }
+      }
+    );
+    const p = producer.send({ type: "bump", siteId: site.id, field: "copies", referer: null, timestamp: Date.now() });
     if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(p);
-    else p.catch(() => {});
+    else p.catch((err) => { console.error("[trackCopy] copy enqueue failed:", err); });
   }
   return json({ ok: true });
 }

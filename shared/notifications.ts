@@ -255,6 +255,66 @@ export async function notifyReset(
  * @param oldPlayers — previous players sorted by wagered desc
  * @param newPlayers — new players sorted by wagered desc
  */
+export interface PlayerRankMessage {
+  siteId: string;
+  siteName: string;
+  playerName: string;
+  oldRank: number | null;
+  newRank: number;
+  botId: string;
+  tgUserId: number;
+}
+
+function buildPlayerRankText(siteName: string, playerName: string, oldRank: number | null, newRank: number): string | null {
+  if (!newRank) return null;
+  if (oldRank === null && newRank <= 20) {
+    return `🎉 *${playerName}* entered the *${siteName}* leaderboard at #${newRank}!`;
+  }
+  if (oldRank !== null && oldRank !== newRank) {
+    const direction = newRank < oldRank ? "📈" : "📉";
+    return `${direction} *${playerName}* moved from #${oldRank} to #${newRank} on the *${siteName}* leaderboard!`;
+  }
+  return null;
+}
+
+/**
+ * Send a single player rank-change DM using the bot the player subscribed to.
+ * A token cache avoids fetching/decrypting the same bot token repeatedly when
+ * many messages are processed in a batch.
+ */
+export async function sendPlayerRankNotification(
+  db: { one: (sql: string, params: any[]) => Promise<any> },
+  msg: PlayerRankMessage,
+  tokenCache: Map<string, string> = new Map()
+): Promise<void> {
+  const text = buildPlayerRankText(msg.siteName, msg.playerName, msg.oldRank, msg.newRank);
+  if (!text) return;
+
+  let botToken = tokenCache.get(msg.botId);
+  if (botToken === undefined) {
+    const bot = await db.one(
+      "SELECT token_encrypted FROM bots WHERE id=$1 AND status='active'",
+      [msg.botId]
+    );
+    if (!bot?.token_encrypted) {
+      tokenCache.set(msg.botId, "");
+      return;
+    }
+    try {
+      botToken = await decryptToken(Buffer.from(bot.token_encrypted));
+      tokenCache.set(msg.botId, botToken);
+    } catch (e: any) {
+      console.error("[notify] failed to decrypt bot token:", String(e?.message || e));
+      tokenCache.set(msg.botId, "");
+      return;
+    }
+  }
+  if (!botToken) return;
+  await sendTelegramMessage(botToken, msg.tgUserId, text).catch((e: any) => {
+    console.error("[notify] Telegram subscriber DM failed:", e?.message);
+  });
+}
+
 export async function notifySubscribedPlayers(
   db: { one: (sql: string, params: any[]) => Promise<any>; query: (sql: string, params: any[]) => Promise<any[]> },
   env: any,
@@ -263,59 +323,70 @@ export async function notifySubscribedPlayers(
   oldPlayers: Array<{ name: string; wagered: number }>,
   newPlayers: Array<{ name: string; wagered: number }>
 ): Promise<void> {
-  // Build old rank map: player name → position (1-indexed)
-  const oldRankMap = new Map();
+  const oldRankMap = new Map<string, number>();
   (oldPlayers || []).forEach((p, i) => oldRankMap.set(p.name, i + 1));
 
-  // Build new rank map
-  const newRankMap = new Map();
+  const newRankMap = new Map<string, number>();
   const newSorted = (newPlayers || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
   newSorted.forEach((p, i) => newRankMap.set(p.name, i + 1));
 
-  // Find subscribed players who changed rank
   const subs = await db.query(
     `SELECT ps.tg_user_id, ps.player_name, ps.bot_id FROM player_subscriptions ps WHERE ps.site_id = $1`,
     [siteId]
   );
   if (!subs.length) return;
 
-  // Find the bot token for sending DMs (from the site owner's bots table)
-  const site = await db.one("SELECT user_id FROM sites WHERE id=$1", [siteId]);
-  if (!site) return;
-  const bot = await db.one(
-    "SELECT token_encrypted FROM bots WHERE owner_id=$1 AND status='active' LIMIT 1",
-    [site.user_id]
-  );
-  if (!bot?.token_encrypted) return;
-
-  let botToken: string;
-  try {
-    botToken = await decryptToken(Buffer.from(bot.token_encrypted));
-  } catch (e: any) {
-    console.error("[notify] failed to decrypt bot token:", String(e?.message || e));
-    return;
-  }
-
+  const tokenCache = new Map<string, string>();
   for (const sub of subs) {
     const playerName = sub.player_name;
-    const oldRank = oldRankMap.get(playerName);
+    const oldRank = oldRankMap.get(playerName) ?? null;
     const newRank = newRankMap.get(playerName);
-
-    // Player not found in new list — skip
     if (!newRank) continue;
+    await sendPlayerRankNotification(db, {
+      siteId,
+      siteName,
+      playerName,
+      oldRank,
+      newRank,
+      botId: sub.bot_id,
+      tgUserId: sub.tg_user_id,
+    }, tokenCache);
+  }
+}
 
-    // Player was not in old list (new entry) — notify if in top 20
-    if (!oldRank && newRank <= 20) {
-      const text = `🎉 You entered the *${siteName}* leaderboard at #${newRank}!`;
-              await sendTelegramMessage(botToken, sub.tg_user_id, text).catch((e: any) => { console.error("[notify] Telegram subscriber DM failed:", e?.message); });
-              continue;
-            }
+export interface NotifyEventPayload {
+  type: "notify";
+  kind: "top3" | "reset" | "player-rank";
+  siteId: string;
+  siteName: string;
+  [key: string]: any;
+}
 
-            // Player changed rank
-            if (oldRank && newRank !== oldRank) {
-              const direction = newRank < oldRank ? "📈" : "📉";
-              const text = `${direction} You moved from #${oldRank} to #${newRank} on the *${siteName}* leaderboard!`;
-              await sendTelegramMessage(botToken, sub.tg_user_id, text).catch((e: any) => { console.error("[notify] Telegram subscriber DM failed:", e?.message); });
-    }
+export async function dispatchNotifyEvent(
+  db: { one: (sql: string, params: any[]) => Promise<any>; query: (sql: string, params: any[]) => Promise<any[]> },
+  env: any,
+  event: NotifyEventPayload,
+  tokenCache: Map<string, string> = new Map()
+): Promise<void> {
+  switch (event.kind) {
+    case "top3":
+      await notifyTop3Change(db, env, event.siteId, event.siteName, event.changes || []);
+      break;
+    case "reset":
+      await notifyReset(db, env, event.siteId, event.siteName, event.players || [], event.period || "");
+      break;
+    case "player-rank":
+      await sendPlayerRankNotification(db, {
+        siteId: event.siteId,
+        siteName: event.siteName,
+        playerName: event.playerName,
+        oldRank: event.oldRank ?? null,
+        newRank: event.newRank,
+        botId: event.botId,
+        tgUserId: event.tgUserId,
+      }, tokenCache);
+      break;
+    default:
+      console.warn("[notify] unknown notify event kind:", (event as any).kind);
   }
 }

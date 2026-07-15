@@ -8,6 +8,7 @@ import { renderLeaderboard } from "./render.js";
 import { PAGES } from "./pages.js";
 
 import { bumpStat } from "./stats.js";
+import { createQueueProducer } from "../../../shared/queue-producer.js";
 import { shellNavHtml } from "../../../shared/shell-nav.js";
 import { findRoute } from "./routes.js";
 import { OG_IMAGE_PNG_BASE64 } from "./og-image.js";
@@ -21,6 +22,19 @@ import {
 import { findSiteLogoData, findSiteStatus, findUserTotpSecret } from "./data/sites.js";
 import { one } from "../../../shared/db.js";
 import { handleDashboardPreview } from "./handlers/preview.js";
+
+function enqueueBump(env, ctx, siteId, field, referer = null) {
+  const producer = createQueueProducer(
+    env.EVENTS_QUEUE,
+    async (event) => {
+      if (event.type === "bump") {
+        await bumpStat(event.siteId, event.field, event.referer);
+      }
+    }
+  );
+  const p = producer.send({ type: "bump", siteId, field, referer, timestamp: Date.now() });
+  ctx.waitUntil(p);
+}
 
 export default {
   fetch: withWorkerFetch("leaderboard", async (request, env, ctx) => {
@@ -399,7 +413,7 @@ async function handleRequest(request, env, ctx, meta) {
         }
         const r = await getPublicSite(env, slug);
         if (!r || r.suspended) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
-        if (r.id) ctx.waitUntil(bumpStat(env, r.id, "clicks"));
+        if (r.id) enqueueBump(env, ctx, r.id, "clicks");
         const dest = r.data?.brand?.ctaUrl;
         // E2E-008: Only redirect to the CTA URL if it's a valid https:// URL.
         // If empty/null or non-https (javascript:, data:, relative paths),
@@ -463,7 +477,7 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
         const respHeaders = { ...HTML_N, "cache-control": "no-store" };
         if (r.id && !alreadyViewed) {
           const ref = request.headers.get("referer") || request.headers.get("Referer") || "";
-          ctx.waitUntil(bumpStat(env, r.id, "views", ref));
+          enqueueBump(env, ctx, r.id, "views", ref);
           respHeaders["set-cookie"] = `${viewCookieName}=1; Path=/${slug}; Max-Age=86400; SameSite=Lax; Secure`;
         }
         const paid = r.plan !== "free";

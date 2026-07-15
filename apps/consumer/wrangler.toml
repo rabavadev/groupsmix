@@ -1,5 +1,5 @@
 name = "yourrank-consumer"
-main = "src/worker.ts"
+main = "src/worker.js"
 compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
@@ -12,6 +12,8 @@ queue = "yourrank-events"
 max_batch_size = 50
 max_batch_timeout = 5
 max_retries = 3
+# TODO: create a dead-letter queue via `wrangler queues create yourrank-events-dlq`
+# once Cloudflare supports auto-creation or it has been provisioned manually.
 
 [[hyperdrive]]
 binding = "HYPERDRIVE"

@@ -1,10 +1,22 @@
 // Site + players data helpers for the Worker.
 import { effectivePlan, PLAN_LIMITS, BOARD_LIMITS } from "./billing.js";
 import { query, one, exec, withTransaction } from "../../../shared/db.js";
-import { notifyTop3Change, notifyReset, detectTop3Changes, notifySubscribedPlayers } from "../../../shared/notifications.js";
+import { detectTop3Changes, dispatchNotifyEvent } from "../../../shared/notifications.js";
 import { TEMPLATE_IDS } from "./templates/index.js";
 import { RESERVED, slugify } from "./auth.js";
 import { logAudit } from "../../../shared/audit.js";
+import { createQueueProducer } from "../../../shared/queue-producer.js";
+
+function createNotifyQueue(env) {
+  return createQueueProducer(
+    env.EVENTS_QUEUE,
+    async (event) => {
+      if (event.type === "notify") {
+        await dispatchNotifyEvent({ one, query }, env, event);
+      }
+    }
+  );
+}
 
 // NOTE: chips + whyStats intentionally start empty. They render casino perks
 // ("Deposit Bonus", "Instant Rakeback", …) that a brand-new owner never entered,
@@ -443,15 +455,23 @@ export async function createArchive(env, uid, { label, clear, siteId } = {}, req
     request,
     details: { board_id: site.id, board_slug: site.slug, archive_label: lab, clear: clear || null },
   });
-  // Send reset notification
+  // Enqueue reset notification so outbound calls don't block the request.
   try {
     const rawNotify = fromJsonb(site.extra_json);
     const extra = (rawNotify && typeof rawNotify === "object") ? rawNotify : {};
     if (extra.discord_webhook_url || (extra.telegram_bot_token && extra.telegram_chat_id && extra.telegram_notify)) {
-      await notifyReset({ one, query }, env, site.id, site.name || site.slug, players, lab);
+      const notifyQueue = createNotifyQueue(env);
+      await notifyQueue.send({
+        type: "notify",
+        kind: "reset",
+        siteId: site.id,
+        siteName: site.name || site.slug,
+        players,
+        period: lab,
+      });
     }
   } catch (e) {
-    console.error("[notify] reset webhook failed:", String(e?.message || e));
+    console.error("[notify] reset enqueue failed:", String(e?.message || e));
   }
   return { ok: true, label: lab };
 }
@@ -622,24 +642,50 @@ export async function saveSite(env, user, payload, siteId, request = null) {
     }
   });
 
-  // Detect top-3 changes and send notifications
+  // Detect top-3 / rank changes and enqueue notifications for the consumer to
+  // deliver. This keeps outbound Telegram/Discord calls off the saveSite request
+  // thread and routes player DMs through the bot_id the player subscribed to.
   if (Array.isArray(payload.players) && typeof user === "object" && effectivePlan(user) !== "free") {
     try {
+      const notifyQueue = createNotifyQueue(env);
       const newSorted = payload.players.filter((p) => p && p.name).sort((a, b2) => (b2.wagered || 0) - (a.wagered || 0));
       const top3Changes = detectTop3Changes(oldTop3, newSorted);
       if (top3Changes.length) {
-        await notifyTop3Change({ one, query }, env, site.id, siteName, top3Changes);
+        await notifyQueue.send({ type: "notify", kind: "top3", siteId: site.id, siteName, changes: top3Changes });
+      }
+
+      const subs = await query(
+        `SELECT ps.tg_user_id, ps.player_name, ps.bot_id FROM player_subscriptions ps WHERE ps.site_id = $1`,
+        [site.id]
+      );
+      if (subs && subs.length > 0) {
+        const oldRankMap = new Map();
+        (oldPlayers || []).forEach((p, i) => oldRankMap.set(p.name, i + 1));
+        const newRankMap = new Map();
+        newSorted.forEach((p, i) => newRankMap.set(p.name, i + 1));
+
+        for (const sub of subs) {
+          const playerName = sub.player_name;
+          const oldRank = oldRankMap.get(playerName) ?? null;
+          const newRank = newRankMap.get(playerName);
+          if (!newRank) continue;
+          if ((oldRank === null && newRank <= 20) || (oldRank !== null && oldRank !== newRank)) {
+            await notifyQueue.send({
+              type: "notify",
+              kind: "player-rank",
+              siteId: site.id,
+              siteName,
+              playerName,
+              oldRank,
+              newRank,
+              botId: sub.bot_id,
+              tgUserId: sub.tg_user_id,
+            });
+          }
+        }
       }
     } catch (e) {
-      console.error("[notify] top-3 detection failed:", String(e?.message || e));
-    }
-
-    // Notify subscribed players (via /subscribe) about rank changes
-    try {
-      const newPlayersSorted = payload.players.filter((p) => p && p.name);
-      await notifySubscribedPlayers({ one, query }, env, site.id, siteName, oldPlayers, newPlayersSorted);
-    } catch (e) {
-      console.error("[notify] player subscription notification failed:", String(e?.message || e));
+      console.error("[notify] notification enqueue failed:", String(e?.message || e));
     }
   }
   // Return updated site data including new timestamp for optimistic concurrency

@@ -133,8 +133,9 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const queueProducer = createQueueProducer(
       c.env.EVENTS_QUEUE,
       async (event: QueueEvent) => {
-        if (event.type !== "click") return;
-        await logClick(event.shortLinkId, event.ip, event.userAgent, event.referer, event.country, event.tgUserId, event.clickRef);
+        if (event.type === "click") {
+          await logClick(event.shortLinkId, event.ip, event.userAgent, event.referer, event.country, event.tgUserId, event.clickRef);
+        }
       }
     );
     let ctx: any = null;
@@ -194,7 +195,23 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const valid = await verifyHmacSha256Hex(owner.postback_key, qs, sig);
     if (!valid) return c.json({ error: "bad signature" }, 401);
 
-    await recordConversion(owner.id, c.req.query() as PostbackQuery);
+    // Queue the conversion for durable processing instead of doing the DB write
+    // inline. If the queue is not bound or the enqueue fails, fall back to the
+    // direct write so the postback still succeeds.
+    const conversionQueue = createQueueProducer(
+      c.env.EVENTS_QUEUE,
+      async (event: QueueEvent) => {
+        if (event.type === "conversion") {
+          await recordConversion(event.ownerId, event.query);
+        }
+      }
+    );
+    await conversionQueue.send({
+      type: "conversion",
+      ownerId: owner.id,
+      query: c.req.query() as PostbackQuery,
+      timestamp: Date.now(),
+    });
     return c.json({ ok: true });
   });
 
@@ -212,7 +229,20 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const owner = await one<{ id: string }>(`SELECT id FROM users WHERE postback_key = $1`, [key]);
     if (!owner) return c.json({ error: "unknown key" }, 404);
 
-    await recordConversion(owner.id, c.req.query() as PostbackQuery);
+    const conversionQueue = createQueueProducer(
+      c.env.EVENTS_QUEUE,
+      async (event: QueueEvent) => {
+        if (event.type === "conversion") {
+          await recordConversion(event.ownerId, event.query);
+        }
+      }
+    );
+    await conversionQueue.send({
+      type: "conversion",
+      ownerId: owner.id,
+      query: c.req.query() as PostbackQuery,
+      timestamp: Date.now(),
+    });
     return c.json({ ok: true });
   });
 
