@@ -5,7 +5,7 @@
 //    * Cookie name:      yr_session
 //    * Cookie domain:    .yourrank.site (or SESSION_COOKIE_DOMAIN)
 //    * Storage:          Postgres "sessions" table (replaces Cloudflare KV)
-//    * DB columns:       token, user_id, created_at, expires_at, twofa_verified
+//    * DB columns:       token, user_id, created_at, expires_at, twofa_verified_at
 //
 //  Both Workers call populateEnv() before any session operation so that
 //  process.env.DATABASE_URL is available for the shared db.js module.
@@ -213,7 +213,7 @@ export async function resolveSession(req: Request, env: SessionEnv): Promise<Res
       // Atomic swap: update the existing row's token and reset created_at.
       // RETURNING id lets us detect the race where another request already rotated.
       const updated = await exec(
-        "UPDATE sessions SET token = $1, created_at = now(), expires_at = now() + make_interval(secs => $2) WHERE token = $3 RETURNING id",
+        "UPDATE sessions SET token = $1, created_at = now(), expires_at = now() + make_interval(secs => $2), twofa_verified_at = twofa_verified_at WHERE token = $3 RETURNING id",
         [rotatedHash, SESSION_TTL_S, tokenHash]
       );
       if (!updated || updated.length === 0) {

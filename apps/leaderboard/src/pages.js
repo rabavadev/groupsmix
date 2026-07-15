@@ -699,6 +699,7 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <label for="tfaCode" class="sr-only">6-digit verification code</label><input class="code-input" id="tfaCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" autofocus aria-label="Verification code" />
 <div class="err" id="tfaErr" role="alert" aria-live="assertive"></div>
 <button class="btn btn--accent" id="tfaSubmit" type="button">Verify</button>
+<p class="hint"><a href="#" id="tfaUseRecovery">Use a recovery code</a></p>
 </div>
 
 <div class="tfa-wrap tfa-setup" id="tfaSetup" hidden>
@@ -711,6 +712,22 @@ admin: `<!DOCTYPE html><html lang="en"><head>
 <label for="tfaSetupCode" class="sr-only">6-digit verification code</label><input class="code-input" id="tfaSetupCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" aria-label="Verification code" />
 <div class="err" id="tfaSetupErr" role="alert" aria-live="assertive"></div>
 <button class="btn btn--accent" id="tfaSetupSubmit" type="button">Enable 2FA</button>
+</div>
+
+<div class="tfa-wrap" id="tfaRecovery" hidden>
+<h2>Recovery Code</h2>
+<p>Enter one of the recovery codes you saved when you enabled 2FA.</p>
+<label for="tfaRecoveryCode" class="sr-only">Recovery code</label><input class="code-input recovery-input" id="tfaRecoveryCode" type="text" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx" aria-label="Recovery code" />
+<div class="err" id="tfaRecoveryErr" role="alert" aria-live="assertive"></div>
+<button class="btn btn--accent" id="tfaRecoverySubmit" type="button">Verify</button>
+<p class="hint"><a href="#" id="tfaBackToCode">Back to 6-digit code</a></p>
+</div>
+
+<div class="tfa-wrap" id="tfaSuccess" hidden>
+<h2>2FA Enabled</h2>
+<p>Save these recovery codes somewhere safe. Each one can only be used once.</p>
+<ul class="recovery-list" id="tfaRecoveryList"></ul>
+<button class="btn btn--accent" id="tfaDone" type="button">Go to admin panel</button>
 </div>
 </main>
 <script src="/assets/qrcode.js"></script>

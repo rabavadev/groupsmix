@@ -372,17 +372,18 @@ async function handleRequest(request, env, ctx, meta) {
       if (path === "/admin") {
         const u = await currentUser(request, env);
         if (!u || !u.is_admin) return new Response(notFoundPage("admin", nonce), { status: 404, headers: HTML_N });
-        // Check if 2FA is required but not yet verified
+        // C-10: Mandatory admin MFA. Admins with no enrolled TOTP are forced
+        // to the 2FA setup page; enrolled admins must have a fresh session flag.
         const tfaRow = await findUserTotpSecret(u.id);
-        if (tfaRow?.totp_secret) {
-          const token = readToken(request);
-          const tokenHash = token ? await hashToken(token) : null;
-          const tfaRow2 = tokenHash ? await one("SELECT twofa_verified FROM sessions WHERE token=$1", [tokenHash]) : null;
-          const tfaVerified = tfaRow2?.twofa_verified ? "1" : null;
-          if (tfaVerified !== "1") {
-            // Show 2FA verification page instead of admin dashboard
-            return new Response(addCookieConsent(PAGES.admin2fa), { headers: { ...SECURE_HTML, ...csrfHeader } });
-          }
+        if (!tfaRow?.totp_secret) {
+          return new Response(addCookieConsent(PAGES.admin2fa), { headers: { ...SECURE_HTML, ...csrfHeader } });
+        }
+        const token = readToken(request);
+        const tokenHash = token ? await hashToken(token) : null;
+        const tfaRow2 = tokenHash ? await one("SELECT twofa_verified_at FROM sessions WHERE token=$1", [tokenHash]) : null;
+        if (!tfaRow2?.twofa_verified_at) {
+          // Show 2FA verification page instead of admin dashboard
+          return new Response(addCookieConsent(PAGES.admin2fa), { headers: { ...SECURE_HTML, ...csrfHeader } });
         }
         return new Response(addCookieConsent(PAGES.admin), { headers: { ...SECURE_HTML, ...csrfHeader } });
       }

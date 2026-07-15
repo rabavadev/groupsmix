@@ -12,7 +12,17 @@ async function api(path, opts) {
     const res = await fetch(path, merged);
   const d = await res.json().catch(() => ({}));
   if (res.status === 401) { location.href = "/login"; throw new Error("auth"); }
-  if (res.status === 403) { const err = d.error || "forbidden"; if (err === "2fa_required") { location.href = "/admin"; throw new Error("2fa"); } const el = document.getElementById("panel") || document.getElementById("loading") || document.querySelector(".wrap"); if (el) { el.innerHTML = "<p style='padding:24px;font-family:system-ui'>Not an admin account. <a href='/dashboard'>Back to dashboard</a></p>"; el.hidden = false; } throw new Error("forbidden"); }
+  if (res.status === 403) {
+    const err = d.error || "forbidden";
+    // C-10: Any missing/stale 2FA step-up should send the admin back to the 2FA gate.
+    if (err === "2fa_required" || err === "2fa_setup_required" || err === "2fa_stale") {
+      location.href = "/admin";
+      throw new Error("2fa");
+    }
+    const el = document.getElementById("panel") || document.getElementById("loading") || document.querySelector(".wrap");
+    if (el) { el.innerHTML = "<p style='padding:24px;font-family:system-ui'>Not an admin account. <a href='/dashboard'>Back to dashboard</a></p>"; el.hidden = false; }
+    throw new Error("forbidden");
+  }
   return d;
 }
 
