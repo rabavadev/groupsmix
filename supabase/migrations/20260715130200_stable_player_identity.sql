@@ -27,31 +27,32 @@ DELETE FROM players WHERE normalized_name = '';
 
 -- 5. Deduplicate legacy players that share a site + normalized name.
 --    The earliest row (by id) survives; wagered/prize are summed, sort keeps min.
-WITH keepers AS (
-  SELECT (array_agg(id ORDER BY id))[1] AS keep_id,
-         site_id,
+WITH agg AS (
+  SELECT site_id,
          normalized_name,
          sum(wagered) AS sum_wagered,
          sum(prize) AS sum_prize,
-         min(sort) AS min_sort
+         min(sort) AS min_sort,
+         (array_agg(id ORDER BY id))[1] AS keep_id
     FROM players
    GROUP BY site_id, normalized_name
   HAVING count(*) > 1
 )
 UPDATE players p
-   SET wagered = k.sum_wagered,
-       prize = k.sum_prize,
-       sort = k.min_sort,
+   SET wagered = a.sum_wagered,
+       prize = a.sum_prize,
+       sort = a.min_sort,
        updated_at = now()
-  FROM keepers k
- WHERE p.id = k.keep_id;
+  FROM agg a
+ WHERE p.id = a.keep_id;
 
-DELETE FROM players
- WHERE id IN (
-   SELECT p.id
-     FROM players p
-     JOIN keepers k ON p.site_id = k.site_id AND p.normalized_name = k.normalized_name
-    WHERE p.id <> k.keep_id
+DELETE FROM players p
+ WHERE EXISTS (
+   SELECT 1
+     FROM players p2
+    WHERE p2.site_id = p.site_id
+      AND p2.normalized_name = p.normalized_name
+      AND p2.id < p.id
  );
 
 -- 6. Enforce unique, stable identity per site and index it.
