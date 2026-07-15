@@ -1,6 +1,7 @@
 // Custom domain resolution with in-memory caching
 // Maps custom domain hostnames to site slugs for serving leaderboards on custom domains
 import { one } from "../../../../shared/db.js";
+import { PLATFORM_HOST } from "../constants.js";
 
 const CUSTOM_DOMAIN_CACHE = new Map();
 const CUSTOM_DOMAIN_TTL = 60_000; // 60 seconds
@@ -26,5 +27,5 @@ export async function resolveCustomDomain(env, host) {
 }
 
 export function isCustomHost(host) {
-  return host !== "yourrank.site" && host !== "localhost" && host !== "127.0.0.1" && !host.endsWith(".yourrank.site");
+  return host !== PLATFORM_HOST && host !== "localhost" && host !== "127.0.0.1" && !host.endsWith(`.${PLATFORM_HOST}`);
 }
