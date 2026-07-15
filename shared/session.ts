@@ -33,14 +33,10 @@ import { hashToken } from "./crypto.js";
 // Minimal env shape — both Workers satisfy this.
 // HYPERDRIVE is no longer required since we use process.env.DATABASE_URL
 // set by populateEnv() in both Workers.
-export interface KVNamespace {
-  get(key: string, options?: any): Promise<string | null>;
-  put(key: string, value: string, options?: any): Promise<void>;
-  delete(key: string): Promise<void>;
-}
-
+// NOTE: the optional `SESSIONS` KV binding is owned by the rate limiter, not
+// by session storage. Sessions live exclusively in Postgres to avoid the KV/DB
+// split-brain behavior described in audit C-04.
 export interface SessionEnv {
-  SESSIONS?: KVNamespace;
   SESSION_COOKIE_DOMAIN?: string;
   ENVIRONMENT?: string;
   HYPERDRIVE?: unknown;         // kept for type compat, not used
@@ -144,12 +140,8 @@ export function cookieClear(env?: SessionEnv): string {
 // ---------------------------------------------------------------------------
 
 /** Create a new session for `userId`. Returns the raw token (cookie value). */
-export async function createSession(env: SessionEnv, userId: string): Promise<string> {
+export async function createSession(_env: SessionEnv, userId: string): Promise<string> {
   const token = newToken();
-  if (env.SESSIONS) {
-    await env.SESSIONS.put(KV_PREFIX + token, JSON.stringify({ u: userId, c: Date.now() }));
-    return token;
-  }
   const tokenHash = await hashToken(token);
   await exec(
     `INSERT INTO sessions (token, user_id, created_at, expires_at)
@@ -161,12 +153,8 @@ export async function createSession(env: SessionEnv, userId: string): Promise<st
 }
 
 /** Delete one session.  Used during logout. */
-export async function destroySession(env: SessionEnv, token: string | null): Promise<void> {
+export async function destroySession(_env: SessionEnv, token: string | null): Promise<void> {
   if (!token) return;
-  if (env.SESSIONS) {
-    await env.SESSIONS.delete(KV_PREFIX + token);
-    return;
-  }
   const tokenHash = await hashToken(token);
   await exec("DELETE FROM sessions WHERE token = $1", [tokenHash]);
 }
@@ -176,7 +164,7 @@ export async function destroySession(env: SessionEnv, token: string | null): Pro
  * "log out everywhere".  DB cascade ON DELETE also handles this when the
  * user row is deleted, but explicit call is needed for revoke-all.
  */
-export async function destroyAllUserSessions(env: SessionEnv, userId: string): Promise<void> {
+export async function destroyAllUserSessions(_env: SessionEnv, userId: string): Promise<void> {
   await exec("DELETE FROM sessions WHERE user_id = $1", [userId]);
 }
 
