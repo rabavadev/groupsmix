@@ -24,6 +24,13 @@ routes = [
 name = "RATE_LIMITER_DO"
 class_name = "RateLimiter"
 
+# --- Event queue producer ---
+# Analytics (views, clicks, copies) and postback conversions are enqueued here
+# for the consumer Worker to process durably off the request thread.
+[[queues.producers]]
+queue = "yourrank-events"
+binding = "EVENTS_QUEUE"
+
 # --- Postgres (Supabase) via Hyperdrive. ---
 # Config recreated with correct username (postgres, not postgres.<ref>).
 [[hyperdrive]]

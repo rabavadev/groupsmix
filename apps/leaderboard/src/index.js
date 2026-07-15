@@ -8,6 +8,7 @@ import { renderLeaderboard } from "./render.js";
 import { PAGES } from "./pages.js";
 
 import { bumpStat } from "./stats.js";
+import { createQueueProducer } from "../../../shared/queue-producer.js";
 import { shellNavHtml } from "../../../shared/shell-nav.js";
 import { findRoute } from "./routes.js";
 import { OG_IMAGE_PNG_BASE64 } from "./og-image.js";
@@ -22,6 +23,35 @@ import { findSiteLogoData, findSiteStatus, findUserTotpSecret } from "./data/sit
 import { one } from "../../../shared/db.js";
 import { hashToken } from "../../../shared/crypto.js";
 import { handleDashboardPreview } from "./handlers/preview.js";
+
+function enqueueBump(env, ctx, siteId, field, referer = null) {
+  const producer = createQueueProducer(
+    env.EVENTS_QUEUE,
+    async (event) => {
+      if (event.type === "bump") {
+        await bumpStat(event.siteId, event.field, event.referer);
+      }
+    }
+  );
+  const p = producer.send({ type: "bump", siteId, field, referer, timestamp: Date.now() });
+  ctx.waitUntil(p);
+}
+
+async function serveLogo(request, path) {
+  let slug;
+  try { slug = decodeURIComponent(path.slice(6)).toLowerCase().replace(/\.(png|jpe?g|webp)$/, ""); } catch { return new Response("not found", { status: 404 }); }
+  const site = await findSiteLogoData(slug);
+  const m = (site?.logo_data || "").match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
+  if (!m) return new Response("not found", { status: 404 });
+  const encoder = new TextEncoder();
+  const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(site.logo_data));
+  const etag = '"' + [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16) + '"';
+  const ifNoneMatch = request.headers.get("if-none-match");
+  if (ifNoneMatch === etag) return new Response(null, { status: 304, headers: { etag, "cache-control": "public, max-age=86400" } });
+  let bytes;
+  try { bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0)); } catch { return new Response("not found", { status: 404 }); }
+  return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=86400", etag } });
+}
 
 export default {
   fetch: withWorkerFetch("leaderboard", async (request, env, ctx) => {
@@ -126,14 +156,17 @@ async function handleRequest(request, env, ctx, meta) {
           // Rewrite the URL path internally
           url.pathname = "/" + customSlug;
           // Only serve GET requests on custom domains (no dashboard/API)
+          if (method === "GET" && path.startsWith("/logo/")) {
+            return serveLogo(request, path);
+          }
           if (method === "GET" && (path === "/" || path === "")) {
             const r = await getPublicSite(env, customSlug);
             if (!r || r.suspended) return new Response(notFoundPage(customSlug, nonce), { status: 404, headers: HTML_N });
-            const pro = r.plan === "pro";
+            const paid = r.plan === "pro" || r.plan === "agency";
             return new Response(
               renderLeaderboard(r.data, {
-                watermark: !pro, homeUrl: `https://${host}`, slug: customSlug, nonce,
-                logoUrl: pro && r.data.branding?.hasLogo ? `https://${host}/logo/${customSlug}` : null,
+                watermark: !paid, homeUrl: `https://${host}`, slug: customSlug, nonce,
+                logoUrl: paid && r.data.branding?.hasLogo ? `https://${host}/logo/${customSlug}` : null,
               }),
               { headers: { ...HTML_N, "cache-control": "no-store" } }
             );
@@ -338,20 +371,7 @@ async function handleRequest(request, env, ctx, meta) {
 
       // --- streamer logos (uploaded via dashboard, served as real images) ---
       if (path.startsWith("/logo/") && method === "GET") {
-        let slug;
-        try { slug = decodeURIComponent(path.slice(6)).toLowerCase().replace(/\.(png|jpe?g|webp)$/, ""); } catch { return new Response("not found", { status: 404 }); }
-        const site = await findSiteLogoData(slug);
-        const m = (site?.logo_data || "").match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
-        if (!m) return new Response("not found", { status: 404 });
-        // PERF-005-v8: ETag based on content hash, support If-None-Match for 304
-        const encoder = new TextEncoder();
-        const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(site.logo_data));
-        const etag = '"' + [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16) + '"';
-        const ifNoneMatch = request.headers.get("if-none-match");
-        if (ifNoneMatch === etag) return new Response(null, { status: 304, headers: { etag, "cache-control": "public, max-age=86400" } });
-        let bytes;
-        try { bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0)); } catch { return new Response("not found", { status: 404 }); }
-        return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=86400", etag } });
+        return serveLogo(request, path);
       }
 
       // --- API routing ---
@@ -403,7 +423,7 @@ async function handleRequest(request, env, ctx, meta) {
         }
         const r = await getPublicSite(env, slug);
         if (!r || r.suspended) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
-        if (r.id) ctx.waitUntil(bumpStat(env, r.id, "clicks"));
+        if (r.id) enqueueBump(env, ctx, r.id, "clicks");
         const dest = r.data?.brand?.ctaUrl;
         // E2E-008: Only redirect to the CTA URL if it's a valid https:// URL.
         // If empty/null or non-https (javascript:, data:, relative paths),
@@ -467,7 +487,7 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
         const respHeaders = { ...HTML_N, "cache-control": "no-store" };
         if (r.id && !alreadyViewed) {
           const ref = request.headers.get("referer") || request.headers.get("Referer") || "";
-          ctx.waitUntil(bumpStat(env, r.id, "views", ref));
+          enqueueBump(env, ctx, r.id, "views", ref);
           respHeaders["set-cookie"] = `${viewCookieName}=1; Path=/${slug}; Max-Age=86400; SameSite=Lax; Secure`;
         }
         const paid = r.plan !== "free";

@@ -135,8 +135,9 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const queueProducer = createQueueProducer(
       c.env.EVENTS_QUEUE,
       async (event: QueueEvent) => {
-        if (event.type !== "click") return;
-        await logClick(event.shortLinkId, event.ip, event.userAgent, event.referer, event.country, event.tgUserId, event.clickRef);
+        if (event.type === "click") {
+          await logClick(event.shortLinkId, event.ip, event.userAgent, event.referer, event.country, event.tgUserId, event.clickRef);
+        }
       }
     );
     let ctx: any = null;
@@ -196,7 +197,23 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const valid = await verifyHmacSha256Hex(owner.postback_key, qs, sig);
     if (!valid) return c.json({ error: "bad signature" }, 401);
 
-    await recordConversion(owner.id, c.req.query() as PostbackQuery);
+    // Queue the conversion for durable processing instead of doing the DB write
+    // inline. If the queue is not bound or the enqueue fails, fall back to the
+    // direct write so the postback still succeeds.
+    const conversionQueue = createQueueProducer(
+      c.env.EVENTS_QUEUE,
+      async (event: QueueEvent) => {
+        if (event.type === "conversion") {
+          await recordConversion(event.ownerId, event.query);
+        }
+      }
+    );
+    await conversionQueue.send({
+      type: "conversion",
+      ownerId: owner.id,
+      query: c.req.query() as PostbackQuery,
+      timestamp: Date.now(),
+    });
     return c.json({ ok: true });
   });
 
@@ -214,7 +231,20 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     const owner = await one<{ id: string }>(`SELECT id FROM users WHERE postback_key = $1`, [key]);
     if (!owner) return c.json({ error: "unknown key" }, 404);
 
-    await recordConversion(owner.id, c.req.query() as PostbackQuery);
+    const conversionQueue = createQueueProducer(
+      c.env.EVENTS_QUEUE,
+      async (event: QueueEvent) => {
+        if (event.type === "conversion") {
+          await recordConversion(event.ownerId, event.query);
+        }
+      }
+    );
+    await conversionQueue.send({
+      type: "conversion",
+      ownerId: owner.id,
+      query: c.req.query() as PostbackQuery,
+      timestamp: Date.now(),
+    });
     return c.json({ ok: true });
   });
 
@@ -289,14 +319,14 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
         const row = await tx.one<{ id: string }>(
           `INSERT INTO bots (owner_id, tg_bot_id, username, token_encrypted,
                              token_hint, webhook_secret, status, welcome_message)
-           VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
+           VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
            ON CONFLICT (tg_bot_id) DO UPDATE
              SET owner_id = EXCLUDED.owner_id,
                  username = EXCLUDED.username,
                  token_encrypted = EXCLUDED.token_encrypted,
                  token_hint = EXCLUDED.token_hint,
                  webhook_secret = EXCLUDED.webhook_secret,
-                 status = 'active',
+                 status = 'pending',
                  welcome_message = COALESCE(EXCLUDED.welcome_message, bots.welcome_message),
                  updated_at = now()
            RETURNING id`,
@@ -310,17 +340,30 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
       return c.json({ error: "Database error — please try again in a moment" }, 500);
     }
     if ("error" in out) return c.json({ error: out.error }, 402);
-    let webhookOk = true;
+
+    // H-20: set the Telegram webhook before marking the bot active.
     try {
       await setWebhook(token, `${config.publicBaseUrl}/hook/${out.result.secret}`, out.result.secret, {
         dropPendingUpdates: true, // Onboarding: drop queued updates for clean start
         allowedUpdates: ["message", "callback_query"],
       });
     } catch (err) {
-      console.error("[admin POST /bots] setWebhook failed:", String((err as any)?.message ?? err));
-      webhookOk = false;
+      const msg = String((err as any)?.message ?? err);
+      console.error("[admin POST /bots] setWebhook failed:", msg);
+      return c.json({ error: "Telegram could not set the webhook. The bot is saved as pending; click Reconnect to retry once your PUBLIC_BASE_URL is reachable." }, 502);
     }
-    return c.json({ bot_id: out.result.bot_id, username: me.username, webhook: webhookOk ? "set" : "failed", try_it: `https://t.me/${me.username}` });
+
+    try {
+      await one(
+        `UPDATE bots SET status = 'active', updated_at = now() WHERE id = $1 AND owner_id = $2`,
+        [out.result.bot_id, owner_id]
+      );
+    } catch (err) {
+      const msg = String((err as any)?.message ?? err);
+      console.error("[admin POST /bots] activation failed:", msg);
+      return c.json({ error: "Webhook set, but we could not activate the bot record." }, 500);
+    }
+    return c.json({ bot_id: out.result.bot_id, username: me.username, webhook: "set", try_it: `https://t.me/${me.username}` });
   });
 
   api.post("/offers", async (c) => {

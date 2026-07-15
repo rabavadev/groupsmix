@@ -22,11 +22,18 @@ const dbMockFactory = () => ({
   exec: (...args: any[]) => mockExec(...args),
   query: () => Promise.resolve([]),
   getSql: () => null,
-  withTransaction: async (fn: any) => fn({ one: (...a: any[]) => mockOne(...a), exec: (...a: any[]) => mockExec(...a), query: () => Promise.resolve([]) }),
+  withTransaction: async (fn: any) =>
+    fn({
+      one: (...a: any[]) => mockOne(...a),
+      exec: (...a: any[]) => mockExec(...a),
+      unsafe: (...a: any[]) => mockExec(...a),
+      query: () => Promise.resolve([]),
+    }),
 });
 const cryptoMockFactory = () => ({
   decryptToken: (enc: string) => enc,
   encryptToken: (s: string) => s,
+  hashToken: async (s: string) => "hash:" + s,
   reencryptToken: (s: string) => s,
   encrypt: (s: string) => s,
   decrypt: (s: string) => s,

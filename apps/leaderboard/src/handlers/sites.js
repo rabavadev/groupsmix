@@ -8,6 +8,7 @@ import { one, exec } from "../../../../shared/db.js";
 import { logAudit } from "../../../../shared/audit.js";
 import { buildTop3Embed, sendDiscordWebhook, sendTelegramMessage } from "../../../../shared/notifications.js";
 import { decryptToken } from "../../../../shared/crypto.js";
+import { createQueueProducer } from "../../../../shared/queue-producer.js";
 
 export async function handleStats(request, env) {
   const { user, res } = await requireUser(request, env);
@@ -61,9 +62,17 @@ export async function handleTrackCopy(request, env, ctx) {
   if (!(await rateLimit(env, `copy:${slug}:${ip}`, 20, 60)).ok) return json({ ok: false, error: "Too many requests." }, 429);
   const site = await one("SELECT id FROM sites WHERE slug=$1 AND published=true", [slug]);
   if (site) {
-    const p = bumpStat(env, site.id, "copies");
+    const producer = createQueueProducer(
+      env.EVENTS_QUEUE,
+      async (event) => {
+        if (event.type === "bump") {
+          await bumpStat(event.siteId, event.field, event.referer);
+        }
+      }
+    );
+    const p = producer.send({ type: "bump", siteId: site.id, field: "copies", referer: null, timestamp: Date.now() });
     if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(p);
-    else p.catch(() => {});
+    else p.catch((err) => { console.error("[trackCopy] copy enqueue failed:", err); });
   }
   return json({ ok: true });
 }
@@ -283,8 +292,47 @@ export async function handleDomainVerify(request, env) {
     if (plan !== "pro" && plan !== "agency") return bad("Custom domains are a Pro feature.", 403);
 
     const body = await readJson(request);
-    if (!body || !body.domain) return bad("Domain required");
-    const domain = String(body.domain).trim().toLowerCase();
+    if (!body) return bad("Domain required");
+
+    const siteId = body.siteId || null;
+    const site = siteId ? await getBoardById(env, user.id, siteId) : await getByUser(env, user.id);
+    if (!site) return bad("No site found", 404);
+
+    const zoneId = env.CF_ZONE_ID;
+    const cfToken = env.CF_API_TOKEN;
+
+    // H-12: support explicit removal / replacement lifecycle.
+    const remove = body.remove === true || body.remove === "true";
+    const rawDomain = String(body.domain || "").trim().toLowerCase();
+    if (remove || !rawDomain) {
+      const existing = await one(
+        "SELECT custom_hostname_id, custom_domain FROM sites WHERE id=$1",
+        [site.id]
+      );
+      if (cfToken && existing?.custom_hostname_id) {
+        try {
+          await fetch(
+            `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${existing.custom_hostname_id}`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${cfToken}` },
+              signal: AbortSignal.timeout(15000),
+            }
+          );
+        } catch (e) {
+          console.error("[domain] CF delete failed:", String(e?.message || e));
+        }
+      }
+      await exec(
+        "UPDATE sites SET custom_domain=NULL, custom_hostname_id=NULL, domain_status='pending', updated_at=now() WHERE id=$1",
+        [site.id]
+      );
+      invalidateSiteCache(env, site.slug);
+      invalidateUserCache(env, user.id);
+      return ok({ status: "removed", message: "Custom domain removed." });
+    }
+
+    const domain = rawDomain;
     // Basic domain validation
     if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/.test(domain)) {
       return bad("Invalid domain format.");
@@ -296,28 +344,22 @@ export async function handleDomainVerify(request, env) {
       return bad("We couldn't find a CNAME record for this domain pointing to yourrank.site. Add the CNAME first, then verify.", 400);
     }
 
-    // Get the site
-    const siteId = body.siteId || null;
-    const site = siteId ? await getBoardById(env, user.id, siteId) : await getByUser(env, user.id);
-    if (!site) return bad("No site found", 404);
-
-    const zoneId = env.CF_ZONE_ID;
-    const cfToken = env.CF_API_TOKEN;
-
     if (!cfToken) {
       // Fallback: just save the domain without TLS provisioning
-      await exec("UPDATE sites SET custom_domain=$1, updated_at=now() WHERE id=$2", [domain, site.id]);
+      await exec("UPDATE sites SET custom_domain=$1, custom_hostname_id=NULL, domain_status='pending', updated_at=now() WHERE id=$2", [domain, site.id]);
+      invalidateSiteCache(env, site.slug);
+      invalidateUserCache(env, user.id);
       return ok({ status: "saved", message: "Domain saved. TLS automation is not configured — contact support." });
     }
 
-    // Step 1: Check if there's already a custom hostname for this domain
+    // H-12: Read current domain state before deciding to reuse, replace, or create.
     const existing = await one(
-      "SELECT custom_hostname_id, domain_status FROM sites WHERE id=$1",
+      "SELECT custom_domain, custom_hostname_id, domain_status FROM sites WHERE id=$1",
       [site.id]
     );
 
-    if (existing?.custom_hostname_id && existing?.domain_status === "active") {
-      // Already active — check with CF to confirm
+    // If the exact same domain is already active, verify with CF and short-circuit.
+    if (domain === existing?.custom_domain && existing?.domain_status === "active" && existing?.custom_hostname_id) {
       try {
         const cfRes = await fetch(
           `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${existing.custom_hostname_id}`,
@@ -335,29 +377,26 @@ export async function handleDomainVerify(request, env) {
       }
     }
 
-    // Step 2: If there's an existing custom_hostname_id, check its status first
-    if (existing?.custom_hostname_id) {
+    // If the domain is changing, detach the old hostname first.
+    if (domain !== existing?.custom_domain && existing?.custom_hostname_id) {
       try {
         const cfRes = await fetch(
           `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${existing.custom_hostname_id}`,
           {
-            headers: { "Authorization": `Bearer ${cfToken}`, "Content-Type": "application/json" },
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${cfToken}` },
             signal: AbortSignal.timeout(15000),
           }
         );
-        const cfData = await cfRes.json();
-        if (cfData.success) {
-          const cfStatus = cfData.result?.ssl?.status || "pending";
-          const dbStatus = cfStatus === "active" ? "active" : cfStatus === "pending_validation" || cfStatus === "pending_issuance" ? "pending" : "pending";
-          await exec("UPDATE sites SET domain_status=$1, updated_at=now() WHERE id=$2", [dbStatus, site.id]);
-          return ok({ status: dbStatus, customHostnameId: existing.custom_hostname_id, message: dbStatus === "active" ? "TLS is active!" : "TLS provisioning in progress. This can take a few minutes." });
+        if (!cfRes.ok) {
+          console.warn("[domain] CF old-hostname delete returned non-2xx:", cfRes.status);
         }
       } catch (e) {
-        console.error("[domain] CF status check failed:", String(e?.message || e));
+        console.error("[domain] CF old-hostname delete failed:", String(e?.message || e));
       }
     }
 
-    // Step 3: Create a new custom hostname via CF API
+    // Create a new custom hostname via CF API
     let cfResult;
     try {
       const cfRes = await fetch(
@@ -382,7 +421,9 @@ export async function handleDomainVerify(request, env) {
       const errMsg = cfResult.errors?.[0]?.message || "Cloudflare API error";
       console.error("[domain] CF error:", errMsg);
       // Save domain even if CF fails, for manual resolution
-      await exec("UPDATE sites SET custom_domain=$1, domain_status='error', updated_at=now() WHERE id=$2", [domain, site.id]);
+      await exec("UPDATE sites SET custom_domain=$1, custom_hostname_id=NULL, domain_status='error', updated_at=now() WHERE id=$2", [domain, site.id]);
+      invalidateSiteCache(env, site.slug);
+      invalidateUserCache(env, user.id);
       return ok({ status: "error", message: errMsg });
     }
 

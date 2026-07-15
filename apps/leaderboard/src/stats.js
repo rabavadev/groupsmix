@@ -1,66 +1,7 @@
 // Per-site daily analytics. Cheap upsert counters in Postgres — no external service.
-import { query, withTransaction } from "../../../shared/db.js";
-const FIELDS = new Set(["views", "copies", "clicks"]);
-
-export function todayUTC() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-// Extract domain from a Referer URL string.
-function extractDomain(ref) {
-  if (!ref) return null;
-  try {
-    const u = new URL(ref);
-    return u.hostname.replace(/^www\./, "").slice(0, 120);
-  } catch { return null; }
-}
-
-// Fire-and-forget increment. Callers wrap in ctx.waitUntil so it never blocks a response.
-// `refererHeader` is optional — only views pass it.
-// PERF-001-v9: Consolidated 3 separate DB round-trips into a single transaction.
-export async function bumpStat(env, siteId, field, refererHeader) {
-  if (!siteId || !FIELDS.has(field)) return;
-  const day = todayUTC();
-  const viewsInc = field === "views" ? 1 : 0;
-  const copiesInc = field === "copies" ? 1 : 0;
-  const clicksInc = field === "clicks" ? 1 : 0;
-
-  try {
-    await withTransaction(async (tx) => {
-      // Main daily counter — single upsert for all three fields
-      await tx.query(
-        `INSERT INTO site_stats (site_id, day, views, copies, clicks) VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (site_id, day) DO UPDATE SET
-           views = site_stats.views + $3,
-           copies = site_stats.copies + $4,
-           clicks = site_stats.clicks + $5`,
-        [siteId, day, viewsInc, copiesInc, clicksInc]
-      );
-
-      // Hourly heatmap — only for views
-      if (field === "views") {
-        const now = new Date();
-        const hour = now.getUTCHours();
-        const dow = now.getUTCDay();
-        await tx.query(
-          `INSERT INTO site_stats_hourly (site_id, day, hour, day_of_week, views) VALUES ($1, $2, $3, $4, 1)
-           ON CONFLICT (site_id, day, hour) DO UPDATE SET views = site_stats_hourly.views + 1`,
-          [siteId, day, hour, dow]
-        );
-
-        // Referrer tracking
-        const domain = extractDomain(refererHeader);
-        if (domain) {
-          await tx.query(
-            `INSERT INTO site_referrers (site_id, day, domain, count) VALUES ($1, $2, $3, 1)
-             ON CONFLICT (site_id, day, domain) DO UPDATE SET count = site_referrers.count + 1`,
-            [siteId, day, domain]
-          );
-        }
-      }
-    });
-  } catch (err) { console.error("[bumpStat]: operation failed", err); }
-}
+import { query } from "../../../shared/db.js";
+import { bumpStat, todayUTC } from "../../../shared/stats.js";
+export { bumpStat, todayUTC };
 
 // Last 30 days of rows plus rolled-up totals for the dashboard.
 export async function getStats(env, siteId) {
