@@ -139,12 +139,71 @@ async function getPlayers(env, siteId) {
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
-// PERF-003: Logos are stored as base64 data URIs (up to 180KB) in the logo_data
-// column. This means every /logo/:slug request fetches the blob from Postgres,
-// decodes base64 in-memory, and sends it. Deferred: migrate to R2 bucket storage
-// with signed URLs. Requires R2 bucket provisioning (not yet available in infra).
-const LOGO_RE = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
-const MAX_LOGO = 250000; // chars of data URI (~180KB image)
+
+// H-19: Logo uploads are validated by decoded magic bytes, not just the data-URI
+// regex. We still store the base64 blob in Postgres until an R2 bucket is
+// provisioned; moving the asset out of the database is deferred to the infra task.
+const LOGO_RE = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/;
+const MAX_LOGO_CHARS = 250000; // chars of data URI (~187KB decoded)
+const MAX_LOGO_BYTES = 200 * 1024;
+
+const PNG_MAGIC = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+const JPEG_MAGIC = [0xFF, 0xD8];
+const WEBP_MAGIC = [0x52, 0x49, 0x46, 0x46];
+
+function bytesMatch(buf, magic) {
+  if (buf.length < magic.length) return false;
+  for (let i = 0; i < magic.length; i++) {
+    if (buf[i] !== magic[i]) return false;
+  }
+  return true;
+}
+
+export function detectImageMime(buf) {
+  if (bytesMatch(buf, PNG_MAGIC)) return "image/png";
+  if (bytesMatch(buf, JPEG_MAGIC)) return "image/jpeg";
+  if (bytesMatch(buf, WEBP_MAGIC) && buf.length >= 12 &&
+      buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) {
+    return "image/webp";
+  }
+  return null;
+}
+
+/** Validate a logo data URI by decoding and checking magic bytes.
+ *  Returns { ok: true, mime, dataUri } or { error }.
+ */
+export function validateLogoData(dataUri) {
+  const m = LOGO_RE.exec(String(dataUri ?? ""));
+  if (!m) return { error: "Logo must be a base64 data URI for PNG, JPEG or WebP." };
+
+  const declaredMime = `image/${m[1]}`;
+  const base64 = m[2];
+  if (base64.length > MAX_LOGO_CHARS) {
+    return { error: "Logo is too large. Keep it under ~180KB." };
+  }
+
+  let bytes;
+  try {
+    bytes = Buffer.from(base64, "base64");
+  } catch {
+    return { error: "Logo base64 is malformed." };
+  }
+  if (bytes.length > MAX_LOGO_BYTES) {
+    return { error: "Logo is too large. Keep it under ~180KB." };
+  }
+
+  const detected = detectImageMime(bytes);
+  if (!detected) {
+    return { error: "Logo file type could not be verified from its contents." };
+  }
+  if (detected !== declaredMime) {
+    return { error: `Logo content is ${detected.split("/")[1]} but declared as ${declaredMime.split("/")[1]}.` };
+  }
+
+  // Normalise the data URI to the detected MIME (dropping accidental whitespace).
+  const normalised = `data:${detected};base64,${bytes.toString("base64")}`;
+  return { ok: true, mime: detected, dataUri: normalised };
+}
 
 // theme_json / extra_json / snapshot_json are JSONB. postgres.js returns them
 // already parsed (object/array). But a value that is pre-stringified with
@@ -608,9 +667,9 @@ export async function saveSite(env, user, payload, siteId, request = null) {
   if (br && typeof user === "object" && effectivePlan(user) !== "free") {
     if (br.logo === null) logoData = "";
     else if (typeof br.logo === "string" && br.logo) {
-      if (!LOGO_RE.test(br.logo)) return { error: "Logo must be a PNG, JPG or WebP image." };
-      if (br.logo.length > MAX_LOGO) return { error: "Logo is too large. Keep it under ~180KB." };
-      logoData = br.logo;
+      const validated = validateLogoData(br.logo);
+      if (validated.error) return { error: validated.error, code: "invalid_logo" };
+      logoData = validated.dataUri;
     }
     const t = {};
     if (HEX.test(br.accentA || "")) t.accentA = br.accentA;
