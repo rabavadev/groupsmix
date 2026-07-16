@@ -1,0 +1,20 @@
+import { legal } from "./legal-helper.js";
+
+// terms page
+export const termsPage = legal("Terms of Service", "July 2026", `
+<h2>What YourRank is</h2>
+<p>YourRank hosts leaderboard pages for streamers and their communities. You get a dashboard to edit your page's content — prize pool, referral code, player standings — and we serve that page at a public URL. That's the whole service.</p>
+<p><b>YourRank is not a casino.</b> No wagering, betting or gambling happens on this platform. Leaderboard standings are provided by the page owner — entered manually or updated automatically from the casino postbacks they configure. Prizes shown on any page are offered and paid by that page's owner, not by YourRank.</p>
+<h2>Your account</h2>
+<p>You need to be at least 18 to use YourRank. You're responsible for keeping your password safe and for everything published on your page. One account per person. How many leaderboards you can run depends on your plan — Free and Starter include one, Pro up to three, and Agency unlimited.</p>
+<h2>Your content</h2>
+<p>Everything you put on your page — names, numbers, links, images — is yours, and so is the responsibility for it. Don't publish anything illegal, misleading (fake prizes you don't pay out), or that infringes someone else's rights. Don't impersonate other streamers or brands.</p>
+<p>If your page promotes a gambling referral, you're responsible for complying with the laws and platform rules that apply to you and your audience.</p>
+<h2>Payments</h2>
+<p>Paid plans — Starter, Pro, Agency (30-day fixed-term access), and one-time Lifetime Pro — are paid in cryptocurrency through our payment processor, NOWPayments (BTC, ETH, USDT and 100+ more). Access does not auto-renew; purchase another 30-day period before expiry to keep features. Before paying, you can start a one-time 7-day free Pro trial. Crypto payments are final once confirmed and non-refundable due to blockchain irreversibility — see our <a href="/refund">refund policy</a>. Your paid features last until the end of the purchased period, after which your page reverts to the Free plan (player limit and badge apply again).</p>
+<h2>What we can do</h2>
+<p>We can suspend pages or accounts that break these terms, harm other users, or expose us to legal risk. We'll be reasonable about it. We may change prices or features with notice.</p>
+<h2>Liability</h2>
+<p>YourRank is provided as-is. We work to keep pages online, but we don't guarantee uninterrupted service and we're not liable for lost revenue, lost viewers, or disputes between you and your community. Our total liability is capped at what you paid us in the last 3 months.</p>
+<h2>Contact</h2>
+<p>Questions about these terms: email us at contact@yourrank.site.</p>`, "terms", "YourRank terms of service. Covers accounts, content, payments, liability, and how we handle disputes.");

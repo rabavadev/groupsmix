@@ -283,7 +283,7 @@ body[data-preview] .top3{margin-bottom:14px}
 </style>` : "";
   // Free-plan pages carry the badge — it's how YourRank spreads.
   const badge = opts.watermark
-    ? `<a class="rk-badge" href="${esc(opts.homeUrl || "/")}" target="_blank" rel="noopener">⚡ Powered by <b>YourRank</b></a>`
+    ? `<aside aria-label="YourRank branding"><a class="rk-badge" href="${esc(opts.homeUrl || "/")}" target="_blank" rel="noopener">⚡ Powered by <b>YourRank</b></a></aside>`
     : "";
   // Pro theme: one gradient pair drives the page accents. Validated hex only.
   const themeCss = (!opts.watermark && HEX.test(br.accentA || "") && HEX.test(br.accentB || ""))

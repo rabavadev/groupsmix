@@ -6,6 +6,8 @@
 
   const banner = document.createElement("div");
   banner.className = "cookie-banner";
+  banner.setAttribute("role", "region");
+  banner.setAttribute("aria-label", "Cookie consent");
   banner.innerHTML = `
     <span>We use only essential cookies to keep you signed in and secure — no advertising or third-party tracking cookies. See our <a href="/cookies">cookie policy</a>.</span>
     <button class="btn btn--sm btn--accent" id="cookieAccept" type="button">Got it</button>

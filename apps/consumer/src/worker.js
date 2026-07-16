@@ -17,6 +17,47 @@ function setProcessEnv(env) {
   if (env.PUBLIC_BASE_URL) process.env.PUBLIC_BASE_URL = env.PUBLIC_BASE_URL;
 }
 
+async function alertDiscord(webhook, batch) {
+  if (!webhook) return;
+  const fields = batch.messages.map((msg) => ({
+    name: `ID ${msg.id.slice(0, 12)}`,
+    value: `type: ${msg.body?.type ?? "unknown"}`,
+    inline: false,
+  }));
+  const embed = {
+    title: "⚠️ YourRank events moved to DLQ",
+    description: `${batch.messages.length} queue message(s) exhausted retries and reached the dead-letter queue.`,
+    color: 0xff9900,
+    fields,
+    timestamp: new Date().toISOString(),
+    footer: { text: "YourRank Consumer" },
+  };
+  try {
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "YourRank DLQ", embeds: [embed] }),
+      signal: AbortSignal.timeout(8_000),
+    });
+  } catch {
+    // Swallow — alerting must not block acking DLQ messages.
+  }
+}
+
+async function handleDlq(batch, env, ctx) {
+  for (const msg of batch.messages) {
+    console.error(JSON.stringify({
+      event: "queue_dlq_received",
+      queue: batch.queue,
+      message_id: msg.id,
+      message_type: msg.body?.type ?? "unknown",
+      ts: new Date().toISOString(),
+    }));
+    msg.ack();
+  }
+  ctx?.waitUntil(alertDiscord(env.DISCORD_MONITORING_WEBHOOK, batch));
+}
+
 async function handleEvent(input, tokenCache) {
   const body = parseQueueEvent(input);
 
@@ -51,6 +92,11 @@ async function handleEvent(input, tokenCache) {
 export default {
   async queue(batch, env, ctx) {
     setProcessEnv(env);
+
+    if (batch.queue === "yourrank-events-dlq") {
+      return handleDlq(batch, env, ctx);
+    }
+
     const tokenCache = new Map();
 
     for (const msg of batch.messages) {

@@ -1,0 +1,62 @@
+import { leaderboardPageHtml } from "../../../../shared/page-shell.js";
+
+// setup page
+export const setupPage = leaderboardPageHtml({
+  title: "Setup · YourRank",
+  canonical: "https://yourrank.site/dashboard/setup",
+  mainClass: "gm-shell-main",
+  styles: ["/assets/app.css","/assets/shell-nav.css","/assets/setup-styles.css"],
+  noscript: "<p>YourRank requires JavaScript</p><p>Please enable JavaScript in your browser settings to set up your leaderboard.</p>",
+  scripts: ['<script src="/assets/setup-wizard.js?v=3"></script>'],
+  content: `<div class="setup-wrap">
+<h1>Set up your leaderboard</h1>
+<p class="sub">Four quick steps and you're live.</p>
+<div class="steps-ind" id="stepsInd"></div>
+
+<div class="wiz-step active" id="step1">
+<div class="field"><label for="wiz_name">Your name / handle</label>
+<input id="wiz_name" placeholder="YourName" autocomplete="nickname" required />
+<span class="hint">Auto-generates your URL below.</span></div>
+<div class="field"><label for="wiz_slug">Your URL</label>
+<input id="wiz_slug" placeholder="chuckybtz" autocomplete="off" />
+<div class="preview-url" id="wiz_preview">yourrank.site/…</div>
+<span class="hint">Letters, numbers, dashes only. You can change it here.</span></div>
+<div class="btns-row"><span></span><button class="btn btn--accent" id="wiz1next" type="button">Next →</button></div>
+</div>
+
+<div class="wiz-step" id="step2">
+<div class="field"><label for="wiz_casino">Casino name</label>
+<input id="wiz_casino" placeholder="Stake" /></div>
+<div class="field"><label for="wiz_code">Referral code</label>
+<input id="wiz_code" placeholder="BTZ" /></div>
+<div class="field"><label for="wiz_cta">Referral link</label>
+<input id="wiz_cta" placeholder="https://stake.com/?c=BTZ" /></div>
+<div class="btns-row"><button class="btn" id="wiz2back" type="button">← Back</button><button class="btn btn--accent" id="wiz2next" type="button">Next →</button></div>
+</div>
+
+<div class="wiz-step" id="step3">
+<div class="field"><label for="wiz_players">Paste your players</label>
+<span class="hint">One player per line: <span class="mono">name, wagered amount</span>. Comma or tab separated. Wagered is optional (defaults to 0).</span>
+<textarea class="players-ta" id="wiz_players" rows="8" spellcheck="false" placeholder="*****ess, 152000
+*****y, 98000
+*****k, 61250"></textarea>
+<span class="hint" id="wiz_pcount">0 players detected</span></div>
+<div class="btns-row"><button class="btn" id="wiz3back" type="button">← Back</button><button class="btn btn--accent" id="wiz3next" type="button">Next →</button></div>
+</div>
+
+<div class="wiz-step" id="step4">
+<h2 class="setup-complete-title">Your page is ready! 🎉</h2>
+<p class="setup-complete-sub">Share this link with your community:</p>
+<div class="share-box">
+<span class="url" id="wiz_finalUrl">yourrank.site/…</span>
+<div class="d-flex gap-10 justify-center flex-wrap">
+<button class="btn btn--accent" id="wiz_copy" type="button">📋 Copy link</button>
+<a class="btn" id="wiz_view" href="#" target="_blank">View live page →</a>
+</div>
+</div>
+<div class="btns-row"><button class="btn" id="wiz4back" type="button">← Back</button><button class="btn btn--accent" id="wiz_finish" type="button">Go to dashboard</button></div>
+</div>
+
+<div class="err" id="wiz_err" role="alert" aria-live="assertive"></div>
+</div>`
+});
