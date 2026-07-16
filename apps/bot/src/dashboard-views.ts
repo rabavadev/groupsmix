@@ -7,6 +7,8 @@ const STYLE_ATTR_CSS = `
 /* ---- inline style migration (M-02) ---- */
 .hidden { display: none !important; }
 .sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0); }
+.skip-link { position:absolute;left:8px;top:8px;z-index:100;background:var(--bg);color:var(--fg);padding:10px 14px;border:1px solid var(--border-2);border-radius:8px;text-decoration:none;transform:translateY(-200%);transition:transform .15s; }
+.skip-link:focus { transform:translateY(0);outline:2px solid var(--accent); }
 .style-1 { margin-bottom:8px }
 .style-2 { margin-bottom:20px }
 .style-3 { margin-top:24px;border-top:1px solid var(--border);padding-top:16px }
@@ -46,7 +48,7 @@ const STYLE_ATTR_CSS = `
 
 const BASE_CSS = `
   :root { --bg:#0d1117; --panel:#161b22; --panel-2:#1b222b; --border:#2a313a; --border-2:#3a434f;
-          --fg:#e9eef4; --dim:#9aa4b0; --mute:#6e7681;
+          --fg:#e9eef4; --dim:#9aa4b0; --mute:#8b949e;
           --accent:#f0b429; --accent-ink:#1a1205; --green:#3fb950; --red:#f85149;
           --mono:ui-monospace,SFMono-Regular,Menlo,monospace; }
   * { box-sizing:border-box; margin:0; }
@@ -271,12 +273,12 @@ export function appHtml(
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Streamer Dashboard</title><style nonce="${nonce}">${STYLE_ATTR_CSS}${SHELL_NAV_CSS}${BASE_CSS}</style></head><body data-page="${page}">
+<a href="#main-content" class="skip-link">Skip to main content</a>
 ${shellNavHtml({ activePath: "/bot" + (page === "overview" ? "/dashboard" : "/" + page), user, logoutAction: "/bot/auth/logout" })}
-<div class="shell">
+<main class="shell" id="main-content">
 ${sideNav(page, user)}
-<div class="main"><div class="wrap" id="main-content">
+<div class="main"><div class="wrap">
   ${pageHead(page)}
-  <span id="whoami" class="muted hidden"></span>
 
   <!-- Quick actions (overview) -->
   <div class="qa" data-page="overview" aria-label="Quick actions">
@@ -349,9 +351,15 @@ ${sideNav(page, user)}
     <button class="ghost" data-action="cancelTestMessage" type="button">Cancel</button>
   </div>
 
+  <!-- Empty state for commands page when no bot is connected -->
+  <div class="panel" data-page="commands" id="commandsEmptyHint">
+    <h2>Commands</h2>
+    <p class="muted">Connect a bot first — do that in <a href="/bot/bots">Bots</a>.</p>
+  </div>
+
   <!-- Customization (bots, commands) -->
   <div class="panel" data-page="bots commands" id="customizePanel">
-    <h2>Customize <select class="style-14" id="botSelect"><option>Loading…</option></select></h2>
+    <h2>Customize <select class="style-14" id="botSelect" aria-label="Select bot"><option>Loading…</option></select></h2>
     <div id="custDisabledNote" class="muted style-15 hidden">This bot is disconnected — reconnect it to customize.</div>
     <p class="muted style-16">Personalize what the selected bot says to viewers. Changes apply instantly — no redeploy needed.</p>
 
@@ -368,7 +376,7 @@ ${sideNav(page, user)}
       <input id="cmdResp" placeholder="Reply text viewers receive">
     </div>
     <button data-action="addCommand" type="button">Add command</button>
-    <table class="style-20"><thead><tr><th>Command</th><th>Reply</th><th>Status</th><th></th></tr></thead>
+    <table class="style-20"><thead><tr><th>Command</th><th>Reply</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
     <tbody id="cmdList"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody></table>
   </div>
 
@@ -392,7 +400,7 @@ ${sideNav(page, user)}
   </div>
 
   <div class="panel" data-page="offers"><h2>Offers</h2>
-    <table><thead><tr><th>Offer</th><th>Link</th><th>Clicks</th><th>Unique</th><th>Status</th><th></th></tr></thead>
+    <table><thead><tr><th>Offer</th><th>Link</th><th>Clicks</th><th>Unique</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
     <tbody id="offers"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table>
   </div>
 
@@ -411,7 +419,7 @@ ${sideNav(page, user)}
       <button class="ghost" data-action="testBroadcast" type="button">Send test</button>
     </div>
     <p class="muted style-28">Get your chat ID by sending <code>/start</code> to <a href="https://t.me/userinfobot" target="_blank" rel="noopener">@userinfobot</a>. A broadcast can't be undone once it sends.</p>
-    <table class="style-20"><thead><tr><th>Message</th><th>Bot</th><th>Status</th><th>Sent</th><th>Failed</th><th></th></tr></thead>
+    <table class="style-20"><thead><tr><th>Message</th><th>Bot</th><th>Status</th><th>Sent</th><th>Failed</th><th><span class="sr-only">Actions</span></th></tr></thead>
     <tbody id="bcList"></tbody></table>
   </div>
 
@@ -436,7 +444,7 @@ ${sideNav(page, user)}
     <div id="planInfo" class="muted">Loading…</div>
     <div class="style-10" id="planButtons"></div>
   </div>
-</div></div></div>
+</div></div></main>
 <div id="toast" class="hidden" role="status" aria-live="polite"></div>
 <script${nonce ? ` nonce="${nonce}"` : ""}>
 const $ = (id) => document.getElementById(id);
@@ -482,7 +490,6 @@ let custBotId = null;
 async function load() {
   const me = await api('/me');
   if (me.error) { toast(me.error); return; }
-  setText('whoami', (me.display_name||'') + ' · ' + (me.plan || 'free'));
 
   const [offers, daily, bots] = await Promise.all([api('/offers'), api('/stats/daily'), api('/bots')]);
   if (daily.error || offers.error || bots.error) { toast(daily.error || offers.error || bots.error); return; }
@@ -775,6 +782,10 @@ function renderBots(bots, loadCmds = true){
       $('customizePanel').classList.add('hidden');
     }
   }
+
+  // Hide the "connect a bot first" hint once the user has a bot.
+  const commandsHint = $('commandsEmptyHint');
+  if (commandsHint) commandsHint.classList.toggle('hidden', bots.length > 0);
 }
 
 // A disconnected bot can't be customized — reflect that by disabling the

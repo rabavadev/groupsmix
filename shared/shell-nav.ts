@@ -84,7 +84,7 @@ export function shellNavHtml(
       <span class="gm-brand-mark">YR</span>
       <span class="gm-brand-word">YourRank</span>
     </a>
-    <nav class="gm-tabs">${tabs}</nav>
+    <nav class="gm-tabs" aria-label="Dashboard">${tabs}</nav>
     <div class="gm-who">
       <a class="gm-help-link" href="/contact?type=feedback&amp;${helpQuery}">Feedback</a>
       <a class="gm-help-link gm-help-link--support" href="/contact?type=support&amp;${helpQuery}">Support</a>
@@ -101,7 +101,7 @@ export function shellNavHtml(
 export const SHELL_NAV_CSS = `
 :root{
   --gm-bg:#0b0b0c; --gm-panel:#0f0f11; --gm-line:#232327; --gm-line-2:#2e2e33;
-  --gm-ink:#ededf0; --gm-ink-soft:#a3a3ab; --gm-ink-mute:#8a8a94;
+  --gm-ink:#ededf0; --gm-ink-soft:#a3a3ab; --gm-ink-mute:#8b949e;
   --gm-accent:#c8ff00; --gm-accent-ink:#0b0b0c;
   --gm-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --gm-sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
@@ -116,7 +116,7 @@ export const SHELL_NAV_CSS = `
   width:26px;height:26px;display:grid;place-items:center;border-radius:6px;}
 .gm-brand-word{font-family:var(--gm-mono);font-size:14px;letter-spacing:.02em;
   color:var(--gm-ink);}
-.gm-tabs{display:flex;align-items:center;gap:2px;flex:1 1 auto;}
+.gm-tabs{display:flex;align-items:center;gap:2px;flex:1 1 auto;min-width:0;}
 .gm-tab{font-family:var(--gm-mono);font-size:12px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--gm-ink-mute);text-decoration:none;
   padding:18px 14px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
@@ -143,9 +143,11 @@ export const SHELL_NAV_CSS = `
 @media(max-width:680px){
     .gm-shell-inner{gap:12px;padding:0 12px;}
     .gm-brand-word{display:none;}
-    .gm-tab{padding:18px 9px;font-size:11px;letter-spacing:.05em;}
+    .gm-tab{padding:18px 9px;font-size:11px;letter-spacing:.05em;flex:0 0 auto;}
     .gm-who-name{display:none;}
     .gm-who .gm-help-link:not(.gm-help-link--support){display:none;}
+    .gm-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;flex-wrap:nowrap;}
+    .gm-tabs::-webkit-scrollbar{display:none;}
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
