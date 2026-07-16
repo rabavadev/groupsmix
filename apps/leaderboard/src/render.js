@@ -41,9 +41,9 @@ ${whyStats.length ? `<div class="pcol pcol-why"><span class="pcol-label">Why ${h
   const announce = `<div class="sr-only" aria-live="polite" id="lb-announce"></div>`;
   const payouts = `<div class="payouts" data-payouts hidden></div>`;
   const top3 = `<div class="top3" data-top3></div>`;
-  const findRank = `<div class="find-rank-bar"><div class="find-rank-wrap"><button type="button" aria-label="Search" class="find-rank-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button><input class="find-rank-input" type="text" placeholder="Find your rank..." data-find-rank aria-label="Search for your rank" /></div><span class="find-rank-result" data-find-result></span></div>`;
-  const table = `<div class="table"><div class="t-head"><span>#</span><span>Player</span><span class="ta-r">Wagered</span><span class="ta-r">Prize</span></div>
-<ol class="t-rows" data-rows></ol></div>`;
+  const findRank = `<div class="find-rank-bar"><div class="find-rank-wrap"><button type="button" aria-label="Search" class="find-rank-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button><input class="find-rank-input" type="text" placeholder="Find your rank..." data-find-rank aria-label="Search for your rank" /></div><span class="find-rank-result" data-find-result role="status" aria-live="polite"></span></div>`;
+  const table = `<div class="table" role="table" aria-label="Leaderboard standings"><div class="t-head" role="row"><span role="columnheader">#</span><span role="columnheader">Player</span><span class="ta-r" role="columnheader">Wagered</span><span class="ta-r" role="columnheader">Prize</span></div>
+<ol class="t-rows" role="rowgroup" data-rows></ol></div>`;
   const rules = `<details class="rules"><summary>Leaderboard rules — how wager counts</summary><ol class="rules-list" data-rules></ol></details>`;
   const pastSec = `<section id="past" class="past-sec" data-past hidden><h2 class="sec-title center">Past Winners</h2><p class="sec-sub center">Every closed-out period, on the record.</p>
 <div class="past-grid" data-past-grid></div></section>`;

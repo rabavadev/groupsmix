@@ -9,8 +9,8 @@
   --violet-2:  #0d0720;
   --panel:     #120e22;
   --panel-2:   #171331;
-  --line:      rgba(150, 120, 220, 0.16);
-  --line-2:    rgba(150, 120, 220, 0.28);
+  --line:      rgba(150, 120, 220, 0.30);
+  --line-2:    rgba(150, 120, 220, 0.45);
 
   --ink:       #f3f0ff;
   --ink-soft:  #b7b2d4;
@@ -33,6 +33,7 @@
   --radius-sm: 13px;
   --wrap: 1140px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --tap: 44px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -276,7 +277,7 @@ section { width: min(var(--wrap), 100% - 2.5rem); margin-inline: auto; }
   max-width: 380px; width: 100%;
 }
 .find-rank-wrap:focus-within { border-color: var(--cy); box-shadow: 0 0 0 3px rgba(70,212,255,0.12); }
-.find-rank-icon { flex-shrink: 0; color: var(--ink-mute); cursor: pointer; transition: color 0.2s; background: none; border: none; padding: 0; }
+.find-rank-icon { flex-shrink: 0; color: var(--ink-mute); cursor: pointer; transition: color 0.2s; background: none; border: none; padding: 0; min-width: var(--tap); min-height: var(--tap); display: inline-flex; align-items: center; justify-content: center; margin: -0.45rem 0 -0.45rem -0.5rem; }
 .find-rank-icon:hover { color: var(--cy); }
 .find-rank-input {
   flex: 1; background: none; border: none; outline: none;
@@ -355,6 +356,7 @@ section { width: min(var(--wrap), 100% - 2.5rem); margin-inline: auto; }
 .nav-toggle {
   display: none; background: none; border: none; color: var(--ink); cursor: pointer;
   padding: 0.4rem; line-height: 0;
+  min-width: var(--tap); min-height: var(--tap); align-items: center; justify-content: center;
 }
 .nav-toggle svg { width: 24px; height: 24px; }
 .nav-toggle:focus-visible { outline: 2px solid var(--cy); outline-offset: 2px; border-radius: 4px; }
@@ -380,7 +382,15 @@ section { width: min(var(--wrap), 100% - 2.5rem); margin-inline: auto; }
   .tr-wager, .t-head span:nth-child(3) { font-size: 0.72rem; letter-spacing: 0; }
   .tr-gap { display: none; }
   .find-rank-wrap { max-width: 100%; }
-  .find-rank-result { display: none; }
+  /* U-5/M-1: keep the find-your-rank result visible on mobile (was display:none) */
+  .find-rank-result { display: block; width: 100%; margin-top: 0.4rem; }
+  /* M-1: sticky search so the highest-value interaction stays reachable */
+  .find-rank-bar {
+    position: sticky; top: 3rem; z-index: 30;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    padding: 0.6rem 0; margin-inline: -0.2rem;
+  }
   .player-count-badge { font-size: 0.6rem; padding: 0.25rem 0.55rem; }
   .social-cards { grid-template-columns: 1fr; }
   .board-head { flex-direction: column; align-items: flex-start; }

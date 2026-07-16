@@ -98,14 +98,14 @@ function initParticles() {
 let previousPlayerNames = []; // tracks ordered names from last render for rank-change detection
 
 function buildPlayerRow(pl, rank, delay, gap) {
-    const prize = pl.prize ? `<span class="tr-prize has ta-r">${moneyShort(pl.prize)}</span>` : `<span class="tr-prize no ta-r">—</span>`;
+    const prize = pl.prize ? `<span class="tr-prize has ta-r" role="cell">${moneyShort(pl.prize)}</span>` : `<span class="tr-prize no ta-r" role="cell">—</span>`;
     const gapHtml = rank === 1 ? "" : (gap === 0
-      ? `<span class="tr-gap">↑ tied</span>`
-      : `<span class="tr-gap">↑ ${moneyShort(gap)} to next</span>`);
-    return `<li class="t-row" data-position="${rank}" data-name="${esc(pl.name)}" data-wagered="${Number(pl.wagered) || 0}" data-delay="${delay}">
-      <span class="tr-rank">${String(rank).padStart(2, "0")}</span>
-      <span class="tr-player"><span class="tr-av">${esc(initials(pl.name))}</span><span class="tr-name">${esc(pl.name)}</span></span>
-      <span class="tr-wager">${money(pl.wagered)}</span>${prize}${gapHtml}<span class="tr-bar" aria-hidden="true"><i></i></span></li>`;
+      ? `<span class="tr-gap" aria-hidden="true">↑ tied</span>`
+      : `<span class="tr-gap" aria-hidden="true">↑ ${moneyShort(gap)} to next</span>`);
+    return `<li class="t-row" role="row" data-position="${rank}" data-name="${esc(pl.name)}" data-wagered="${Number(pl.wagered) || 0}" data-delay="${delay}">
+      <span class="tr-rank" role="cell">${String(rank).padStart(2, "0")}</span>
+      <span class="tr-player" role="cell"><span class="tr-av" aria-hidden="true">${esc(initials(pl.name))}</span><span class="tr-name">${esc(pl.name)}</span></span>
+      <span class="tr-wager" role="cell">${money(pl.wagered)}</span>${prize}${gapHtml}<span class="tr-bar" aria-hidden="true"><i></i></span></li>`;
   }
 
 function buildTop3Card(pl, rank) {
