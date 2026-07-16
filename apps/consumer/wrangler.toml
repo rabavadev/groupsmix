@@ -14,6 +14,15 @@ max_batch_timeout = 5
 max_retries = 3
 dead_letter_queue = "yourrank-events-dlq"
 
+[[queues.consumers]]
+queue = "yourrank-events-dlq"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 0
+
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "9e5b625bfdd84cd691b44c4780bdaf13"
+
+# Secrets (set via wrangler secret put):
+#   DISCORD_MONITORING_WEBHOOK — optional Discord webhook for DLQ alerts

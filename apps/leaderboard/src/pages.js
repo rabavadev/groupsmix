@@ -43,11 +43,13 @@ export const PAGES = {
 <a href="/signup">Create your page</a>
 </div></noscript>
 <a href="#main-content" class="sr-only skip-link">Skip to content</a>
-<div class="wrap">
+<header><div class="wrap">
 <nav class="top"><div class="brand">Your<b>Rank</b></div>
 <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
 <div class="links"><a href="#how">How it works</a><a href="#postbacks">Postbacks</a><a href="#pricing">Pricing</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav>
-<main class="hero" id="main-content"><div>
+</div></header>
+<main id="main-content">
+<section class="hero"><div>
 <p class="label mb-18">Leaderboards for casino streamers</p>
 <h1>Run your leaderboard without touching code.</h1>
 <p class="lead">Your prize pool, referral code and ranked players, on a page you edit from a dashboard. Change a number, hit save, your page updates. That's it.</p>
@@ -58,8 +60,7 @@ export const PAGES = {
 <div class="spec-row"><span>Prize pool</span><span>editable</span></div>
 <div class="spec-row"><span>Countdown</span><span>auto</span></div>
 <div class="spec-row"><span>Standings</span><span>sorted by wager</span></div>
-<div class="spec-row"><span>Updates</span><span>instant</span></div></div></main>
-</div>
+<div class="spec-row"><span>Updates</span><span>instant</span></div></div></section>
 <section id="how"><div class="wrap"><h2 class="sec">How it works</h2><p class="sec-sub">Three steps. No build tools, no redeploys, nothing to host yourself.</p>
 <div class="steps">
 <div class="step"><div class="n">01</div><div><h3>Create your account</h3><p>Pick a handle. That becomes your page URL. Takes about a minute.</p></div></div>
@@ -89,6 +90,7 @@ export const PAGES = {
 <p class="sec-sub" style="margin-top:20px"><a href="/pricing">Compare every plan &amp; feature →</a></p></div></section>
 <section id="start"><div class="wrap"><h2 class="sec">Ready to start?</h2><p class="sec-sub">Create your free page in under a minute. No credit card needed.</p>
 <div class="cta cta-wrap"><a href="/signup" class="btn btn--accent btn--cta-lg">Create your free page</a></div></div></section>
+</main>
 <footer><div class="wrap footer-wrap">
 <span>© <span id="yr"></span> YourRank</span>
 <span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund">Refunds</a> · <a href="/cookies">Cookies</a> · <a href="/responsible">Responsible play</a></span>
@@ -1021,8 +1023,8 @@ ${endsAt ? `<p class="ov-timer-label">${esc(b.prizePool || "")} resets in</p>
 <link rel="stylesheet" href="/assets/landing.css" />
 </head><body>
 <a href="#main-content" class="sr-only skip-link">Skip to content</a>
-<nav class="top" style="max-width:1080px;margin:0 auto;padding:0 24px"><div class="brand">Your<b>Rank</b></div>
-<div class="links"><a href="/">Home</a><a href="/#how">How it works</a><a href="/contact">Contact</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav>
+<header><nav class="top" style="max-width:1080px;margin:0 auto;padding:0 24px"><div class="brand">Your<b>Rank</b></div>
+<div class="links"><a href="/">Home</a><a href="/#how">How it works</a><a href="/contact">Contact</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav></header>
 <main class="wrap" id="main-content" style="padding:48px 24px 24px">
 <h1 style="font-size:clamp(32px,5vw,52px);line-height:1.05;letter-spacing:-.03em;margin:0 0 12px;max-width:18ch">Simple pricing for streamers.</h1>
 <p class="lead" style="max-width:58ch">Start free. Upgrade when your board is pulling weight. No hidden fees, no credit card required to try.</p>
