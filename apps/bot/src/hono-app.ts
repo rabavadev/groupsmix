@@ -21,6 +21,7 @@ import {
   unsignedPostbacksEnabled,
 } from "../../../shared/postback.js";
 import { validatedBody, adminUserSchema, adminBotSchema, adminOfferSchema } from "./validation.js";
+import { errMessage } from "./errors.js";
 
 type Bindings = {
   PUBLIC_BASE_URL: string;
@@ -80,8 +81,8 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
   // This ensures ALL unhandled throws return {"error":"..."} JSON.
   app.onError((err, c) => {
     const isDev = c.env?.ENVIRONMENT === "development" || c.env?.ENVIRONMENT === "local";
-    const msg = (err as any)?.message ?? String(err);
-    const stack = (err as any)?.stack ?? "";
+    const msg = errMessage(err);
+    const stack = err instanceof Error ? err.stack ?? "" : "";
     console.error("[unhandled error]", msg, stack);
     return c.json({ error: isDev ? msg : "Internal Server Error" }, 500);
   });
@@ -350,7 +351,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
     let encToken: Buffer;
     try { encToken = await encryptToken(token); }
     catch (err) {
-      console.error("[admin POST /bots] encryptToken failed:", String((err as any)?.message ?? err));
+      console.error("[admin POST /bots] encryptToken failed:", errMessage(err));
       return c.json({ error: "Server configuration error — TOKEN_ENC_KEY may be invalid" }, 500);
     }
 
@@ -376,7 +377,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
         return { bot_id: row!.id, secret };
       });
     } catch (err) {
-      const msg = (err as any)?.message ?? String(err);
+      const msg = errMessage(err);
       console.error("[admin POST /bots] DB error:", msg);
       return c.json({ error: "Database error — please try again in a moment" }, 500);
     }
@@ -389,7 +390,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
         allowedUpdates: ["message", "callback_query"],
       });
     } catch (err) {
-      const msg = String((err as any)?.message ?? err);
+      const msg = errMessage(err);
       console.error("[admin POST /bots] setWebhook failed:", msg);
       return c.json({ error: "Telegram could not set the webhook. The bot is saved as pending; click Reconnect to retry once your PUBLIC_BASE_URL is reachable." }, 502);
     }
@@ -400,7 +401,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
         [out.result.bot_id, owner_id]
       );
     } catch (err) {
-      const msg = String((err as any)?.message ?? err);
+      const msg = errMessage(err);
       console.error("[admin POST /bots] activation failed:", msg);
       return c.json({ error: "Webhook set, but we could not activate the bot record." }, 500);
     }
@@ -486,7 +487,7 @@ export function buildHonoApp(): Hono<{ Bindings: Bindings }> {
         await exec(`UPDATE bots SET token_encrypted = $1 WHERE id = $2`, [reencrypted, row.id]);
         migrated++;
       } catch (err) {
-        console.error(`[reencrypt] bot ${row.id} failed:`, String((err as any)?.message || err));
+        console.error(`[reencrypt] bot ${row.id} failed:`, errMessage(err));
         errors++;
       }
     }
