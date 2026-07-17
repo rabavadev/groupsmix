@@ -172,6 +172,12 @@ table.admin-table td.note{max-width:260px;color:var(--ink-soft)}
   .social-url{grid-area:url}
 }
 
+/* --- sections toggles --- */
+.sections-editor{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.section-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--line-2)}
+.section-row:last-child{border-bottom:none}
+.section-name{font-weight:600;font-size:14px;color:var(--ink)}
+
 /* --- branding --- */
 .logo-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .logo-preview{width:44px;height:44px;object-fit:contain;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2)}

@@ -1,5 +1,6 @@
 // Server-render a streamer's leaderboard page from their data.
 import { templateCss, validTemplate } from "./templates/index.js";
+import { DEFAULT_EXTRA } from "./site.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 // E2E-009: Sanitize user-supplied URLs for href attributes.
 // Only allows https:// URLs (rejects http://, javascript:, data:, vbscript:).
@@ -338,6 +339,21 @@ body[data-preview] .top3{margin-bottom:14px}
     ? `${esc(b.name)} x ${esc(casino)}. Use code ${esc(code)} and compete in the ${esc(pool ? pool + " " : "")}${esc(period.toLowerCase())} leaderboard.`
     : `${esc(b.name)}'s ${esc(period.toLowerCase())} leaderboard${pool ? ` — compete for the ${esc(pool)} prize pool` : ""}.`;
   const dataJson = JSON.stringify(data).replace(/</g, "\\u003c");
+  const sections = { ...DEFAULT_EXTRA.sections, ...(data.sections || {}) };
+  const sectionAttrs = Object.entries(sections).map(([k, v]) => `data-sections-${k}="${String(v)}"`).join(" ");
+  const sectionCss = `<style nonce="${opts.nonce}">
+body[data-sections-hero="false"] .hero,
+body[data-sections-top3="false"] .top3,
+body[data-sections-search="false"] .find-rank-bar,
+body[data-sections-rules="false"] .rules,
+body[data-sections-partner="false"] #partner,
+body[data-sections-socials="false"] .socials-sec,
+body[data-sections-pastWinners="false"] .past-sec,
+body[data-sections-countdown="false"] .hero-timer,
+body[data-sections-countdown="false"] .countdown,
+body[data-sections-cta="false"] .hero-cta,
+body[data-sections-payouts="false"] .payouts { display: none !important; }
+</style>`;
   return `<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -347,15 +363,16 @@ body[data-preview] .top3{margin-bottom:14px}
 <meta property="og:url" content="${canonicalUrl}" />
 <meta name="twitter:card" content="${twitterCard}" /><meta name="twitter:title" content="${ogTitle}" /><meta name="twitter:description" content="${desc}" />${ogImage}
 <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" media="print" data-async />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&family=Press+Start+2P&family=Fredoka+One&family=Orbitron:wght@400;700;900&family=Pacifico&family=Baloo+2:wght@400;600;800&family=Cormorant+Garamond:wght@400;600;700&family=Rye&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" data-async />
 <script nonce="${opts.nonce}">document.querySelector('link[data-async]').onload=function(){this.media='all'};</script>
-<noscript><link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" /></noscript>
+<noscript><link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&family=Press+Start+2P&family=Fredoka+One&family=Orbitron:wght@400;700;900&family=Pacifico&family=Baloo+2:wght@400;600;800&family=Cormorant+Garamond:wght@400;600;700&family=Rye&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" /></noscript>
 <link rel="stylesheet" href="/assets/leaderboard.css" />
 ${tplCss}
 ${themeCss}
+${sectionCss}
 ${previewCss}
 <script nonce="${opts.nonce}" type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":${JSON.stringify(title)},"description":${JSON.stringify(desc)},"numberOfItems":${data.players ? data.players.length : 0}}</script>
-</head><body data-template="${tpl}"${opts.preview ? " data-preview" : ""}${opts.demo ? " data-demo" : ""}>
+</head><body data-template="${tpl}"${opts.preview ? " data-preview" : ""}${opts.demo ? " data-demo" : ""} ${sectionAttrs}>
 <noscript><p class="noscript-noscroll">This leaderboard requires JavaScript for live updates. The data shown below may not refresh automatically.</p></noscript>
 ${opts.demo ? `<div class="demo-bar" role="region" aria-label="Demo notice"><span class="demo-bar-txt">You're viewing a live <b>YourRank</b> demo board.</span><a class="demo-bar-cta" href="${esc(`${opts.homeUrl || ""}/signup`)}" target="_top">Create your free page →</a><a class="demo-bar-home" href="${esc(opts.homeUrl || "/")}" target="_top">Back to YourRank</a></div>` : ""}
 <a class="skip-link" href="#board">Skip to leaderboard</a>
