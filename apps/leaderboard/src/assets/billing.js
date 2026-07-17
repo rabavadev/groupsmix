@@ -189,6 +189,18 @@ function fmtExp(ms) {
 
   $("loading").hidden = true;
   $("bl").hidden = false;
+
+  // If the user arrived with ?plan=, start the matching checkout flow
+  // automatically (e.g. after choosing a plan on the landing/pricing page).
+  const autoPlan = new URLSearchParams(location.search).get("plan");
+  if (autoPlan) {
+    const target = autoPlan.toLowerCase();
+    if (target === "lifetime" && !isLifetime) {
+      startLifetimeCheckout();
+    } else if (["starter", "pro", "agency"].includes(target) && PLAN_ORDER.indexOf(target) > PLAN_ORDER.indexOf(plan)) {
+      startCheckout(target);
+    }
+  }
 })();
 
 // Trial button handler

@@ -24,6 +24,8 @@ document.querySelectorAll("[data-pw-toggle]").forEach(btn => {
 });
 
 const mode = { "/signup": "signup", "/forgot": "forgot", "/reset": "reset" }[location.pathname] || "login";
+const urlParams = new URLSearchParams(location.search);
+const planParam = urlParams.get("plan") || "";
 const form = document.getElementById("form");
 const errEl = document.getElementById("err");
 function getCsrf() { const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/); return m ? m[1] : ""; }
@@ -91,6 +93,15 @@ const nameInput = document.getElementById("name");
 const slugPreview = document.getElementById("slugPreview");
 function slugify(s){return String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);}
 if (nameInput && slugPreview) nameInput.addEventListener("input", () => { const s = slugify(nameInput.value); slugPreview.textContent = s ? "yourrank.site/" + s : "yourrank.site/…"; });
+const PLAN_NAMES = { free: "Free", starter: "Starter", pro: "Pro", agency: "Agency", lifetime: "Lifetime Pro" };
+if (mode === "signup" && PLAN_NAMES[planParam]) {
+  const banner = document.getElementById("planBanner");
+  if (banner) {
+    banner.hidden = false;
+    const isPaid = planParam !== "free";
+    banner.innerHTML = `You selected <b>${PLAN_NAMES[planParam]}</b>.${isPaid ? " After creating your account you'll go straight to checkout." : " You can upgrade anytime from the dashboard."}`;
+  }
+}
 if (mode === "login" || mode === "signup") {
   fetch("/api/auth/me").then(r => r.json()).then(d => { if (d && d.ok && d.user) location.href = "/dashboard"; }).catch(() => {});
 }
@@ -131,6 +142,14 @@ form.addEventListener("submit", async (e) => {
       submit.textContent = "Sent";
       return;
     }
-    location.href = mode === "signup" ? "/dashboard/setup" : "/dashboard";
+    if (mode === "signup") {
+      const p = (planParam || "").toLowerCase();
+      if (["starter", "pro"].includes(p)) location.href = `/dashboard/billing?plan=${encodeURIComponent(p)}`;
+      else if (p === "lifetime") location.href = "/dashboard/billing?plan=lifetime";
+      else if (p === "agency") location.href = "/contact?plan=agency";
+      else location.href = "/dashboard/setup";
+    } else {
+      location.href = "/dashboard";
+    }
   } catch (_) { errEl.textContent = "Network error. Try again."; submit.disabled = false; submit.textContent = orig; }
 });
