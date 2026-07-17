@@ -38,7 +38,54 @@ if (mode === "reset" && !new URLSearchParams(location.search).get("token")) {
   backLink.className = "back-link";
   if (errEl && errEl.parentNode) errEl.parentNode.appendChild(backLink);
 }
-form.querySelectorAll("input").forEach(inp => inp.addEventListener("input", () => { if (errEl.textContent) errEl.textContent = ""; }));
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function fieldErrEl(id) { return document.querySelector('[data-field-err="' + id + '"]'); }
+function setFieldError(id, msg) {
+  const inp = document.getElementById(id);
+  if (inp) inp.setAttribute("aria-invalid", "true");
+  const box = fieldErrEl(id);
+  if (box) box.textContent = msg;
+}
+function clearFieldError(id) {
+  const inp = document.getElementById(id);
+  if (inp) inp.removeAttribute("aria-invalid");
+  const box = fieldErrEl(id);
+  if (box) box.textContent = "";
+}
+function clearAllFieldErrors() {
+  form.querySelectorAll("[data-field-err]").forEach(b => { b.textContent = ""; });
+  form.querySelectorAll("input[aria-invalid]").forEach(i => i.removeAttribute("aria-invalid"));
+}
+form.querySelectorAll("input").forEach(inp => inp.addEventListener("input", () => {
+  if (errEl && errEl.textContent) errEl.textContent = "";
+  if (inp.id) clearFieldError(inp.id);
+}));
+
+/* Live password strength meter (signup only) */
+function passwordScore(v) {
+  if (v.length < 8) return 0;
+  let s = 1;
+  if (v.length >= 12) s++;
+  if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++;
+  if (/\d/.test(v) && /[^A-Za-z0-9]/.test(v)) s++;
+  return Math.min(s, 4);
+}
+const STRENGTH_LABELS = ["", "Weak", "Fair", "Good", "Strong"];
+const pwInput = document.getElementById("password");
+const pwMeter = document.getElementById("pwMeter");
+if (mode === "signup" && pwInput && pwMeter) {
+  const bar = pwMeter.querySelector(".pw-meter-bar");
+  const label = pwMeter.querySelector("[data-pw-strength]");
+  pwInput.addEventListener("input", () => {
+    const v = pwInput.value;
+    if (!v) { pwMeter.hidden = true; return; }
+    pwMeter.hidden = false;
+    const score = v.length < 8 ? 1 : passwordScore(v);
+    if (bar) bar.className = "pw-meter-bar s" + score;
+    if (label) label.textContent = v.length < 8 ? "At least 8 characters" : STRENGTH_LABELS[score];
+  });
+}
+
 const submit = document.getElementById("submit");
 const nameInput = document.getElementById("name");
 const slugPreview = document.getElementById("slugPreview");
@@ -62,9 +109,17 @@ form.addEventListener("submit", async (e) => {
     payload = { email: document.getElementById("email").value.trim(), password: document.getElementById("password").value };
     if (mode === "signup" && nameInput) payload.name = nameInput.value.trim();
   }
-  if (mode === "signup") {
-    if (!payload.email) { errEl.textContent = "Enter a valid email"; submit.disabled = false; submit.textContent = orig; return; }
-    if (payload.password.length < 8) { errEl.textContent = "Password must be at least 8 characters"; submit.disabled = false; submit.textContent = orig; return; }
+  if (mode === "login" || mode === "signup") {
+    clearAllFieldErrors();
+    let firstInvalid = null;
+    if (!EMAIL_RE.test(payload.email || "")) { setFieldError("email", "Enter a valid email address"); firstInvalid = firstInvalid || "email"; }
+    if (mode === "signup" && (payload.password || "").length < 8) { setFieldError("password", "Password must be at least 8 characters"); firstInvalid = firstInvalid || "password"; }
+    if (firstInvalid) {
+      const el = document.getElementById(firstInvalid);
+      if (el) el.focus();
+      submit.disabled = false; submit.textContent = orig;
+      return;
+    }
   }
   try {
     const res = await fetch(endpoint, { method: "POST", credentials: "include", headers: { "content-type": "application/json", "x-csrf-token": getCsrf() }, body: JSON.stringify(payload) });

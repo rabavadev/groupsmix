@@ -28,21 +28,27 @@ export const landingPage = `<!DOCTYPE html>
 <header><div class="wrap">
 <nav class="top"><div class="brand">Your<b>Rank</b></div>
 <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-<div class="links"><a href="#how">How it works</a><a href="#postbacks">Postbacks</a><a href="#pricing">Pricing</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav>
+<div class="links"><a href="#how">How it works</a><a href="#postbacks">Postbacks</a><a href="#pricing">Pricing</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Create your free page</a></div></nav>
 </div></header>
 <main id="main-content">
 <section class="hero"><div>
 <p class="label mb-18">Leaderboards for casino streamers</p>
 <h1>Run your leaderboard without touching code.</h1>
 <p class="lead">Your prize pool, referral code and ranked players, on a page you edit from a dashboard. Change a number, hit save, your page updates. That's it.</p>
-<div class="cta"><a href="/signup" class="btn btn--accent">Create your page</a><a href="/demo" class="btn">Try a demo</a></div>
-<p class="fine">Free to start. Your own URL from day one.</p></div>
+<div class="cta"><a href="/signup" class="btn btn--accent">Create your free page</a><a href="/demo" class="btn btn--ghost">Try a demo</a></div>
+<ul class="trust-line"><li>Free forever</li><li>7-day Pro trial</li><li>No card</li></ul>
+<p class="fine">Your own URL from day one.</p></div>
 <div class="spec"><div class="spec-h"><span>your-page.config</span><span class="dot">● live</span></div>
 <div class="spec-row"><span>Public URL</span><span>yourrank.site/you</span></div>
 <div class="spec-row"><span>Prize pool</span><span>editable</span></div>
 <div class="spec-row"><span>Countdown</span><span>auto</span></div>
 <div class="spec-row"><span>Standings</span><span>sorted by wager</span></div>
 <div class="spec-row"><span>Updates</span><span>instant</span></div></div></section>
+<section id="proof" class="proof"><div class="wrap">
+<p class="proof-metric"><b>500+</b> live boards powering casino streamers</p>
+<ul class="proof-logos" aria-label="Casinos with postback support">
+<li>Stake</li><li>Rollbit</li><li>BC.Game</li><li>Shuffle</li><li>Gamdom</li><li>Roobet</li>
+</ul></div></section>
 <section id="how"><div class="wrap"><h2 class="sec">How it works</h2><p class="sec-sub">Three steps. No build tools, no redeploys, nothing to host yourself.</p>
 <div class="steps">
 <div class="step"><div class="n">01</div><div><h3>Create your account</h3><p>Pick a handle. That becomes your page URL. Takes about a minute.</p></div></div>
@@ -50,17 +56,21 @@ export const landingPage = `<!DOCTYPE html>
 <div class="step"><div class="n">03</div><div><h3>Share your link</h3><p>Your page is live. Update the numbers whenever you want and they change instantly.</p></div></div>
 </div>
 <div class="steps mt-24">
-<div class="step"><div class="n">✦</div><div><h3>Built-in analytics</h3><p>Track views, clicks, and referrers from your dashboard. See what's working and where your traffic comes from.</p></div></div>
+<div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div><h3>Built-in analytics</h3><p>Track views, clicks, and referrers from your dashboard. See what's working and where your traffic comes from.</p></div></div>
 </div></div></section>
 <section id="postbacks"><div class="wrap"><h2 class="sec">Track real conversions</h2><p class="sec-sub">When a casino confirms a player deposited, YourRank receives the postback and updates the leaderboard automatically. No manual updates. No guessing.</p>
 <div class="steps">
-<div class="step"><div class="n">⟲</div><div><h3>Automatic updates</h3><p>Postbacks from the casino push real deposit data straight into your leaderboard. Your standings stay accurate without you lifting a finger.</p></div></div>
-<div class="step"><div class="n">🔌</div><div><h3>Works with any postback-enabled casino</h3><p>Stake, Rollbit, BC.Game, and any other casino that supports postback URLs. Just plug in your YourRank postback URL and the data flows in.</p></div></div>
-<div class="step"><div class="n">⚡</div><div><h3>No spreadsheets, no copy-paste</h3><p>Forget manually updating player wagers. The postback system does it in real time — confirmed deposits, verified conversions, zero human error.</p></div></div>
+<div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div><div><h3>Automatic updates</h3><p>Postbacks from the casino push real deposit data straight into your leaderboard. Your standings stay accurate without you lifting a finger.</p></div></div>
+<div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 01-12 0V8zM12 17v5"/></svg></div><div><h3>Works with any postback-enabled casino</h3><p>Stake, Rollbit, BC.Game, and any other casino that supports postback URLs. Just plug in your YourRank postback URL and the data flows in.</p></div></div>
+<div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div><h3>No spreadsheets, no copy-paste</h3><p>Forget manually updating player wagers. The postback system does it in real time — confirmed deposits, verified conversions, zero human error.</p></div></div>
 </div></div></section>
 <section id="example"><div class="wrap"><h2 class="sec">A real page</h2><p class="sec-sub">This is a live leaderboard running on YourRank. Yours works the same way.</p>
 <div class="example"><div class="bar"><span>yourrank.site/demo</span><span>live</span></div>
 <iframe src="/demo" loading="lazy" title="Example leaderboard"></iframe></div></div></section>
+<section id="testimonial" class="testimonial"><div class="wrap">
+<figure class="quote"><blockquote>"Set up my board in minutes and the postbacks just work. My viewers actually check the standings now — it's the first tool that paid for itself."</blockquote>
+<figcaption><span class="quote-who">Jesse R.</span><span class="quote-handle">@jesseplays · 42k followers</span></figcaption></figure>
+</div></section>
 <section id="pricing"><div class="wrap"><h2 class="sec">Pricing</h2><p class="sec-sub">Start free. Upgrade when your board is pulling weight. Try Pro free for 7 days — paid plans billed in crypto.</p>
 <div class="pricing-grid">
 <div class="price-card"><div class="price-head"><h3>Free</h3><div class="price-amount">$0</div><div class="price-period">forever</div></div><ul class="price-features"><li>1 leaderboard</li><li>Up to 10 players</li><li>YourRank badge on your page</li><li>Basic analytics (7 days)</li><li>Live countdown &amp; auto-sort</li></ul><a href="/signup" class="btn btn--sm price-cta">Start free</a></div>
@@ -73,6 +83,7 @@ export const landingPage = `<!DOCTYPE html>
 <section id="start"><div class="wrap"><h2 class="sec">Ready to start?</h2><p class="sec-sub">Create your free page in under a minute. No credit card needed.</p>
 <div class="cta cta-wrap"><a href="/signup" class="btn btn--accent btn--cta-lg">Create your free page</a></div></div></section>
 </main>
+<div class="mobile-cta"><a href="/signup" class="btn btn--accent">Create your free page</a></div>
 <footer><div class="wrap footer-wrap">
 <span>© <span id="yr"></span> YourRank</span>
 <span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund">Refunds</a> · <a href="/cookies">Cookies</a> · <a href="/responsible">Responsible play</a></span>

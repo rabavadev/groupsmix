@@ -14,12 +14,13 @@ export const pricingPage = `<!DOCTYPE html><html lang="en"><head>
 <link rel="stylesheet" href="/assets/landing.css" />
 </head><body>
 <a href="#main-content" class="sr-only skip-link">Skip to content</a>
-<header><nav class="top" style="max-width:1080px;margin:0 auto;padding:0 24px"><div class="brand">Your<b>Rank</b></div>
-<div class="links"><a href="/">Home</a><a href="/#how">How it works</a><a href="/contact">Contact</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Get started</a></div></nav></header>
+<header><nav class="top wrap"><a href="/" class="brand">Your<b>Rank</b></a>
+<button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+<div class="links"><a href="/#how">How it works</a><a href="/#postbacks">Postbacks</a><a href="/pricing">Pricing</a><a href="/login">Sign in</a><a href="/signup" class="btn btn--accent">Create your free page</a></div></nav></header>
 <main class="wrap" id="main-content" style="padding:48px 24px 24px">
 <h1 style="font-size:clamp(32px,5vw,52px);line-height:1.05;letter-spacing:-.03em;margin:0 0 12px;max-width:18ch">Simple pricing for streamers.</h1>
-<p class="lead" style="max-width:58ch">Start free. Upgrade when your board is pulling weight. No hidden fees, no credit card required to try.</p>
-<p class="lead" style="max-width:58ch;font-size:15px;color:var(--muted,#9aa0aa);margin-top:8px">Try every Pro feature with a <strong>7-day free Pro trial</strong> — no payment up front. Paid plans are billed in <strong>crypto</strong> (BTC, ETH, USDT and 100+ more) and activate automatically once the network confirms.</p>
+<p class="prose-lead">Start free. Upgrade when your board is pulling weight. No hidden fees, no credit card required to try.</p>
+<p class="prose-lead prose-lead--sub">Try every Pro feature with a <b>7-day free Pro trial</b> — no payment up front. Paid plans are billed in <b>crypto</b> (BTC, ETH, USDT and 100+ more) and activate automatically once the network confirms.</p>
 <div class="pricing-grid" style="margin-top:32px">
 <div class="price-card"><div class="price-head"><h3>Free</h3><div class="price-amount">$0</div><div class="price-period">forever</div></div><ul class="price-features"><li>1 leaderboard</li><li>Up to 10 players</li><li>YourRank badge on your page</li><li>Basic analytics (7 days)</li><li>Live countdown &amp; auto-sort</li></ul><a href="/signup" class="btn btn--sm price-cta">Start free</a></div>
 <div class="price-card"><div class="price-head"><h3>Starter</h3><div class="price-amount">$12<span>/30 days</span></div></div><ul class="price-features"><li>1 leaderboard</li><li>Up to 25 players</li><li>No YourRank badge</li><li>Full analytics (30 days)</li><li>CSV import</li></ul><a href="/signup" class="btn btn--sm price-cta">Start</a></div>
@@ -55,6 +56,7 @@ export const pricingPage = `<!DOCTYPE html><html lang="en"><head>
 
 <div class="cta cta-wrap" style="margin-top:64px;text-align:center"><a href="/signup" class="btn btn--accent btn--cta-lg">Create your free page</a></div>
 </main>
+<div class="mobile-cta"><a href="/signup" class="btn btn--accent">Create your free page</a></div>
 <footer><div class="wrap footer-wrap">
 <span>© <span id="yr"></span> YourRank</span>
 <span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund">Refunds</a> · <a href="/cookies">Cookies</a> · <a href="/responsible">Responsible play</a></span>
