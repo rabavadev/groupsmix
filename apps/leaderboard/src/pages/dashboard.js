@@ -144,6 +144,8 @@ export const dashboardPage = leaderboardPageHtml({
 </details></div>
 </div></div>
 <div class="empty" id="brandLock" hidden>Branding is a Pro feature. <a href="#" id="brandUpgrade">Upgrade to unlock it</a>.</div></div>
+<div class="card" id="sectionsCard"><h2>Sections</h2><p class="card-sub">Choose what appears on your public page. Turn sections off to build a leaner layout.</p>
+<div class="sections-editor" id="sectionsList"></div></div>
 <div class="card" id="socialsCard"><h2>Social links</h2><p class="card-sub">Add the links to your channels. Turn a network <b>on</b> to show it in the “Join the Socials” section of your public page; turn it <b>off</b> to hide it. Links with the toggle on but no URL stay hidden.</p>
 <div class="socials-editor" id="socialsList"></div></div>
 </section>

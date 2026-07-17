@@ -10,11 +10,6 @@
 // the renderer via data.branding.template.
 import { MIDNIGHT_CSS } from "./midnight.js";
 import { NEON_CSS } from "./neon.js";
-import { MINIMAL_CSS } from "./minimal.js";
-import { SPONSOR_CSS } from "./sponsor.js";
-import { ESPORTS_CSS } from "./esports.js";
-import { ROYALE_CSS } from "./royale.js";
-import { OCEAN_CSS } from "./ocean.js";
 import { PODIUM_CSS } from "./podium.js";
 import { BROADCAST_CSS } from "./broadcast.js";
 import { CARDS_CSS } from "./cards.js";
@@ -27,6 +22,7 @@ import { TERMINAL_CSS } from "./terminal.js";
 import { REWARDS_CSS } from "./rewards.js";
 import { AMBER_CSS } from "./amber.js";
 import { COPPER_CSS } from "./copper.js";
+import { CASINO_TEMPLATES } from "./casino.js";
 
 export const TEMPLATES = {
   classic: {
@@ -60,61 +56,6 @@ export const TEMPLATES = {
       { id: "cyber", name: "Cyber", accentA: "#00ffd1", accentB: "#ff2cd0" },
       { id: "ultraviolet", name: "Ultraviolet", accentA: "#7b61ff", accentB: "#ff3ea5" },
       { id: "laser", name: "Laser", accentA: "#d7ff32", accentB: "#00c2ff" },
-    ],
-  },
-  minimal: {
-    id: "minimal",
-    name: "Minimal Light",
-    description: "Editorial, sponsor-safe, and intentionally quiet.",
-    css: MINIMAL_CSS,
-    presets: [
-      { id: "studio", name: "Studio", accentA: "#15171a", accentB: "#0066ff" },
-      { id: "forest", name: "Forest", accentA: "#14532d", accentB: "#00a884" },
-      { id: "plum", name: "Plum", accentA: "#572b67", accentB: "#d1498b" },
-    ],
-  },
-  sponsor: {
-    id: "sponsor",
-    name: "Sponsor Dark",
-    description: "Polished brand campaign styling for sponsor activations.",
-    css: SPONSOR_CSS,
-    presets: [
-      { id: "ember", name: "Ember", accentA: "#ff4d4d", accentB: "#ff9f43" },
-      { id: "enterprise", name: "Enterprise", accentA: "#4f8cff", accentB: "#7357ff" },
-      { id: "mint", name: "Mint", accentA: "#42e6a4", accentB: "#16a6d9" },
-    ],
-  },
-  esports: {
-    id: "esports",
-    name: "Arena Esports",
-    description: "Angular match-day graphics with competitive punch.",
-    css: ESPORTS_CSS,
-    presets: [
-      { id: "lime", name: "Lime", accentA: "#cdff1f", accentB: "#72ff3d" },
-      { id: "redline", name: "Redline", accentA: "#ff3b3b", accentB: "#ff7a1a" },
-      { id: "ice", name: "Ice", accentA: "#7de8ff", accentB: "#4c68ff" },
-    ],
-  },
-  royale: {
-    id: "royale",
-    name: "Royal Velvet",
-    description: "Deep velvet, warm gold, and high-roller polish.",
-    css: ROYALE_CSS,
-    presets: [
-      { id: "velvet", name: "Velvet", accentA: "#ffcc7c", accentB: "#ff6a9f" },
-      { id: "amethyst", name: "Amethyst", accentA: "#e6c6ff", accentB: "#a855f7" },
-      { id: "ruby", name: "Ruby", accentA: "#ffd0c9", accentB: "#d92f5a" },
-    ],
-  },
-  ocean: {
-    id: "ocean",
-    name: "Electric Blue",
-    description: "Deep ocean gradients with crisp electric highlights.",
-    css: OCEAN_CSS,
-    presets: [
-      { id: "current", name: "Current", accentA: "#51dbff", accentB: "#4776ff" },
-      { id: "lagoon", name: "Lagoon", accentA: "#4fffd2", accentB: "#1697d5" },
-      { id: "arctic", name: "Arctic", accentA: "#d8fbff", accentB: "#68a4ff" },
     ],
   },
   podium: {
@@ -249,6 +190,7 @@ export const TEMPLATES = {
       { id: "brass", name: "Brass", accentA: "#f0b45a", accentB: "#b8862c" },
     ],
   },
+  ...CASINO_TEMPLATES,
 };
 
 export const TEMPLATE_IDS = Object.keys(TEMPLATES);

@@ -4,6 +4,19 @@ import { state } from "./state.js";
 import { renderBoardSwitcher, renderBoardsPage, renderSidebarBoardSwitcher } from "./boards.js";
 import { renderPlayers } from "./players.js";
 
+export const DEFAULT_SECTIONS = {
+  hero: true,
+  top3: true,
+  search: true,
+  rules: true,
+  partner: true,
+  socials: true,
+  pastWinners: true,
+  countdown: true,
+  cta: true,
+  payouts: true,
+};
+
 export function renderPlan() {
   const plan = state.ME.plan || "free";
   const planNames = { free: "Free", starter: "Starter", pro: "Pro", agency: "Agency" };
@@ -64,6 +77,7 @@ export function collect() {
     whyStats: state.EXTRA.whyStats,
     rules: state.EXTRA.rules,
     socials: state.EXTRA.socials,
+    sections: state.EXTRA.sections,
     players,
   };
   const pubToggle = $("pubToggle");
@@ -282,6 +296,44 @@ export function renderSocials() {
   list.addEventListener("input", collectSocials);
   list.addEventListener("change", collectSocials);
   collectSocials();
+}
+
+const SECTIONS_CATALOG = [
+  { key: "hero", label: "Hero header" },
+  { key: "top3", label: "Top 3 podium" },
+  { key: "search", label: "Find my rank search" },
+  { key: "payouts", label: "Prize payout strip" },
+  { key: "countdown", label: "Countdown timer" },
+  { key: "cta", label: "Join CTA button" },
+  { key: "rules", label: "Rules section" },
+  { key: "partner", label: "Partner panel" },
+  { key: "socials", label: "Social links" },
+  { key: "pastWinners", label: "Past winners" },
+];
+
+function collectSections() {
+  const list = $("sectionsList");
+  if (!list) return;
+  const sections = {};
+  for (const row of list.querySelectorAll("[data-section]")) {
+    const key = row.dataset.section;
+    const checked = row.querySelector(".section-toggle")?.checked ?? true;
+    sections[key] = checked;
+  }
+  state.EXTRA.sections = { ...(state.EXTRA.sections || DEFAULT_SECTIONS), ...sections };
+}
+
+export function renderSections() {
+  const list = $("sectionsList");
+  if (!list) return;
+  const current = { ...DEFAULT_SECTIONS, ...(state.EXTRA?.sections || {}) };
+  list.innerHTML = SECTIONS_CATALOG.map((s) => `<div class="section-row" data-section="${esc(s.key)}">
+<span class="section-name">${esc(s.label)}</span>
+<label class="switch" title="Show on public page"><input type="checkbox" class="section-toggle" ${current[s.key] !== false ? "checked" : ""} /><span class="switch-track"></span></label>
+</div>`).join("");
+  list.addEventListener("input", collectSections);
+  list.addEventListener("change", collectSections);
+  collectSections();
 }
 
 export function renderOverlay() {

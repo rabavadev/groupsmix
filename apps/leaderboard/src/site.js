@@ -56,6 +56,18 @@ export const DEFAULT_EXTRA = {
     { name: "Twitch", handle: "Watch live", action: "Follow", url: "#", brand: "twitch" },
     { name: "X", handle: "Latest updates", action: "Follow", url: "#", brand: "x" },
   ],
+  sections: {
+    hero: true,
+    top3: true,
+    search: true,
+    rules: true,
+    partner: true,
+    socials: true,
+    pastWinners: true,
+    countdown: true,
+    cta: true,
+    payouts: true,
+  },
 };
 
 // All site columns except logo_data (base64 image, up to 180KB) — that's only
@@ -277,6 +289,7 @@ export function publicShape(site, players, archives = [], hasLogo = false) {
     branding: { hasLogo, accentA: theme.accentA, accentB: theme.accentB, template: theme.template },
     pastWinners: archives.map(archiveShape),
     players: players.map((p) => ({ name: p.name, wagered: p.wagered, prize: p.prize })),
+    sections: m.sections || DEFAULT_EXTRA.sections,
   };
 }
 
@@ -654,11 +667,13 @@ export async function saveSite(env, user, payload, siteId, request = null) {
   // H-25: notification credentials live in dedicated columns (and Discord URLs
   // are encrypted at rest), not inside extra_json. Strip any legacy copies so
   // they cannot leak through public-shape or future code that reads extra_json.
+  const incomingSections = payload.sections && typeof payload.sections === "object" ? payload.sections : {};
   const extra = {
     chips: payload.partner?.chips ?? payload.chips ?? existingExtra.chips ?? DEFAULT_EXTRA.chips,
     whyStats: payload.whyStats ?? existingExtra.whyStats ?? DEFAULT_EXTRA.whyStats,
     rules: payload.rules ?? existingExtra.rules ?? DEFAULT_EXTRA.rules,
     socials: payload.socials ?? existingExtra.socials ?? DEFAULT_EXTRA.socials,
+    sections: { ...(existingExtra.sections || DEFAULT_EXTRA.sections), ...incomingSections },
   };
 
   let discordWebhookUrlEnc = site.discord_webhook_url_enc;
