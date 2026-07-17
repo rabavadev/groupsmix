@@ -6,7 +6,9 @@ export function broadcastsPanel(): string {
     <label for="bcBotSelect" class="muted style-22">From bot</label>
     <select class="style-23" id="bcBotSelect"><option value="">Loading bots…</option></select>
     <label class="sr-only" for="bcBody">Message</label>
-    <textarea id="bcBody" rows="3" placeholder="Message to all your bot's subscribers (Markdown supported)"></textarea>
+    <textarea id="bcBody" rows="3" placeholder="Message to all your bot's subscribers (HTML supported)"></textarea>
+    <label class="sr-only" for="bcImage">Image URL</label>
+    <input id="bcImage" type="url" placeholder="Image URL (optional) — shown above the message" />
     <div id="bcAudience" class="muted style-24" aria-live="polite">This will send to <b>–</b> subscribers.</div>
     <div class="style-25">
       <button data-action="sendBroadcast" type="button">Send broadcast</button>
