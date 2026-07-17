@@ -7,7 +7,12 @@ export const loginPage = `<!DOCTYPE html><html lang="en"><head>
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
 <a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
-<div><h1>Your leaderboard, hosted and handled.</h1><p>Edit your prize pool, code and players from one dashboard. Your page updates instantly. No code, no redeploys.</p></div>
+<div><h1>Your leaderboard, hosted and handled.</h1><p>Edit your prize pool, code and players from one dashboard. Your page updates instantly. No code, no redeploys.</p>
+<div class="auth-spec" aria-hidden="true"><div class="auth-spec-h"><span>your-page.config</span><span class="dot">● live</span></div>
+<div class="auth-spec-row"><span>Public URL</span><span>yourrank.site/you</span></div>
+<div class="auth-spec-row"><span>Prize pool</span><span>editable</span></div>
+<div class="auth-spec-row"><span>Countdown</span><span>auto</span></div>
+<div class="auth-spec-row"><span>Updates</span><span>instant</span></div></div></div>
 <div class="feat"><div>— Live countdown to every reset</div><div>— Auto-sorted standings from wager</div><div>— Your own public URL</div></div></aside>
 <main class="auth-main" id="main-content"><div class="auth-card"><a href="/" class="auth-brand-m">Your<b>Rank</b></a><h2>Sign in</h2><p class="sub">Welcome back.</p>
 <form id="form" method="POST" action="/api/auth/login" novalidate><div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required aria-describedby="email-err" /><span class="field-err" id="email-err" data-field-err="email" role="alert" aria-live="polite"></span></div>
