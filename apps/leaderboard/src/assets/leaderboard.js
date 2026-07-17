@@ -120,6 +120,22 @@ window.__yr = { money, moneyShort, esc, initials, ord };
 
 function currentTemplate() { return document.body?.dataset?.template || "classic"; }
 function isCasinoFull() { return !!((window.CASINO_BUILDERS || {}).top3 || {})[currentTemplate()]; }
+
+// CASINO-STYLE: full-page templates ship data-style-* attributes for dynamic
+// per-player values (win-rate bars, gradients, score bars, animation-delay, etc.)
+// because the strict CSP blocks inline style="..." attributes. Apply them via
+// CSSOM after render.
+function hydrateStyles() {
+  for (const el of $$("[data-style]")) {
+    for (const key of Object.keys(el.dataset)) {
+      if (!key.startsWith("style")) continue;
+      let cssProp = key.slice(5);
+      cssProp = cssProp[0].toLowerCase() + cssProp.slice(1);
+      el.style[cssProp] = el.dataset[key];
+      delete el.dataset[key];
+    }
+  }
+}
 function buildTop3(pl, rank) {
   const fn = (window.CASINO_BUILDERS?.top3 || {})[currentTemplate()];
   return fn ? fn(pl, rank) : buildTop3Card(pl, rank);
@@ -166,6 +182,7 @@ function updateLeaderboard(players) {
       }).join("");
       // SEC-713: apply animation-delay via CSSOM (CSP blocks style="" attributes)
       $$("[data-rows] [data-delay]").forEach((el) => { el.style.animationDelay = el.dataset.delay + "s"; });
+    hydrateStyles();
     applyRowBars(sorted);
 
     // Flash rank-change indicators
@@ -318,6 +335,7 @@ function boot() {
     }).join("");
     // SEC-713: apply animation-delay via CSSOM (CSP blocks style="" attributes)
     $$("[data-rows] [data-delay]").forEach((el) => { el.style.animationDelay = el.dataset.delay + "s"; });
+    hydrateStyles();
     applyRowBars(players);
   }
   // Store initial ordering

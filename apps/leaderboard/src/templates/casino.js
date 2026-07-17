@@ -4,6 +4,9 @@ import {
   composeArcade,
   composeCandy,
   composeFun,
+  composeLeaderboard,
+  composeLeaderboardV2,
+  composePro,
   composeSpace,
   composeTropical,
   composeUnderwater,
@@ -11,6 +14,7 @@ import {
   composeWestern,
   CASINO_FULL_CSS,
 } from "./casino-full.js";
+import { CASINO_TEXT_DEFAULTS } from "./casino-text.js";
 
 const PRESETS = {
   arcade: [
@@ -53,6 +57,21 @@ const PRESETS = {
     { id: "dust", name: "Dust", accentA: "#D4B886", accentB: "#8B6B3D" },
     { id: "whiskey", name: "Whiskey", accentA: "#8B4513", accentB: "#F5A623" },
   ],
+  pro: [
+    { id: "green", name: "Green", accentA: "#22C55E", accentB: "#0D1A0F" },
+    { id: "amber", name: "Amber", accentA: "#F59E0B", accentB: "#0D1A0F" },
+    { id: "mono", name: "Mono", accentA: "#E5E5E5", accentB: "#0D1A0F" },
+  ],
+  leaderboardV2: [
+    { id: "cream", name: "Cream", accentA: "#C41E3A", accentB: "#FAF7F2" },
+    { id: "ink", name: "Ink", accentA: "#000000", accentB: "#FAF7F2" },
+    { id: "gold", name: "Gold", accentA: "#B8860B", accentB: "#FAF7F2" },
+  ],
+  leaderboard: [
+    { id: "dark", name: "Dark", accentA: "#38bdf8", accentB: "#020617" },
+    { id: "void", name: "Void", accentA: "#8B5CF6", accentB: "#020617" },
+    { id: "ember", name: "Ember", accentA: "#F59E0B", accentB: "#020617" },
+  ],
 };
 
 const METAS = {
@@ -64,6 +83,9 @@ const METAS = {
   underwater: { name: "Casino Underwater", description: "Deep-sea leaderboard with cyan, pink, and bubbly edges." },
   vip: { name: "Casino VIP", description: "Full-page black-and-gold members list with elegant serif type." },
   western: { name: "Casino Western", description: "Wild west saloon board with wood grain, gold, and sheriff stars." },
+  pro: { name: "Casino Pro", description: "Poker-style data table with hands, win-rate bars, and net-profit deltas." },
+  leaderboardV2: { name: "Editorial Standings", description: "Magazine-style light leaderboard with serif headlines and score bars." },
+  leaderboard: { name: "Cyber Standings", description: "Dark shadcn podium and list with animated cards and glow effects." },
 };
 
 export const CASINO_TEMPLATES = Object.fromEntries(
@@ -75,6 +97,7 @@ export const CASINO_TEMPLATES = Object.fromEntries(
       description: METAS[id].description,
       css: CASINO_FULL_CSS[id],
       presets: PRESETS[id],
+      textDefaults: CASINO_TEXT_DEFAULTS[id] || {},
     },
   ])
 );
@@ -88,6 +111,27 @@ export const CASINO_COMPOSERS = {
   underwater: composeUnderwater,
   vip: composeVip,
   western: composeWestern,
+  pro: composePro,
+  leaderboardV2: composeLeaderboardV2,
+  leaderboard: composeLeaderboard,
 };
 
 export const CASINO_FULL = new Set(Object.keys(CASINO_COMPOSERS));
+
+export { CASINO_TEXT_DEFAULTS };
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// Replace default text strings in a full-page template with streamer overrides.
+export function applyCasinoText(html, templateId, overrides = {}) {
+  const defaults = CASINO_TEXT_DEFAULTS[templateId] || {};
+  const keys = Object.keys(defaults).sort((a, b) => (defaults[b]?.length || 0) - (defaults[a]?.length || 0));
+  for (const key of keys) {
+    const original = defaults[key];
+    const replacement = overrides[key];
+    if (replacement !== undefined && replacement !== original) {
+      html = html.split(original).join(esc(replacement));
+    }
+  }
+  return html;
+}

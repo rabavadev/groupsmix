@@ -17,6 +17,16 @@ const scoreNumber = z
   .transform((value) => Number(value))
   .pipe(z.number().finite().min(0).max(1e15));
 
+const signedNumber = z
+  .union([z.number(), z.string()])
+  .transform((value) => Number(value))
+  .pipe(z.number().finite().min(-1e15).max(1e15));
+
+const intNumber = z
+  .union([z.number(), z.string()])
+  .transform((value) => Number(value))
+  .pipe(z.number().int().finite().min(-2147483648).max(2147483647));
+
 const scoreBodySchema = z
   .object({
     slug: z.string().trim().min(1).max(80).optional(),
@@ -25,6 +35,11 @@ const scoreBodySchema = z
       name: z.string().trim().min(1).max(80),
       wagered: scoreNumber.optional(),
       prize: scoreNumber.optional(),
+      score: scoreNumber.optional(),
+      hands: intNumber.optional(),
+      netProfit: signedNumber.optional(),
+      winRate: signedNumber.optional(),
+      change: intNumber.optional(),
     }).strict()).max(9999),
   })
   .strict()
@@ -94,7 +109,16 @@ export async function handleScores(request, env) {
     const savePayload = {
       brand: { name: site.name, tagline: site.tagline, casino: site.casino, code: site.code, ctaUrl: site.cta_url, prizePool: site.prize_pool, period: site.period, resetNote: site.reset_note },
       partner: { blurb: site.blurb },
-      players: validPlayers.map(p => ({ name: String(p.name).slice(0, 40), wagered: Number(p.wagered) || 0, prize: Number(p.prize) || 0 })),
+      players: validPlayers.map(p => ({
+        name: String(p.name).slice(0, 40),
+        wagered: Number(p.wagered) || 0,
+        prize: Number(p.prize) || 0,
+        score: p.score !== undefined ? Number(p.score) : undefined,
+        hands: p.hands !== undefined ? Number(p.hands) : undefined,
+        netProfit: p.netProfit !== undefined ? Number(p.netProfit) : undefined,
+        winRate: p.winRate !== undefined ? Number(p.winRate) : undefined,
+        change: p.change !== undefined ? Number(p.change) : undefined,
+      })),
     };
     const r = await saveSite(env, user, savePayload, site.id, request);
     return r.error ? bad(r.error, 400) : json({ ok: true, players: validPlayers.length }, 200, rateLimitHeaders(rl));

@@ -167,6 +167,115 @@
     return `<div class="w-full rounded-lg p-4 flex items-center border-l-8 border-[#F5A623] shadow-[0_4px_10px_rgba(0,0,0,0.5)] transform hover:scale-[1.01] transition-all cursor-pointer hover:bg-[#381E0C] group bg-[#2C1000]"><div class="w-10 h-10 md:w-12 md:h-12 bg-[#F5A623] rounded-full flex items-center justify-center text-[#2C1000] shadow-[inset_0_2px_4px_rgba(255,255,255,0.4)] shrink-0 border-2 border-[#C98415] relative"><div class="absolute inset-0 border-2 border-[#C98415] rounded-full rotate-45 scale-[1.05] opacity-30"></div><span class="font-black text-lg md:text-xl relative z-10 font-['Inter']">4</span></div><div class="ml-4 flex-grow flex flex-col md:flex-row md:items-center justify-between"><div class="flex items-center gap-2"><span class="text-[#FFF8E7] text-lg md:text-xl tracking-wide group-hover:text-[#F5A623] transition-colors [font-family:'Rye',_serif]">${name}</span>${icon}</div><div class="text-[#F5A623] text-lg md:text-2xl tabular-nums mt-1 md:mt-0 flex items-center gap-2 [font-family:'Rye',_serif]">${score}<!-- --> <span class="text-base opacity-80 filter grayscale-[50%] brightness-[1.5]">�${rankStr}�</span></div></div></div>`;
   }
 
+  function rowPro(pl, rank, delay, gap) {
+    const name = yr().esc(pl.name);
+    const score = fmtScore(pl.score || pl.wagered || 0);
+    const hands = fmtScore(pl.hands || 0);
+    const netProfit = Number(pl.netProfit) || (Number(pl.prize) - Number(pl.wagered)) || 0;
+    const winRate = Number(pl.winRate) || 0;
+    const change = Number(pl.change) || 0;
+    const initials = wordInitials(pl.name);
+    const handle = "@" + String(pl.name).toLowerCase().replace(/[\s]+/g, "_").slice(0, 14);
+    const rankPad = String(rank).padStart(2, "0");
+    const isRank1 = rank === 1;
+    const isYou = false;
+    const rowClass = isYou ? "bg-[#F59E0B]/5 border-l-2 border-l-[#F59E0B] border-y border-y-[#F59E0B]/10 hover:bg-[#F59E0B]/10 transition-colors" : isRank1 ? "bg-[#1A2E1C] border-l-2 border-l-[#22C55E] border-y border-y-transparent hover:bg-[#1A2E1C]/80 transition-colors" : "border-l-2 border-l-transparent border-y border-y-transparent hover:bg-[#1A2E1C]/40 transition-colors";
+    const textColor = isYou ? "text-[#F59E0B]" : "text-[#E5E5E5]";
+    const mutedColor = isYou ? "text-[#F59E0B]/70" : "text-[#6B7280]";
+    const winRateColor = winRate > 55 ? "#22C55E" : winRate >= 45 ? "#F59E0B" : "#EF4444";
+    const netProfitClass = isYou ? "text-[#F59E0B]" : (netProfit >= 0 ? "text-[#22C55E]" : "text-[#EF4444]");
+    const netProfitStr = (netProfit >= 0 ? "+" : "-") + "$" + Math.abs(netProfit).toLocaleString();
+    const changeClass = isYou ? (change > 0 ? "text-[#F59E0B]" : change < 0 ? "text-[#EF4444]" : mutedColor) : (change > 0 ? "text-[#22C55E]" : change < 0 ? "text-[#EF4444]" : mutedColor);
+    const changeStr = change > 0 ? "+" + change : (change < 0 ? String(change) : "—");
+    const rankClass = isYou ? "text-[#F59E0B]" : "text-[#22C55E]";
+    const initialsBorderClass = isYou ? "border-[#F59E0B] text-[#F59E0B]" : "border-[#22C55E]/50 text-[#22C55E]";
+    return `<tr class="${rowClass}">
+      <td class="py-3 px-4 ${rankClass}">${rankPad}</td>
+      <td class="py-3 px-4 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full border flex items-center justify-center text-xs ${initialsBorderClass}">${initials}</div>
+        <div class="flex flex-col">
+          <span class="${textColor} leading-tight">${name}</span>
+          <span class="${mutedColor} text-[10px] leading-tight">${handle}</span>
+        </div>
+      </td>
+      <td class="py-3 px-4 text-right ${textColor}">${hands}</td>
+      <td class="py-3 px-4">
+        <div class="flex items-center gap-3 w-full">
+          <span class="${textColor} w-10 text-right">${winRate.toFixed(1)}%</span>
+          <div class="h-[2px] bg-[#0D1A0F] border border-[#22C55E]/10 w-24 flex-1 relative overflow-hidden">
+            <div class="absolute top-0 left-0 h-full opacity-80" data-styleWidth="${winRate}%" data-styleBackgroundColor="${winRateColor}"></div>
+          </div>
+        </div>
+      </td>
+      <td class="py-3 px-4 text-right ${netProfitClass}">${netProfitStr}</td>
+      <td class="py-3 px-4 text-right font-bold text-base tracking-tight ${textColor}">${score}</td>
+      <td class="py-3 px-4 text-right"><span class="${changeClass}">${changeStr}</span></td>
+    </tr>`;
+  }
+
+  function rowLeaderboardV2(pl, rank, delay, gap) {
+    const name = yr().esc(pl.name);
+    const scoreNum = Number(pl.score) || Number(pl.wagered) || 0;
+    const score = fmtScore(scoreNum);
+    const maxScore = Math.max(1, ...((window.__SITE_DATA__?.players || []).map((p) => Number(p.score || p.wagered) || 0)));
+    const barWidth = maxScore ? Math.round((scoreNum / maxScore) * 100) : 0;
+    const winRate = (Number(pl.winRate) || barWidth).toFixed(1);
+    const change = Number(pl.change) || 0;
+    const initials = String(pl.name).split(/[\s]+/).filter(Boolean).map((n) => n[0]).join("").toUpperCase();
+    const handle = "@" + String(pl.name).toLowerCase().replace(/[\s]+/g, "_").slice(0, 12);
+    const rankPad = String(rank).padStart(2, "0");
+    const rankColorClass = rank === 1 ? "text-[#C41E3A]" : "text-black";
+    const nameSizeClass = rank === 1 ? "text-3xl md:text-[2.25rem]" : "text-2xl md:text-[1.75rem]";
+    const leftBar = rank === 1 ? '<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-[#C41E3A]"></div>' : "";
+    const h = hash(handle);
+    const gradient = `linear-gradient(135deg, hsl(${h % 360}, 70%, 80%) 0%, hsl(${(h * 7) % 360}, 70%, 90%) 100%)`;
+    let trendIcon, trendText, trendClass;
+    if (change > 0) { trendIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up" aria-hidden="true"><path d="M16 7h6v6" /><path d="m22 7-8.5 8.5-5-5L2 17" /></svg>`; trendText = String(change); trendClass = "text-[#105c38]"; }
+    else if (change < 0) { trendIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down" aria-hidden="true"><path d="M16 17h6v-6" /><path d="m22 17-8.5-8.5-5 5L2 7" /></svg>`; trendText = String(Math.abs(change)); trendClass = "text-[#C41E3A]"; }
+    else { trendIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus" aria-hidden="true"><path d="M5 12h14" /></svg>`; trendText = ""; trendClass = "text-gray-400"; }
+    const noiseUrl = "data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E";
+    return `<div class="group relative flex flex-col xl:flex-row xl:items-center py-6 md:py-8 border-b-[2px] border-black transition-colors hover:bg-black/[0.03]">${leftBar}<div class="flex items-center w-full xl:w-auto"><div class="flex items-center justify-end w-24 md:w-32 shrink-0 pr-6 md:pr-10 pl-6"><span class="text-[4.5rem] md:text-[6rem] font-black italic tracking-tighter tabular-nums leading-none -ml-2 ${rankColorClass}">${rankPad}</span></div><div class="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-full border-[1.5px] border-black shrink-0 relative overflow-hidden" data-styleBackground="${gradient}"><div class="absolute inset-0 opacity-20 mix-blend-overlay" data-styleBackgroundImage="url('${noiseUrl}')"></div><span class="font-mono font-bold text-sm md:text-lg text-black/80 relative z-10 mix-blend-color-burn">${initials}</span></div><div class="ml-5 md:ml-8 flex flex-col shrink-0 min-w-[240px]"><div class="flex items-center gap-3 md:gap-4"><h2 class="font-bold leading-none ${nameSizeClass}">${name}</h2></div><p class="font-mono text-xs md:text-sm text-gray-500 mt-3 md:mt-4">${handle}</p></div></div><div class="flex-1 px-8 lg:px-12 hidden xl:flex items-center opacity-60 group-hover:opacity-100 transition-opacity duration-300"><div class="w-full h-[1px] bg-black/20 relative"><div class="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-black" data-styleWidth="${barWidth}%"></div><div class="absolute top-1/2 -translate-y-1/2 w-[3px] h-4 bg-black" data-styleLeft="calc(${barWidth}% - 2px)"></div></div></div><div class="flex items-center justify-between xl:justify-end mt-8 xl:mt-0 xl:ml-auto w-full xl:w-auto pl-2 xl:pl-0"><div class="flex flex-col items-start xl:items-end"><span class="font-mono text-[2.5rem] md:text-[3.5rem] font-bold tracking-tighter tabular-nums leading-none">${score}</span><span class="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-500 mt-3">Win Rate <span class="font-bold text-black">${winRate}%</span></span></div><div class="flex items-center justify-end w-16 md:w-24 shrink-0 ml-4 md:ml-8 font-mono text-sm md:text-lg"><span class="${trendClass} flex items-center gap-1.5 font-bold">${trendIcon}${trendText}</span></div></div></div>`;
+  }
+
+
+  function gradientFromHandle(handle) {
+    const h = hash(handle);
+    return `linear-gradient(135deg, hsl(${h % 360}, 80%, 60%), hsl(${(h * 13) % 360}, 80%, 40%))`;
+  }
+
+  function top3Leaderboard(pl, rank) {
+    const name = yr().esc(pl.name);
+    const scoreNum = Number(pl.score) || Number(pl.wagered) || 0;
+    const score = fmtScore(scoreNum);
+    const winRate = (Number(pl.winRate) || 0).toFixed(1);
+    const initials = String(pl.name).split(/[\s]+/).filter(Boolean).map((n) => n[0]).join("").toUpperCase();
+    const handle = "@" + String(pl.name).toLowerCase().replace(/[\s]+/g, "_").slice(0, 12);
+    const gradient = gradientFromHandle(handle);
+    const templates = [null, `<div class="flex flex-col items-center order-1 md:order-2 z-10 relative group animate-in fade-in slide-in-from-bottom-8 duration-700" data-styleAnimationDelay="${rank*150}ms"><div class="flex flex-col items-center w-full transition-all duration-500 hover:-translate-y-4"><div class="absolute -top-16 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce duration-[2000ms]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crown w-10 h-10 text-yellow-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" /><path d="M5 21h14" /></svg></div><div class="relative mb-6"><div class="absolute inset-0 rounded-full bg-gradient-to-b from-yellow-300 via-yellow-500 to-amber-700 blur-xl opacity-40 group-hover:opacity-70 transition-opacity duration-500"></div><div class="relative w-28 h-28 md:w-32 md:h-32 rounded-full p-1 bg-gradient-to-b from-yellow-300 via-yellow-500 to-amber-700 z-10"><div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center border-4 border-background" data-styleBackground="${gradient}"><span class="text-3xl font-bold text-white drop-shadow-md tracking-tight">${initials}</span></div></div><div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-b from-yellow-300 via-yellow-500 to-amber-700 flex items-center justify-center text-background font-black text-sm border-2 border-background z-20 shadow-lg">${rank}</div></div><div class="w-full bg-gradient-to-t from-card/80 to-card rounded-t-2xl border-t border-x shadow-[0_0_50px_rgba(251,191,36,0.2)] border-yellow-500/50 flex flex-col items-center p-6 h-[280px] backdrop-blur-md relative overflow-hidden"><div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><h3 class="text-lg md:text-xl font-bold text-foreground mb-1 truncate w-full text-center relative z-10">Kaelen "Vortex" Vance</h3><p class="text-sm text-muted-foreground mb-4 relative z-10">${handle}</p><div class="mt-auto flex flex-col items-center w-full relative z-10"><div class="text-3xl md:text-4xl font-black font-display tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 drop-shadow-sm">${score}</div><div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crosshair w-3.5 h-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="22" x2="18" y1="12" y2="12" /><line x1="6" x2="2" y1="12" y2="12" /><line x1="12" x2="12" y1="6" y2="2" /><line x1="12" x2="12" y1="22" y2="18" /></svg>${winRate}<!-- -->% WR</div></div></div></div></div>`, `<div class="flex flex-col items-center order-2 md:order-1 relative group animate-in fade-in slide-in-from-bottom-8 duration-700" data-styleAnimationDelay="${rank*150}ms"><div class="flex flex-col items-center w-full transition-all duration-500 hover:-translate-y-4"><div class="relative mb-6"><div class="absolute inset-0 rounded-full bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 blur-xl opacity-40 group-hover:opacity-70 transition-opacity duration-500"></div><div class="relative w-24 h-24 rounded-full p-1 bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 z-10"><div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center border-4 border-background" data-styleBackground="${gradient}"><span class="text-2xl font-bold text-white drop-shadow-md tracking-tight">${initials}</span></div></div><div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 flex items-center justify-center text-background font-black text-sm border-2 border-background z-20 shadow-lg">${rank}</div></div><div class="w-full bg-gradient-to-t from-card/80 to-card rounded-t-2xl border-t border-x shadow-[0_0_30px_rgba(148,163,184,0.15)] border-slate-400/30 flex flex-col items-center p-6 h-[240px] backdrop-blur-md relative overflow-hidden"><div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><h3 class="text-lg md:text-xl font-bold text-foreground mb-1 truncate w-full text-center relative z-10">Sarah "Nova" Jones</h3><p class="text-sm text-muted-foreground mb-4 relative z-10">${handle}</p><div class="mt-auto flex flex-col items-center w-full relative z-10"><div class="text-3xl md:text-4xl font-black font-display tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 drop-shadow-sm">${score}</div><div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crosshair w-3.5 h-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="22" x2="18" y1="12" y2="12" /><line x1="6" x2="2" y1="12" y2="12" /><line x1="12" x2="12" y1="6" y2="2" /><line x1="12" x2="12" y1="22" y2="18" /></svg>${winRate}<!-- -->% WR</div></div></div></div></div>`, `<div class="flex flex-col items-center order-3 md:order-3 relative group animate-in fade-in slide-in-from-bottom-8 duration-700" data-styleAnimationDelay="${rank*150}ms"><div class="flex flex-col items-center w-full transition-all duration-500 hover:-translate-y-4"><div class="relative mb-6"><div class="absolute inset-0 rounded-full bg-gradient-to-b from-orange-300 via-orange-500 to-orange-700 blur-xl opacity-40 group-hover:opacity-70 transition-opacity duration-500"></div><div class="relative w-24 h-24 rounded-full p-1 bg-gradient-to-b from-orange-300 via-orange-500 to-orange-700 z-10"><div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center border-4 border-background" data-styleBackground="${gradient}"><span class="text-2xl font-bold text-white drop-shadow-md tracking-tight">${initials}</span></div></div><div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-b from-orange-300 via-orange-500 to-orange-700 flex items-center justify-center text-background font-black text-sm border-2 border-background z-20 shadow-lg">${rank}</div></div><div class="w-full bg-gradient-to-t from-card/80 to-card rounded-t-2xl border-t border-x shadow-[0_0_30px_rgba(249,115,22,0.15)] border-orange-500/30 flex flex-col items-center p-6 h-[220px] backdrop-blur-md relative overflow-hidden"><div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><h3 class="text-lg md:text-xl font-bold text-foreground mb-1 truncate w-full text-center relative z-10">Marcus "Apex" Chen</h3><p class="text-sm text-muted-foreground mb-4 relative z-10">${handle}</p><div class="mt-auto flex flex-col items-center w-full relative z-10"><div class="text-3xl md:text-4xl font-black font-display tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 drop-shadow-sm">${score}</div><div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crosshair w-3.5 h-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="22" x2="18" y1="12" y2="12" /><line x1="6" x2="2" y1="12" y2="12" /><line x1="12" x2="12" y1="6" y2="2" /><line x1="12" x2="12" y1="22" y2="18" /></svg>${winRate}<!-- -->% WR</div></div></div></div></div>`];
+    return templates[rank] || "";
+  }
+
+  function rowLeaderboard(pl, rank, _delay, _gap) {
+    const name = yr().esc(pl.name);
+    const scoreNum = Number(pl.score) || Number(pl.wagered) || 0;
+    const score = fmtScore(scoreNum);
+    const winRate = (Number(pl.winRate) || 0).toFixed(1);
+    const change = Number(pl.change) || 0;
+    const initials = String(pl.name).split(/[\s]+/).filter(Boolean).map((n) => n[0]).join("").toUpperCase();
+    const handle = "@" + String(pl.name).toLowerCase().replace(/[\s]+/g, "_").slice(0, 12);
+    const gradient = gradientFromHandle(handle);
+    const delay = 400 + (rank - 4) * 50;
+    let trendPill;
+    if (change > 0) {
+      trendPill = `<div class="flex items-center gap-1 text-emerald-400 bg-emerald-400/10 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-up w-3 h-3" aria-hidden="true"><path d="m18 15-6-6-6 6" /></svg><span>${change}</span></div>`;
+    } else if (change < 0) {
+      trendPill = `<div class="flex items-center gap-1 text-rose-400 bg-rose-400/10 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down w-3 h-3" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg><span>${Math.abs(change)}</span></div>`;
+    } else {
+      trendPill = `<div class="flex items-center gap-1 text-slate-500 bg-slate-500/10 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus w-3 h-3" aria-hidden="true"><path d="M5 12h14" /></svg></div>`;
+    }
+    return `<div class="grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-4 md:px-6 py-4 items-center group hover:bg-white/[0.03] transition-colors relative animate-in fade-in slide-in-from-bottom-4 duration-500" data-styleAnimationDelay="${delay}ms"><div class="w-8 md:w-12 text-center text-base md:text-lg font-bold text-muted-foreground font-display">#<!-- -->${rank}</div><div class="flex items-center gap-3 md:gap-4"><div class="relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-background/50 shadow-sm" data-styleBackground="${gradient}"><span class="text-sm font-bold text-white drop-shadow-md">${initials}</span></div><div class="min-w-0"><div class="font-bold text-foreground flex items-center gap-2 truncate text-sm md:text-base"><span class="truncate">Elena "Zero" Rostova</span></div><div class="text-xs text-muted-foreground truncate">${handle}</div></div></div><div class="w-24 md:w-32 hidden md:flex items-center justify-end text-sm text-muted-foreground font-medium"><div class="w-full max-w-[60px] lg:max-w-[80px] bg-background/50 h-1.5 rounded-full overflow-hidden mr-3"><div class="h-full bg-slate-400 rounded-full transition-all duration-1000" data-styleWidth="${winRate}%"></div></div>${winRate}%</div><div class="w-16 md:w-24 flex justify-center">${trendPill}</div><div class="w-20 md:w-32 text-right font-display text-lg md:text-xl font-black text-foreground group-hover:text-primary transition-colors">${score}</div></div>`;
+  }
+
   window.CASINO_BUILDERS = {
     top3: {
       arcade: top3Arcade,
@@ -177,6 +286,9 @@
       underwater: top3Underwater,
       vip: top3Vip,
       western: top3Western,
+      pro: function() { return ""; },
+      leaderboardV2: function() { return ""; },
+      leaderboard: top3Leaderboard,
     },
     rows: {
       arcade: rowArcade,
@@ -187,6 +299,9 @@
       underwater: rowUnderwater,
       vip: rowVip,
       western: rowWestern,
+      pro: rowPro,
+      leaderboardV2: rowLeaderboardV2,
+      leaderboard: rowLeaderboard,
     }
   };
 })();
