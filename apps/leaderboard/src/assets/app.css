@@ -38,7 +38,19 @@ a{color:var(--ink);text-decoration:none}a:hover{color:var(--accent)}
 .auth-card{width:100%;max-width:360px}
 .auth-card h2{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}.auth-card .sub{color:var(--ink-mute);font-size:13px;margin-bottom:26px}
 .auth-card .foot{margin-top:18px;font-size:13px;color:var(--ink-mute)}
-@media(max-width:820px){.auth-wrap{grid-template-columns:1fr}.auth-side{display:none}}
+.auth-brand-m{display:none}
+.field-err{color:var(--danger);font-size:12px;margin-top:6px}
+.field-err:empty{display:none}
+.field input[aria-invalid="true"]{border-color:var(--danger)}
+.pw-meter{margin-top:8px}
+.pw-meter-track{height:4px;border-radius:var(--radius-full);background:var(--line-2);overflow:hidden}
+.pw-meter-bar{height:100%;width:0;border-radius:var(--radius-full);transition:width .2s ease,background .2s ease}
+.pw-meter-bar.s1{width:25%;background:var(--danger)}
+.pw-meter-bar.s2{width:50%;background:#f5a623}
+.pw-meter-bar.s3{width:75%;background:#f5d423}
+.pw-meter-bar.s4{width:100%;background:var(--ok)}
+.pw-meter-label{font-size:12px;color:var(--ink-mute);margin-top:5px}
+@media(max-width:820px){.auth-wrap{grid-template-columns:1fr}.auth-side{display:none}.auth-brand-m{display:block;margin:0 0 22px;font-weight:800;letter-spacing:-.02em;font-size:20px;color:var(--ink)}.auth-brand-m b{color:var(--accent)}}
 .wrap{max-width:1280px;margin:0 auto;padding:26px 28px 80px}
 .dash-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
 .dash-head h1{font-size:24px;letter-spacing:-.02em;margin:0}
