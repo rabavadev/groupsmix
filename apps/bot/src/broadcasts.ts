@@ -24,6 +24,7 @@ interface ActiveBroadcast {
   body: string;
   media_url: string | null;
   buttons: unknown;
+  is_cancelled: boolean;
   cursor_tg_user_id: number; // Changed from string to number for numeric comparison
   sent_count: number;
   fail_count: number;
@@ -42,12 +43,13 @@ export async function processBroadcastBatch(batchSize = 300): Promise<boolean> {
       WHERE id = (
         SELECT id FROM broadcasts
          WHERE status IN ('scheduled', 'sending')
+           AND NOT is_cancelled
            AND (scheduled_at IS NULL OR scheduled_at <= now())
          ORDER BY created_at
          LIMIT 1
          FOR UPDATE SKIP LOCKED
       )
-      RETURNING id, bot_id, body, media_url, buttons, cursor_tg_user_id, sent_count, fail_count`
+      RETURNING id, bot_id, body, media_url, buttons, is_cancelled, cursor_tg_user_id, sent_count, fail_count`
   );
   if (!bc) return false;
 
@@ -107,8 +109,22 @@ export async function processBroadcastBatch(batchSize = 300): Promise<boolean> {
 
   let sent = 0;
   let failed = 0;
-  let lastProcessedId = subs[0].tg_user_id; // Track last actually processed sub
-  for (const sub of subs) {
+  let canceled = false;
+  let lastProcessedId = bc.cursor_tg_user_id; // Advance only after a message is actually processed
+  for (let i = 0; i < subs.length; i++) {
+    const sub = subs[i];
+    // Check for dashboard cancellation every few messages so an actively
+    // sending broadcast can be stopped without waiting for the whole batch.
+    if (i % 10 === 0) {
+      const cancelRow = await one<{ is_cancelled: boolean }>(
+        `SELECT is_cancelled FROM broadcasts WHERE id = $1`,
+        [bc.id]
+      );
+      if (cancelRow?.is_cancelled) {
+        canceled = true;
+        break;
+      }
+    }
     const hasMedia = !!bc.media_url;
     const payload: Record<string, unknown> = hasMedia
       ? {
@@ -159,9 +175,22 @@ export async function processBroadcastBatch(batchSize = 300): Promise<boolean> {
   }
 
   // Advance cursor to the last subscriber we actually processed (sent or failed),
-  // NOT to the last fetched subscriber. On 429, unprocessed subs will be retried
-  // in the next batch.
+  // NOT to the last fetched subscriber. On 429 or cancellation, unprocessed subs
+  // will be retried in the next batch only if the broadcast was not canceled.
   const cursorId = lastProcessedId;
+  if (canceled) {
+    await query(
+      `UPDATE broadcasts
+          SET status = 'canceled',
+              is_cancelled = true,
+              cursor_tg_user_id = $1,
+              sent_count = sent_count + $2,
+              fail_count = fail_count + $3
+        WHERE id = $4`,
+      [cursorId, sent, failed, bc.id]
+    );
+    return false;
+  }
   await query(
     `UPDATE broadcasts
         SET cursor_tg_user_id = $1,

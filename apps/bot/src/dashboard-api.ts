@@ -671,14 +671,15 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
     return c.json(row);
   });
 
-  // Cancel a scheduled broadcast. Already sent/delivered broadcasts can't be
-  // cancelled; the cron processor will skip rows with status = 'cancelled'.
+  // Cancel a scheduled or actively-sending broadcast. The cron loop checks the
+  // is_cancelled flag and bails out early; this endpoint also sets the final
+  // status so the dashboard shows it as canceled immediately.
   api.delete("/broadcasts/:id", async (c) => {
     const result = await exec(
       `UPDATE broadcasts b
-          SET status = 'cancelled', updated_at = now()
+          SET status = 'canceled', is_cancelled = true, updated_at = now()
          FROM bots bo
-        WHERE b.id = $1 AND b.bot_id = bo.id AND bo.owner_id = $2 AND b.status = 'scheduled'
+        WHERE b.id = $1 AND b.bot_id = bo.id AND bo.owner_id = $2 AND b.status IN ('scheduled', 'sending')
         RETURNING b.id`,
       [c.req.param("id"), c.get("uid")]
     );

@@ -177,7 +177,7 @@ async function loadExtras(){
       const bodyPreview = esc(b.body.slice(0,60)) + (b.body.length>60?'…':'') + (b.media_url ? ' (image)' : '');
       return '<tr><td>'+bodyPreview+'</td><td>'+esc(b.bot_username||'–')+'</td><td>'+esc(b.status)+'</td>'+
       '<td>'+esc(b.sent_count)+'/'+(b.total_count?esc(b.total_count):'?')+'</td><td>'+esc(b.fail_count)+'</td>'+
-      '<td>'+(b.status==='scheduled'?'<button class="ghost" data-action="cancelBroadcast" data-id="'+esc(b.id)+'" type="button">Cancel</button>':'')+'</td></tr>';
+      '<td>'+(b.status==='scheduled'||b.status==='sending'?'<button class="ghost" data-action="cancelBroadcast" data-id="'+esc(b.id)+'" type="button">Cancel</button>':'')+'</td></tr>';
     }).join('')
       || '<tr><td colspan="6" class="muted">No broadcasts yet.</td></tr>';
   }
@@ -476,11 +476,11 @@ async function testBroadcast(btn){
   toast('Test sent — check that chat');
 }
 async function cancelBroadcast(btn){
-  if (!confirm('Cancel this scheduled broadcast?')) return;
+  if (!confirm('Cancel this broadcast?')) return;
   setLoading(btn, 'Cancelling…');
   const r = await api('/broadcasts/'+btn.dataset.id,{method:'DELETE'});
   if (r.error) { restoreBtn(btn); return toast(r.error); }
-  toast('Broadcast cancelled'); restoreBtn(btn); loadExtras();
+  toast('Broadcast canceled'); restoreBtn(btn); loadExtras();
 }
 async function revealPostback(btn){
   setLoading(btn, 'Revealing…');
