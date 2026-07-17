@@ -167,6 +167,52 @@
     return `<div class="w-full rounded-lg p-4 flex items-center border-l-8 border-[#F5A623] shadow-[0_4px_10px_rgba(0,0,0,0.5)] transform hover:scale-[1.01] transition-all cursor-pointer hover:bg-[#381E0C] group bg-[#2C1000]"><div class="w-10 h-10 md:w-12 md:h-12 bg-[#F5A623] rounded-full flex items-center justify-center text-[#2C1000] shadow-[inset_0_2px_4px_rgba(255,255,255,0.4)] shrink-0 border-2 border-[#C98415] relative"><div class="absolute inset-0 border-2 border-[#C98415] rounded-full rotate-45 scale-[1.05] opacity-30"></div><span class="font-black text-lg md:text-xl relative z-10 font-['Inter']">4</span></div><div class="ml-4 flex-grow flex flex-col md:flex-row md:items-center justify-between"><div class="flex items-center gap-2"><span class="text-[#FFF8E7] text-lg md:text-xl tracking-wide group-hover:text-[#F5A623] transition-colors [font-family:'Rye',_serif]">${name}</span>${icon}</div><div class="text-[#F5A623] text-lg md:text-2xl tabular-nums mt-1 md:mt-0 flex items-center gap-2 [font-family:'Rye',_serif]">${score}<!-- --> <span class="text-base opacity-80 filter grayscale-[50%] brightness-[1.5]">�${rankStr}�</span></div></div></div>`;
   }
 
+  function rowPro(pl, rank, delay, gap) {
+    const name = yr().esc(pl.name);
+    const score = fmtScore(pl.score || pl.wagered || 0);
+    const hands = fmtScore(pl.hands || 0);
+    const netProfit = Number(pl.netProfit) || (Number(pl.prize) - Number(pl.wagered)) || 0;
+    const winRate = Number(pl.winRate) || 0;
+    const change = Number(pl.change) || 0;
+    const initials = wordInitials(pl.name);
+    const handle = "@" + String(pl.name).toLowerCase().replace(/[\s]+/g, "_").slice(0, 14);
+    const rankPad = String(rank).padStart(2, "0");
+    const isRank1 = rank === 1;
+    const isYou = false;
+    const rowClass = isYou ? "bg-[#F59E0B]/5 border-l-2 border-l-[#F59E0B] border-y border-y-[#F59E0B]/10 hover:bg-[#F59E0B]/10 transition-colors" : isRank1 ? "bg-[#1A2E1C] border-l-2 border-l-[#22C55E] border-y border-y-transparent hover:bg-[#1A2E1C]/80 transition-colors" : "border-l-2 border-l-transparent border-y border-y-transparent hover:bg-[#1A2E1C]/40 transition-colors";
+    const textColor = isYou ? "text-[#F59E0B]" : "text-[#E5E5E5]";
+    const mutedColor = isYou ? "text-[#F59E0B]/70" : "text-[#6B7280]";
+    const winRateColor = winRate > 55 ? "#22C55E" : winRate >= 45 ? "#F59E0B" : "#EF4444";
+    const netProfitClass = isYou ? "text-[#F59E0B]" : (netProfit >= 0 ? "text-[#22C55E]" : "text-[#EF4444]");
+    const netProfitStr = (netProfit >= 0 ? "+" : "-") + "$" + Math.abs(netProfit).toLocaleString();
+    const changeClass = isYou ? (change > 0 ? "text-[#F59E0B]" : change < 0 ? "text-[#EF4444]" : mutedColor) : (change > 0 ? "text-[#22C55E]" : change < 0 ? "text-[#EF4444]" : mutedColor);
+    const changeStr = change > 0 ? "+" + change : (change < 0 ? String(change) : "—");
+    const rankClass = isYou ? "text-[#F59E0B]" : "text-[#22C55E]";
+    const initialsBorderClass = isYou ? "border-[#F59E0B] text-[#F59E0B]" : "border-[#22C55E]/50 text-[#22C55E]";
+    return `<tr class="${rowClass}">
+      <td class="py-3 px-4 ${rankClass}">${rankPad}</td>
+      <td class="py-3 px-4 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full border flex items-center justify-center text-xs ${initialsBorderClass}">${initials}</div>
+        <div class="flex flex-col">
+          <span class="${textColor} leading-tight">${name}</span>
+          <span class="${mutedColor} text-[10px] leading-tight">${handle}</span>
+        </div>
+      </td>
+      <td class="py-3 px-4 text-right ${textColor}">${hands}</td>
+      <td class="py-3 px-4">
+        <div class="flex items-center gap-3 w-full">
+          <span class="${textColor} w-10 text-right">${winRate.toFixed(1)}%</span>
+          <div class="h-[2px] bg-[#0D1A0F] border border-[#22C55E]/10 w-24 flex-1 relative overflow-hidden">
+            <div class="absolute top-0 left-0 h-full opacity-80" data-style-width="${winRate}%" data-style-bgcolor="${winRateColor}"></div>
+          </div>
+        </div>
+      </td>
+      <td class="py-3 px-4 text-right ${netProfitClass}">${netProfitStr}</td>
+      <td class="py-3 px-4 text-right font-bold text-base tracking-tight ${textColor}">${score}</td>
+      <td class="py-3 px-4 text-right"><span class="${changeClass}">${changeStr}</span></td>
+    </tr>`;
+  }
+
   window.CASINO_BUILDERS = {
     top3: {
       arcade: top3Arcade,
@@ -177,6 +223,7 @@
       underwater: top3Underwater,
       vip: top3Vip,
       western: top3Western,
+      pro: function() { return ""; },
     },
     rows: {
       arcade: rowArcade,
@@ -187,6 +234,7 @@
       underwater: rowUnderwater,
       vip: rowVip,
       western: rowWestern,
+      pro: rowPro,
     }
   };
 })();

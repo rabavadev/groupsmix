@@ -157,7 +157,10 @@ async function getPublicBoards(env, uid) {
 }
 
 async function getPlayers(env, siteId) {
-  const rows = await query("SELECT name, wagered, prize FROM players WHERE site_id=$1 ORDER BY wagered DESC", [siteId]);
+  const rows = await query(
+    "SELECT name, wagered, prize, score, hands, net_profit, win_rate, change FROM players WHERE site_id=$1 ORDER BY wagered DESC",
+    [siteId]
+  );
   return rows || [];
 }
 
@@ -289,7 +292,16 @@ export function publicShape(site, players, archives = [], hasLogo = false) {
     whyStats: m.whyStats, rules: m.rules, socials: (m.socials || []).filter(s => s.enabled !== false && s.url && s.url !== "#" && s.url !== ""),
     branding: { hasLogo, accentA: theme.accentA, accentB: theme.accentB, template: theme.template, text: theme.text },
     pastWinners: archives.map(archiveShape),
-    players: players.map((p) => ({ name: p.name, wagered: p.wagered, prize: p.prize })),
+    players: players.map((p) => ({
+      name: p.name,
+      wagered: p.wagered,
+      prize: p.prize,
+      score: p.score,
+      hands: p.hands,
+      netProfit: p.net_profit,
+      winRate: p.win_rate,
+      change: p.change,
+    })),
     sections: m.sections || DEFAULT_EXTRA.sections,
   };
 }
@@ -779,7 +791,7 @@ export async function saveSite(env, user, payload, siteId, request = null) {
         await tx.unsafe("DELETE FROM players WHERE site_id=$1", [site.id]);
       }
       if (validPlayers.length > 0) {
-        const cols = 8;
+        const cols = 13;
         const params = [];
         const valueRows = [];
         let idx = 1;
@@ -787,21 +799,33 @@ export async function saveSite(env, user, payload, siteId, request = null) {
           const row = [];
           for (let c = 0; c < cols; c++) row.push(`$${idx++}`);
           valueRows.push(`(${row.join(",")})`);
+          const wagered = Number(p.wagered) || 0;
+          const prize = Number(p.prize) || 0;
+          const score = Number(p.score) || wagered;
+          const hands = Number(p.hands) || 0;
+          const netProfit = Number(p.netProfit) || (prize - wagered);
+          const winRate = Number(p.winRate) || 0;
+          const change = Number(p.change) || 0;
           params.push(
             crypto.randomUUID(), site.id, String(p.name).slice(0, 80), normalizePlayerName(p.name),
-            Number(p.wagered) || 0, Number(p.prize) || 0, i, 1
+            wagered, prize, i, 1, score, hands, netProfit, winRate, change
           );
         });
         await tx.unsafe(
-          `INSERT INTO players (id, site_id, name, normalized_name, wagered, prize, sort, version) VALUES ${valueRows.join(",")}
+          `INSERT INTO players (id, site_id, name, normalized_name, wagered, prize, sort, version, score, hands, net_profit, win_rate, change) VALUES ${valueRows.join(",")}
            ON CONFLICT (site_id, normalized_name) DO UPDATE
            SET name = EXCLUDED.name,
                wagered = EXCLUDED.wagered,
                prize = EXCLUDED.prize,
                sort = EXCLUDED.sort,
+               score = EXCLUDED.score,
+               hands = EXCLUDED.hands,
+               net_profit = EXCLUDED.net_profit,
+               win_rate = EXCLUDED.win_rate,
+               change = EXCLUDED.change,
                updated_at = now(),
                version = players.version + 1
-           RETURNING id, name, wagered, prize, sort, version`,
+           RETURNING id, name, wagered, prize, sort, version, score, hands, net_profit, win_rate, change`,
           params
         );
       }

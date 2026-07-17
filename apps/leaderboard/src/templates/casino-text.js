@@ -66,5 +66,23 @@ export const CASINO_TEXT_DEFAULTS = {
     "all_time": "ALL TIME",
     "hourly": "HOURLY",
     "today": "TODAY"
+  },
+  "pro": {
+    "poker_rankings_live": "Poker Rankings · Live",
+    "today": "[TODAY]",
+    "this_week": "[THIS WEEK]",
+    "all_time": "[ALL TIME]",
+    "total_players": "Total Players",
+    "avg_win_rate": "Avg Win Rate",
+    "season_prize_pool": "Season Prize Pool",
+    "hands_played": "Hands Played",
+    "rank": "RANK",
+    "player": "PLAYER",
+    "hands": "HANDS",
+    "win_rate": "WIN RATE",
+    "net_profit": "NET PROFIT",
+    "score": "SCORE",
+    "delta": "Δ",
+    "data_refreshes": "DATA REFRESHES EVERY 30S · SHOWING SEASON 14 RESULTS · ALL FIGURES IN USD"
   }
 };
