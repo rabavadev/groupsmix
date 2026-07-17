@@ -381,19 +381,45 @@ async function saveWelcome(btn){
   toast('Welcome message saved'); restoreBtn(btn);
 }
 let __commands = [];
+let __cmdButtons = [];
+function renderCmdButtons(){
+  const el = $('cmdButtonList');
+  if (!el) return;
+  el.innerHTML = (__cmdButtons||[]).map((b,i)=>'<span class="cmd-button-chip">'+esc(b.label)+' <button class="ghost" data-action="removeCommandButton" data-idx="'+i+'" type="button" title="Remove">×</button></span>').join('') || '';
+}
+function addCommandButton(btn){
+  const label = $('cmdBtnLabel').value.trim(), url = $('cmdBtnUrl').value.trim();
+  if (!label || !url) return toast('Enter a button label and URL');
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return toast('URL must start with http:// or https://');
+  if (__cmdButtons.length >= 10) return toast('Max 10 buttons per command');
+  __cmdButtons.push({label, url});
+  renderCmdButtons();
+  $('cmdBtnLabel').value=''; $('cmdBtnUrl').value=''; $('cmdBtnLabel').focus();
+}
+function removeCommandButton(target){
+  const idx = Number(target.dataset.idx);
+  if (Number.isNaN(idx)) return;
+  __cmdButtons.splice(idx, 1);
+  renderCmdButtons();
+}
 // Render the custom-commands table from client state. Mutation handlers update
 // __commands from their authoritative response and re-render, so the table is
 // correct immediately (an immediate re-read can lag behind the write).
 function renderCommands(){
   const cmdList = $('cmdList');
   if (!cmdList) return;
-  cmdList.innerHTML = (__commands||[]).map(c=>'<tr>'+
+  cmdList.innerHTML = (__commands||[]).map(c=>{
+    const buttons = Array.isArray(c.buttons) ? c.buttons : [];
+    const btnText = buttons.length ? buttons.map(b => esc(b.label)).join(', ') : '–';
+    return '<tr>'+
     '<td>/'+esc(c.command)+'</td>'+
     '<td class="muted">'+esc((c.response||'').slice(0,60))+'</td>'+
+    '<td class="muted">'+btnText+'</td>'+
     '<td class="'+(c.is_enabled?'ok':'off')+'">'+(c.is_enabled?'on':'off')+'</td>'+
     '<td><button class="ghost" data-action="toggleCommand" data-id="'+esc(c.id)+'" data-active="'+(!c.is_enabled)+'">'+(c.is_enabled?'Disable':'Enable')+'</button> '
         +'<button class="ghost" data-action="deleteCommand" data-id="'+esc(c.id)+'">Delete</button></td>'+
-  '</tr>').join('') || '<tr><td colspan="4" class="muted">No custom commands yet.</td></tr>';
+  '</tr>';
+  }).join('') || '<tr><td colspan="5" class="muted">No custom commands yet.</td></tr>';
 }
 async function loadCommands(){
   if (!custBotId) return;
@@ -407,11 +433,15 @@ async function addCommand(btn){
   const command = $('cmdName').value.trim(), response = $('cmdResp').value.trim();
   if (!command || !response) return toast('Enter a command and a reply');
   setLoading(btn, 'Adding…');
-  const r = await api('/bots/'+custBotId+'/commands',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({command, response})});
+  const payload = {command, response};
+  if (__cmdButtons.length) payload.buttons = __cmdButtons;
+  const r = await api('/bots/'+custBotId+'/commands',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
   if (r.error) { restoreBtn(btn); return toast(r.error); }
   const i = __commands.findIndex(c => c.id === r.id || c.command === r.command);
   if (i >= 0) __commands[i] = r; else __commands.push(r);
   __commands.sort((a,b)=>a.command.localeCompare(b.command));
+  __cmdButtons = [];
+  renderCmdButtons();
   renderCommands();
   $('cmdName').value=''; $('cmdResp').value=''; toast('Command saved'); restoreBtn(btn);
 }
@@ -578,6 +608,8 @@ async function handleAction(e) {
     else if (action === 'selectBot') { e.preventDefault(); selectBotById(target.dataset.id); }
     else if (action === 'createOffer') { e.preventDefault(); await createOffer(target); }
     else if (action === 'addCommand') { e.preventDefault(); await addCommand(target); }
+    else if (action === 'addCommandButton') { e.preventDefault(); addCommandButton(target); }
+    else if (action === 'removeCommandButton') { e.preventDefault(); removeCommandButton(target); }
     else if (action === 'saveWelcome') { e.preventDefault(); await saveWelcome(target); }
     else if (action === 'sendBroadcast') { e.preventDefault(); await sendBroadcast(target); }
     else if (action === 'testBroadcast') { e.preventDefault(); await testBroadcast(target); }

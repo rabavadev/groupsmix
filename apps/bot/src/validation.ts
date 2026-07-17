@@ -29,14 +29,21 @@ export const testMessageSchema = z.object({
   text: z.string().min(1).max(4096),
 }).strict();
 
+const commandButtonSchema = z.object({
+  label: z.string().min(1).max(80),
+  url: z.string().url().max(2048),
+}).strict();
+
 export const commandCreateSchema = z.object({
   command: z.string().min(1).max(50),
   response: z.string().min(1).max(1000),
+  buttons: z.array(commandButtonSchema).max(10).optional(),
 }).strict();
 
 export const commandUpdateSchema = z.object({
   is_enabled: z.boolean().optional(),
   response: z.string().min(1).max(1000).optional(),
+  buttons: z.array(commandButtonSchema).max(10).optional(),
 }).strict();
 
 export const broadcastSchema = z.object({
