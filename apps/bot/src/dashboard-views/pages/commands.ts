@@ -24,8 +24,16 @@ export function commandsPanel(): string {
       <label class="sr-only" for="cmdResp">Reply</label>
       <input id="cmdResp" placeholder="Reply text viewers receive">
     </div>
-    <button data-action="addCommand" type="button">Add command</button>
-    <table class="style-20"><thead><tr><th>Command</th><th>Reply</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
-    <tbody id="cmdList"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody></table>
+    <div class="row" style="margin-top:8px">
+      <label class="sr-only" for="cmdBtnLabel">Button label</label>
+      <input id="cmdBtnLabel" placeholder="Button label (optional)">
+      <label class="sr-only" for="cmdBtnUrl">Button URL</label>
+      <input id="cmdBtnUrl" type="url" placeholder="https://example.com (optional)">
+      <button data-action="addCommandButton" type="button" title="Add button">+</button>
+    </div>
+    <div id="cmdButtonList" class="cmd-button-list"></div>
+    <button data-action="addCommand" type="button" style="margin-top:8px">Add command</button>
+    <table class="style-20"><thead><tr><th>Command</th><th>Reply</th><th>Buttons</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody id="cmdList"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody></table>
   </div>`;
 }

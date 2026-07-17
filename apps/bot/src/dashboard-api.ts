@@ -538,7 +538,7 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
     const bot = await one(`SELECT id FROM bots WHERE id = $1 AND owner_id = $2`, [c.req.param("id"), c.get("uid")]);
     if (!bot) return c.json({ error: "bot not found" }, 404);
     return c.json(await query(
-      `SELECT id, command, response, is_enabled FROM bot_commands WHERE bot_id = $1 ORDER BY command`,
+      `SELECT id, command, response, is_enabled, buttons FROM bot_commands WHERE bot_id = $1 ORDER BY command`,
       [c.req.param("id")]
     ));
   });
@@ -547,7 +547,7 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
   api.post("/bots/:id/commands", async (c) => {
     const parsed = await validatedBody(c, commandCreateSchema);
     if (parsed instanceof Response) return parsed;
-    const { command, response } = parsed;
+    const { command, response, buttons } = parsed;
     const bot = await one(`SELECT id FROM bots WHERE id = $1 AND owner_id = $2`, [c.req.param("id"), c.get("uid")]);
     if (!bot) return c.json({ error: "bot not found" }, 404);
     const cmd = normalizeCommand(command ?? "");
@@ -558,12 +558,13 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
       return c.json({ error: `/${cmd} is a built-in command and can't be overridden` }, 400);
     if (!response?.trim()) return c.json({ error: "response required" }, 400);
     if (response.length > 1000) return c.json({ error: "response too long (max 1000)" }, 400);
+    const cleanButtons = Array.isArray(buttons) ? buttons.filter((b: any) => b && typeof b.label === "string" && typeof b.url === "string") : [];
     const row = await one(
-      `INSERT INTO bot_commands (bot_id, command, response, is_enabled)
-         VALUES ($1, $2, $3, true)
-       ON CONFLICT (bot_id, command) DO UPDATE SET response = EXCLUDED.response, is_enabled = true
-       RETURNING id, command, response, is_enabled`,
-      [c.req.param("id"), cmd, response.trim()]
+      `INSERT INTO bot_commands (bot_id, command, response, is_enabled, buttons)
+         VALUES ($1, $2, $3, true, $4::jsonb)
+       ON CONFLICT (bot_id, command) DO UPDATE SET response = EXCLUDED.response, is_enabled = true, buttons = EXCLUDED.buttons
+       RETURNING id, command, response, is_enabled, buttons`,
+      [c.req.param("id"), cmd, response.trim(), cleanButtons]
     );
     await resyncCommands(c.req.param("id"));
     return c.json(row);
@@ -573,18 +574,20 @@ export function buildDashboardApi(): Hono<{ Bindings: DashApiBindings; Variables
   api.patch("/commands/:id", async (c) => {
     const parsed = await validatedBody(c, commandUpdateSchema);
     if (parsed instanceof Response) return parsed;
-    const { is_enabled, response } = parsed;
+    const { is_enabled, response, buttons } = parsed;
     if (response != null && (!response.trim() || response.length > 1000))
       return c.json({ error: "response must be 1-1000 chars" }, 400);
+    const cleanButtons = Array.isArray(buttons) ? buttons.filter((b: any) => b && typeof b.label === "string" && typeof b.url === "string") : null;
     const row = await one(
       `UPDATE bot_commands bc
           SET is_enabled = COALESCE($1, bc.is_enabled),
-              response   = COALESCE($2, bc.response)
+              response   = COALESCE($2, bc.response),
+              buttons    = COALESCE($3, bc.buttons)
          FROM bots b
-        WHERE bc.id = $3 AND bc.bot_id = b.id AND b.owner_id = $4
-        RETURNING bc.id, bc.bot_id, bc.command, bc.response, bc.is_enabled`,
-      [is_enabled ?? null, response?.trim() ?? null, c.req.param("id"), c.get("uid")]
-    ) as { id: string; bot_id: string; command: string; response: string; is_enabled: boolean } | undefined;
+        WHERE bc.id = $4 AND bc.bot_id = b.id AND b.owner_id = $5
+        RETURNING bc.id, bc.bot_id, bc.command, bc.response, bc.is_enabled, bc.buttons`,
+      [is_enabled ?? null, response?.trim() ?? null, cleanButtons, c.req.param("id"), c.get("uid")]
+    ) as { id: string; bot_id: string; command: string; response: string; is_enabled: boolean; buttons: any } | undefined;
     if (row) await resyncCommands(row.bot_id);
     return row ? c.json(row) : c.json({ error: "command not found" }, 404);
   });

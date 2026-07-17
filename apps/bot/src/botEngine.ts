@@ -6,6 +6,23 @@ export const esc = (s: unknown): string =>
   String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? "")
   );
+
+interface CommandButton { label: string; url: string; }
+
+function buildCommandKeyboard(buttons: unknown): InlineKeyboard | undefined {
+  const arr = Array.isArray(buttons) ? buttons : [];
+  const valid = arr.filter((b): b is CommandButton =>
+    b && typeof (b as any).label === "string" && typeof (b as any).url === "string"
+  );
+  if (!valid.length) return undefined;
+  const kb = new InlineKeyboard();
+  valid.forEach((b, i) => {
+    if (i > 0) kb.row();
+    kb.url(esc(b.label), b.url);
+  });
+  return kb;
+}
+
 import { one, query } from "../../../shared/db.js";
 import { decryptToken } from "../../../shared/crypto.js";
 import { config } from "./config.js";
@@ -188,12 +205,16 @@ export function wireHandlers(bot: Bot, botRow: BotRow, env?: any): void {
     if (data === "m:support") { await ctx.reply(supportText(), { parse_mode: "HTML" }); return; }
     if (data.startsWith("m:c:")) {
       const cmd = data.slice(4);
-      const custom = await one<{ response: string | null }>(
-        `SELECT response FROM bot_commands WHERE bot_id = $1 AND command = $2 AND is_enabled`,
+      const custom = await one<{ response: string | null; buttons: unknown }>(
+        `SELECT response, buttons FROM bot_commands WHERE bot_id = $1 AND command = $2 AND is_enabled`,
         [botRow.id, cmd]
       );
-      if (custom?.response) await ctx.reply(esc(custom.response), { parse_mode: "HTML" });
-      else await ctx.reply("That option is no longer available.");
+      if (custom?.response) {
+        const replyMarkup = buildCommandKeyboard(custom.buttons);
+        await ctx.reply(esc(custom.response), { parse_mode: "HTML", reply_markup: replyMarkup });
+      } else {
+        await ctx.reply("That option is no longer available.");
+      }
     }
   });
 
@@ -411,12 +432,15 @@ export function wireHandlers(bot: Bot, botRow: BotRow, env?: any): void {
     const cmd = text.split(/\s/)[0]?.replace(/^\//, "").split("@")[0]?.toLowerCase();
     if (!cmd || ["start", "code", "codes", "subscribe", "unsubscribe"].includes(cmd)) return;
 
-    const custom = await one<{ response: string | null }>(
-      `SELECT response FROM bot_commands
+    const custom = await one<{ response: string | null; buttons: unknown }>(
+      `SELECT response, buttons FROM bot_commands
         WHERE bot_id = $1 AND command = $2 AND is_enabled`,
       [botRow.id, cmd]
     );
-    if (custom?.response) await ctx.reply(esc(custom.response), { parse_mode: "HTML" });
+    if (custom?.response) {
+      const replyMarkup = buildCommandKeyboard(custom.buttons);
+      await ctx.reply(esc(custom.response), { parse_mode: "HTML", reply_markup: replyMarkup });
+    }
   });
 
   bot.catch((err) => {

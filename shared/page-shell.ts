@@ -202,6 +202,10 @@ const BOT_BASE_CSS = `
   .bot-card button { padding:6px 12px; font-size:13px; }
   .code { font-family:var(--mono); font-size:12px; background:var(--panel-2); padding:2px 6px; border-radius:5px; }
 
+  .cmd-button-list { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px; }
+  .cmd-button-chip { display:inline-flex; align-items:center; gap:6px; background:var(--panel-2); border:1px solid var(--border); border-radius:999px; padding:4px 10px; font-size:13px; color:var(--fg); }
+  .cmd-button-chip button { padding:0 4px; font-size:16px; line-height:1; background:transparent; border:none; color:var(--dim); cursor:pointer; }
+
   .menu-btn { display:none; }
   @media (max-width:860px) {
     .side { position:fixed; left:0; top:0; height:100vh; z-index:60; background:var(--bg);
