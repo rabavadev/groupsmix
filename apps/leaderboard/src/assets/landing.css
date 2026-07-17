@@ -138,3 +138,50 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--ink-mute);fon
 /* --- UX audit: touch targets for nav + pricing CTAs (A-1/M-2) --- */
 .nav-toggle{min-width:var(--tap);min-height:var(--tap);align-items:center;justify-content:center}
 .price-cta{min-height:var(--tap)}
+
+/* ===== UI/UX audit round 2 ===== */
+/* Semantic + heading-scale tokens (L5, redesign §9) */
+:root{--fs-h3:1.375rem;--success:#3ecf8e;--danger:#ff5c5c;--warning:#ffb224;--gold:#f5c542;--silver:#c0c8d4;--bronze:#d08a4e}
+
+/* More "premium air" between sections (redesign §9) */
+section{padding:72px 0}
+@media(max-width:640px){section{padding:56px 0}}
+
+/* H1: 4-up pricing grid + Lifetime as a banner, single badge */
+.pricing-grid--4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1000px){.pricing-grid--4{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.pricing-grid--4{grid-template-columns:1fr}}
+.lifetime-banner{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-top:16px;padding:18px 24px;border:1px solid var(--line-2);border-radius:12px;background:linear-gradient(100deg,var(--panel),var(--panel-2))}
+.lifetime-banner-txt{font-size:15px;color:var(--ink-soft)}
+.lifetime-banner-txt b{color:var(--ink)}
+.lifetime-banner-lead{color:var(--ink);font-weight:600}
+.lifetime-banner-price{font-family:var(--mono);color:var(--accent);font-weight:700;margin-left:6px}
+.lifetime-banner-price small{color:var(--ink-mute);font-weight:400;font-size:12px}
+.lifetime-banner-cta{flex:none}
+@media(max-width:560px){.lifetime-banner{flex-direction:column;align-items:stretch;text-align:center}.lifetime-banner-cta{width:100%}}
+.pay-note{margin:16px 0 0;font-size:13px;color:var(--ink-mute)}
+
+/* H6/C-5: repeat trust line under the final CTA */
+.trust-line--center{justify-content:center;margin-top:20px}
+
+/* L1: one alternate-background section for rhythm */
+#postbacks{background:var(--panel)}
+
+/* Compare-table scroll affordance (M) — right-edge fade hint */
+.table-scroll{position:relative}
+.table-scroll::after{content:"";position:absolute;top:0;right:0;bottom:0;width:36px;pointer-events:none;background:linear-gradient(to right,transparent,var(--bg));border-radius:0 12px 12px 0}
+
+/* L4: hover elevation + scroll-reveal (reduced-motion neutralised above) */
+.price-card,.step{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.price-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.reveal{opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* C3: suppress the sticky mobile CTA while the cookie banner is up so the two
+   fixed bars never stack/overlap; also hide it while pricing (own CTAs) shows */
+@media(max-width:640px){
+  body.cookie-open .mobile-cta{display:none}
+  body.cookie-open main{padding-bottom:0}
+  .cookie-banner{bottom:0}
+  body.hide-sticky-cta .mobile-cta{transform:translateY(120%);transition:transform .2s ease}
+}

@@ -61,6 +61,20 @@ describe("template previews", () => {
       expect(html).toContain(`body data-template="${template}"`);
     }
   });
+
+  it("uses div-based ARIA table rows (aria-allowed-role fix, not ol/li)", () => {
+    const html = renderLeaderboard({ ...DATA }, { nonce: "test123" });
+    expect(html).toContain('<div class="t-rows" role="rowgroup" data-rows></div>');
+    expect(html).not.toContain('<ol class="t-rows"');
+  });
+
+  it("shows a referral banner with a signup CTA only on the demo board (C2)", () => {
+    const demo = renderLeaderboard({ ...DATA }, { nonce: "n", demo: true, homeUrl: "https://yourrank.site" });
+    expect(demo).toContain("class=\"demo-bar\"");
+    expect(demo).toContain('href="https://yourrank.site/signup"');
+    const normal = renderLeaderboard({ ...DATA }, { nonce: "n" });
+    expect(normal).not.toContain("class=\"demo-bar\"");
+  });
 });
 
 describe("theme_json / extra_json persistence (BUG: double-encoded JSONB)", () => {

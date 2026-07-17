@@ -54,15 +54,13 @@ export const landingPage = `<!DOCTYPE html>
 <div class="step"><div class="n">01</div><div><h3>Create your account</h3><p>Pick a handle. That becomes your page URL. Takes about a minute.</p></div></div>
 <div class="step"><div class="n">02</div><div><h3>Fill in your details</h3><p>Prize pool, referral code, countdown date, and your ranked players. All from one dashboard.</p></div></div>
 <div class="step"><div class="n">03</div><div><h3>Share your link</h3><p>Your page is live. Update the numbers whenever you want and they change instantly.</p></div></div>
-</div>
-<div class="steps mt-24">
-<div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div><h3>Built-in analytics</h3><p>Track views, clicks, and referrers from your dashboard. See what's working and where your traffic comes from.</p></div></div>
 </div></div></section>
 <section id="postbacks"><div class="wrap"><h2 class="sec">Track real conversions</h2><p class="sec-sub">When a casino confirms a player deposited, YourRank receives the postback and updates the leaderboard automatically. No manual updates. No guessing.</p>
 <div class="steps">
 <div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div><div><h3>Automatic updates</h3><p>Postbacks from the casino push real deposit data straight into your leaderboard. Your standings stay accurate without you lifting a finger.</p></div></div>
 <div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 01-12 0V8zM12 17v5"/></svg></div><div><h3>Works with any postback-enabled casino</h3><p>Stake, Rollbit, BC.Game, and any other casino that supports postback URLs. Just plug in your YourRank postback URL and the data flows in.</p></div></div>
 <div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div><h3>No spreadsheets, no copy-paste</h3><p>Forget manually updating player wagers. The postback system does it in real time — confirmed deposits, verified conversions, zero human error.</p></div></div>
+<div class="step"><div class="n n--ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div><h3>Built-in analytics</h3><p>Track views, clicks, and referrers from your dashboard. See what's working and where your traffic comes from.</p></div></div>
 </div></div></section>
 <section id="example"><div class="wrap"><h2 class="sec">A real page</h2><p class="sec-sub">This is a live leaderboard running on YourRank. Yours works the same way.</p>
 <div class="example"><div class="bar"><span>yourrank.site/demo</span><span>live</span></div>
@@ -72,21 +70,23 @@ export const landingPage = `<!DOCTYPE html>
 <figcaption><span class="quote-who">Jesse R.</span><span class="quote-handle">@jesseplays · 42k followers</span></figcaption></figure>
 </div></section>
 <section id="pricing"><div class="wrap"><h2 class="sec">Pricing</h2><p class="sec-sub">Start free. Upgrade when your board is pulling weight. Try Pro free for 7 days — paid plans billed in crypto.</p>
-<div class="pricing-grid">
+<div class="pricing-grid pricing-grid--4">
 <div class="price-card"><div class="price-head"><h3>Free</h3><div class="price-amount">$0</div><div class="price-period">forever</div></div><ul class="price-features"><li>1 leaderboard</li><li>Up to 10 players</li><li>YourRank badge on your page</li><li>Basic analytics (7 days)</li><li>Live countdown &amp; auto-sort</li></ul><a href="/signup" class="btn btn--sm price-cta">Start free</a></div>
-<div class="price-card"><div class="price-head"><h3>Starter</h3><div class="price-amount">$12<span>/30 days</span></div></div><ul class="price-features"><li>1 leaderboard</li><li>Up to 25 players</li><li>No YourRank badge</li><li>Full analytics (30 days)</li><li>CSV import</li></ul><a href="/signup" class="btn btn--sm price-cta">Start</a></div>
+<div class="price-card"><div class="price-head"><h3>Starter</h3><div class="price-amount">$12<span>/30 days</span></div></div><ul class="price-features"><li>1 leaderboard</li><li>Up to 25 players</li><li>No YourRank badge</li><li>Full analytics (30 days)</li><li>CSV import</li></ul><a href="/signup" class="btn btn--sm price-cta">Choose Starter</a></div>
 <div class="price-card price-card--popular"><div class="price-badge">Most Popular</div><div class="price-head"><h3>Pro</h3><div class="price-amount">$29<span>/30 days</span></div></div><ul class="price-features"><li>Up to 3 leaderboards</li><li>Up to 9,999 players</li><li>No YourRank badge</li><li>Custom domain</li><li>OBS overlay widget</li><li>Discord webhooks</li><li>Telegram notifications</li><li>Signed score API</li><li>Priority support</li></ul><a href="/signup" class="btn btn--sm btn--accent price-cta">Go Pro</a></div>
 <div class="price-card"><div class="price-head"><h3>Agency</h3><div class="price-amount">$79<span>/30 days</span></div></div><ul class="price-features"><li>Up to 99 leaderboards</li><li>Up to 9,999 players per board</li><li>White-label branding</li><li>Everything in Pro</li><li>Dedicated support</li></ul><a href="/contact" class="btn btn--sm price-cta">Contact us</a></div>
-<div class="price-card price-card--lifetime"><div class="price-badge price-badge--lifetime">Best Value</div><div class="price-head"><h3>Lifetime Pro</h3><div class="price-amount">$149<span class="price-amount-sub"> one-time</span></div></div><ul class="price-features"><li>All Pro features</li><li>Pay once, use forever</li><li>No monthly bills</li><li>Up to 3 leaderboards</li><li>Up to 9,999 players</li><li>Custom domain &amp; OBS widget</li><li>Priority support</li></ul><a href="/signup" class="btn btn--accent btn--sm price-cta">Get Lifetime Pro</a></div>
 </div>
-<p class="sec-sub" style="margin-top:20px"><a href="/pricing">Compare every plan &amp; feature →</a></p></div></section>
+<div class="lifetime-banner"><div class="lifetime-banner-txt"><span class="lifetime-banner-lead">Prefer to pay once?</span> <b>Lifetime Pro</b> — every Pro feature, no monthly bills. <span class="lifetime-banner-price">$149<small> one-time</small></span></div><a href="/signup" class="btn btn--accent lifetime-banner-cta">Get Lifetime Pro</a></div>
+<p class="pay-note">Paid plans billed in crypto (BTC · ETH · USDT · 100+ more). Card checkout coming soon.</p>
+<p class="sec-sub" style="margin-top:16px"><a href="/pricing">Compare every plan &amp; feature →</a></p></div></section>
 <section id="start"><div class="wrap"><h2 class="sec">Ready to start?</h2><p class="sec-sub">Create your free page in under a minute. No credit card needed.</p>
-<div class="cta cta-wrap"><a href="/signup" class="btn btn--accent btn--cta-lg">Create your free page</a></div></div></section>
+<div class="cta cta-wrap"><a href="/signup" class="btn btn--accent btn--cta-lg">Create your free page</a></div>
+<ul class="trust-line trust-line--center"><li>Free forever</li><li>7-day Pro trial</li><li>No card</li></ul></div></section>
 </main>
 <div class="mobile-cta"><a href="/signup" class="btn btn--accent">Create your free page</a></div>
 <footer><div class="wrap footer-wrap">
 <span>© <span id="yr"></span> YourRank</span>
 <span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund">Refunds</a> · <a href="/cookies">Cookies</a> · <a href="/responsible">Responsible play</a></span>
 <span>18+ · Gambling can be addictive. Play responsibly.</span></div></footer>
-<script src="/assets/landing.js?v=2"></script>
+<script src="/assets/landing.js?v=3"></script>
 </body></html>`;

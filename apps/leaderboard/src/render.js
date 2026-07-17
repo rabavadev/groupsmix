@@ -43,7 +43,7 @@ ${whyStats.length ? `<div class="pcol pcol-why"><span class="pcol-label">Why ${h
   const top3 = `<div class="top3" data-top3></div>`;
   const findRank = `<div class="find-rank-bar"><div class="find-rank-wrap"><button type="button" aria-label="Search" class="find-rank-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button><input class="find-rank-input" type="text" placeholder="Find your rank..." data-find-rank aria-label="Search for your rank" /></div><span class="find-rank-result" data-find-result role="status" aria-live="polite"></span></div>`;
   const table = `<div class="table" role="table" aria-label="Leaderboard standings"><div class="t-head" role="row"><span role="columnheader">#</span><span role="columnheader">Player</span><span class="ta-r" role="columnheader">Wagered</span><span class="ta-r" role="columnheader">Prize</span></div>
-<ol class="t-rows" role="rowgroup" data-rows></ol></div>`;
+<div class="t-rows" role="rowgroup" data-rows></div></div>`;
   const rules = `<details class="rules"><summary>Leaderboard rules — how wager counts</summary><ol class="rules-list" data-rules></ol></details>`;
   const pastSec = `<section id="past" class="past-sec" data-past hidden><h2 class="sec-title center">Past Winners</h2><p class="sec-sub center">Every closed-out period, on the record.</p>
 <div class="past-grid" data-past-grid></div></section>`;
@@ -355,8 +355,9 @@ ${tplCss}
 ${themeCss}
 ${previewCss}
 <script nonce="${opts.nonce}" type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":${JSON.stringify(title)},"description":${JSON.stringify(desc)},"numberOfItems":${data.players ? data.players.length : 0}}</script>
-</head><body data-template="${tpl}"${opts.preview ? " data-preview" : ""}>
+</head><body data-template="${tpl}"${opts.preview ? " data-preview" : ""}${opts.demo ? " data-demo" : ""}>
 <noscript><p class="noscript-noscroll">This leaderboard requires JavaScript for live updates. The data shown below may not refresh automatically.</p></noscript>
+${opts.demo ? `<div class="demo-bar" role="region" aria-label="Demo notice"><span class="demo-bar-txt">You're viewing a live <b>YourRank</b> demo board.</span><a class="demo-bar-cta" href="${esc(`${opts.homeUrl || ""}/signup`)}" target="_top">Create your free page →</a><a class="demo-bar-home" href="${esc(opts.homeUrl || "/")}" target="_top">Back to YourRank</a></div>` : ""}
 <a class="skip-link" href="#board">Skip to leaderboard</a>
 <div class="field" aria-hidden="true"></div><div class="watermarks" data-watermarks aria-hidden="true"></div>
 <header class="nav"><a class="nav-brand" href="#top">${navLogo}<span data-brand-name>${esc(b.name)}</span></a>

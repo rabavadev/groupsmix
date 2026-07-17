@@ -11,7 +11,7 @@ export const contactPage = `<!DOCTYPE html><html lang="en"><head>
 <div class="topbar-right"><a href="/login" class="btn btn--sm btn--ghost">Sign in</a></div></header>
 <main class="wrap" id="main-content" style="max-width:620px;padding:48px 24px">
 <h1 id="contactTitle">Contact</h1>
-<p class="sub" id="contactIntro">Questions, feedback, or billing issue? Send us a message and we'll reply by email.</p>
+<p class="sub" id="contactIntro">Questions, feedback, or billing issue? Send us a message and we'll reply by email — usually within 1 business day.</p>
 <form id="contactForm" class="card">
 <div class="field"><label for="c_name">Name</label><input id="c_name" name="name" type="text" autocomplete="name" required maxlength="120" /></div>
 <div class="field"><label for="c_email">Email</label><input id="c_email" name="email" type="email" autocomplete="email" required maxlength="254" /></div>

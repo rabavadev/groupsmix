@@ -264,6 +264,7 @@ section { width: min(var(--wrap), 100% - 2.5rem); margin-inline: auto; }
 .tr-av { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; background: rgba(120,90,255,0.2); border: 1px solid var(--line-2); }
 .tr-name { font-weight: 600; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-wager { text-align: right; font-family: "JetBrains Mono"; font-size: 0.85rem; color: var(--ink-soft); }
+.tr-wager .w-sm { display: none; }
 .tr-prize { text-align: right; font-weight: 700; }
 .tr-prize.has { color: var(--cy); } .tr-prize.no { color: var(--ink-mute); font-weight: 500; }
 /* Layout-template extras — hidden by default so only templates that opt in
@@ -306,11 +307,29 @@ section { width: min(var(--wrap), 100% - 2.5rem); margin-inline: auto; }
 /* ---------- Gap-to-next-rank indicator ---------- */
 .tr-gap {
   position: absolute; right: 0; bottom: -2px;
-  font-family: "JetBrains Mono", monospace; font-size: 0.62rem; font-weight: 500;
-  color: var(--ink-mute); white-space: nowrap; pointer-events: none;
-  opacity: 0.65; padding: 0 0.5rem; line-height: 1;
+  font-family: "JetBrains Mono", monospace; font-size: 0.75rem; font-weight: 500;
+  color: var(--ink-soft); white-space: nowrap; pointer-events: none;
+  opacity: 0.9; padding: 0 0.5rem; line-height: 1;
 }
 .t-row { position: relative; }
+
+/* Referral banner shown on /demo (C2) — return path + convert CTA */
+.demo-bar {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 0.5rem 1.1rem; padding: 0.7rem 1.4rem;
+  background: color-mix(in srgb, var(--cy) 12%, var(--panel));
+  border-bottom: 1px solid var(--line-2);
+  font-size: 0.9rem; color: var(--ink); text-align: center;
+}
+.demo-bar-txt b { color: var(--cy); }
+.demo-bar-cta {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-sm); font-weight: 700; font-size: 0.85rem;
+  background: var(--cy); color: #06040c; text-decoration: none;
+}
+.demo-bar-cta:hover { filter: brightness(1.06); }
+.demo-bar-home { color: var(--ink-soft); text-decoration: underline; font-size: 0.85rem; }
+.demo-bar-home:hover { color: var(--ink); }
 
 .rules { margin-top: 1.2rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 1.3rem; }
 .rules summary { cursor: pointer; padding: 1rem 0; font-weight: 600; color: var(--ink-soft); list-style: none; }
@@ -383,8 +402,11 @@ section { width: min(var(--wrap), 100% - 2.5rem); margin-inline: auto; }
   .nav-links a { padding: 0.7rem 1.4rem; font-size: 0.95rem; }
   .nav { position: relative; }
   .top3 { grid-template-columns: 1fr; }
-  .t-head, .t-row { grid-template-columns: 36px 1fr 72px 64px; }
-  .tr-wager, .t-head span:nth-child(3) { font-size: 0.72rem; letter-spacing: 0; }
+  .t-head, .t-row { grid-template-columns: 32px 1fr 64px 60px; }
+  .tr-wager, .t-head span:nth-child(3) { font-size: 0.75rem; letter-spacing: 0; }
+  /* M5: name is identity — keep it full, show short wager format on mobile */
+  .tr-wager .w-lg { display: none; }
+  .tr-wager .w-sm { display: inline; }
   .tr-gap { display: none; }
   .find-rank-wrap { max-width: 100%; }
   /* U-5/M-1: keep the find-your-rank result visible on mobile (was display:none) */

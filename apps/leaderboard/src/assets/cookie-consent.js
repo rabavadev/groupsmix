@@ -13,9 +13,11 @@
     <button class="btn btn--sm btn--accent" id="cookieAccept" type="button">Got it</button>
   `;
   document.body.appendChild(banner);
+  document.body.classList.add("cookie-open");
 
   banner.querySelector("#cookieAccept").addEventListener("click", () => {
     localStorage.setItem(key, "1");
     banner.remove();
+    document.body.classList.remove("cookie-open");
   });
 })();

@@ -458,7 +458,7 @@ async function handleRequest(request, env, ctx, meta) {
       if (method === "GET" && path === "/demo") {
         return new Response(
           renderLeaderboard(demoLeaderboardData(), {
-            watermark: false, homeUrl: url.origin, slug: "demo", nonce,
+            watermark: false, homeUrl: url.origin, slug: "demo", nonce, demo: true,
           }),
           { headers: { ...HTML_N, "cache-control": "no-store" } }
         );
