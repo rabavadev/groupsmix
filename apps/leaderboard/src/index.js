@@ -67,11 +67,22 @@ async function buildPlayerHistory(env, siteId, rawName, plan) {
 async function serveLogo(request, path) {
   let slug;
   try { slug = decodeURIComponent(path.slice(6)).toLowerCase().replace(/\.(png|jpe?g|webp)$/, ""); } catch { return new Response("not found", { status: 404 }); }
+  const width = new URL(request.url).searchParams.get("w") || "orig";
   const site = await findSiteLogoData(slug);
-  const m = (site?.logo_data || "").match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
+  let logoData = site?.logo_data || "";
+  // New uploads can store multiple pre-sized WebP blobs as a JSON object.
+  if (logoData.startsWith("{")) {
+    try {
+      const srcset = JSON.parse(logoData);
+      logoData = srcset[width] || srcset["512"] || srcset["orig"] || Object.values(srcset)[0] || "";
+    } catch {
+      // fall through to legacy single data URI handling
+    }
+  }
+  const m = (logoData || "").match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
   if (!m) return new Response("not found", { status: 404 });
   const encoder = new TextEncoder();
-  const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(site.logo_data));
+  const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(logoData));
   const etag = '"' + [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16) + '"';
   const ifNoneMatch = request.headers.get("if-none-match");
   if (ifNoneMatch === etag) return new Response(null, { status: 304, headers: { etag, "cache-control": "public, max-age=86400" } });

@@ -347,15 +347,26 @@ $("logoFile").addEventListener("change", () => {
   const f = $("logoFile").files[0]; if (!f) return;
   const img = new Image();
   img.onload = () => {
-    const max = 512, scale = Math.min(1, max / Math.max(img.width, img.height));
-    const c = document.createElement("canvas");
-    c.width = Math.max(1, Math.round(img.width * scale)); c.height = Math.max(1, Math.round(img.height * scale));
-    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-    let uri = c.toDataURL("image/png");
-    if (uri.length > 240000) uri = c.toDataURL("image/jpeg", 0.85);
-    if (uri.length > 240000) { $("status").textContent = "That image is too big even after resizing. Try a simpler one."; return; }
-    state.LOGO = uri;
-    $("logoPreview").src = uri; $("logoPreview").hidden = false; $("logoClear").hidden = false;
+    const aspect = img.width / img.height;
+    const sizes = [64, 128, 256, 512];
+    const srcset = {};
+    for (const w of sizes) {
+      const h = Math.max(1, Math.round(w / aspect));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      let uri = c.toDataURL("image/webp", 0.85);
+      if (!uri.startsWith("data:image/webp")) uri = c.toDataURL("image/jpeg", 0.85);
+      if (!uri.startsWith("data:")) continue;
+      srcset[w] = uri;
+    }
+    const entries = Object.values(srcset);
+    if (entries.length === 0) { $("status").textContent = "Couldn't convert that image."; URL.revokeObjectURL(img.src); return; }
+    const totalChars = entries.reduce((a, b) => a + b.length, 0);
+    if (totalChars > 300000) { $("status").textContent = "That image is too big even after resizing. Try a simpler one."; return; }
+    state.LOGO = srcset;
+    $("logoPreview").src = entries[entries.length - 1];
+    $("logoPreview").hidden = false; $("logoClear").hidden = false;
     $("status").textContent = "Logo ready — hit Save to publish it.";
     URL.revokeObjectURL(img.src);
   };
