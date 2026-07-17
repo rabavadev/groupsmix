@@ -21,6 +21,24 @@ async function decryptCredential(blobHex) {
   if (!blobHex) return null;
   try { return await decrypt(blobHex, getTokenEncKey()); } catch { return blobHex; }
 }
+
+async function onboardingForSite(env, site, userId, plan) {
+  const [bot, postback, players, firstView] = await Promise.all([
+    one("SELECT 1 FROM bots WHERE owner_id=$1 LIMIT 1", [userId]),
+    plan !== "free" ? one("SELECT 1 FROM postback_keys WHERE user_id=$1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now()) LIMIT 1", [userId]) : null,
+    one("SELECT COUNT(*)::int AS n FROM players WHERE site_id=$1", [site.id]),
+    one("SELECT 1 FROM site_stats WHERE site_id=$1 LIMIT 1", [site.id]),
+  ]);
+  return {
+    brand: !!(site.name?.trim() && (site.casino?.trim() || site.code?.trim())),
+    players: (players?.n || 0) > 0,
+    botConnected: !!bot,
+    shared: !!site.published && !!firstView,
+    postback: !!postback,
+    isFree: plan === "free",
+  };
+}
+
 import { createQueueProducer } from "../../../../shared/queue-producer.js";
 
 export async function handleStats(request, env) {
@@ -137,7 +155,8 @@ export async function handleGetSite(request, env) {
   }
   if (!s) return bad("No site for this account", 404);
   const boards = await getUserBoardsList(env, user.id);
-  return json({ ok: true, slug: s.slug, published: s.published, plan: plan, data: s.data, socials: s.socials, notify: s.notify || {}, archives: s.archives, boards, siteId: s.id, customDomain: s.customDomain || "", domainStatus: s.domainStatus || "pending", templates: templateCatalog() });
+  const onboarding = await onboardingForSite(env, s, user.id, plan);
+  return json({ ok: true, slug: s.slug, published: s.published, plan: plan, data: s.data, socials: s.socials, notify: s.notify || {}, archives: s.archives, boards, siteId: s.id, customDomain: s.customDomain || "", domainStatus: s.domainStatus || "pending", onboarding, templates: templateCatalog() });
 }
 
 export async function handleListBoards(request, env) {

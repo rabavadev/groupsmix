@@ -30,8 +30,11 @@ export function renderOverviewSummary() {
     top.hidden = sorted.length === 0;
     if (topEmpty) topEmpty.hidden = sorted.length > 0;
   }
-  const nameSet = !!($("f_name")?.value.trim());
-  const codeSet = !!($("f_code")?.value.trim() || $("f_pool")?.value.trim());
-  $("ov_step_brand")?.classList.toggle("is-done", nameSet && codeSet);
-  $("ov_step_players")?.classList.toggle("is-done", players.length > 0);
+  const o = state.ONBOARDING || {};
+  $("ov_step_brand")?.classList.toggle("is-done", o.brand);
+  $("ov_step_players")?.classList.toggle("is-done", o.players);
+  $("ov_step_share")?.classList.toggle("is-done", o.shared);
+  $("ov_step_bot")?.classList.toggle("is-done", o.botConnected);
+  $("ov_step_postback")?.classList.toggle("is-done", o.postback);
+  $("ov_step_postback")?.classList.toggle("is-locked", o.isFree);
 }
