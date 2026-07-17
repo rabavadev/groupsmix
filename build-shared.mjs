@@ -22,6 +22,15 @@ function findTsc() {
 
 console.log("Compiling shared TypeScript to JavaScript for leaderboard Worker...");
 
+// Remove stale generated .js files so tsc can emit fresh copies in-place.
+const sharedDir = path.join(__dirname, "shared");
+for (const entry of fs.readdirSync(sharedDir, { withFileTypes: true })) {
+  if (!entry.isFile()) continue;
+  if (entry.name.endsWith(".js")) {
+    fs.rmSync(path.join(sharedDir, entry.name));
+  }
+}
+
 try {
   const tscBin = findTsc();
   const cmd = tscBin
