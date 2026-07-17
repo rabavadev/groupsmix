@@ -3,8 +3,9 @@ import { sendErrorToDiscord } from "../../../shared/monitoring.js";
 import { withWorkerFetch } from "../../../shared/with-worker.js";
 import { RateLimiter } from "../../../shared/rate-limiter-do.js";
 import { populateEnv } from "../../../shared/env.js";
-import { getPublicSite, getByUser, getArchives, ARCHIVE_LIMITS } from "./site.js";
-import { renderLeaderboard, renderLegalPage, renderPlayerProfile } from "./render.js";
+import { getPublicSite, getByUser, getArchives, ARCHIVE_LIMITS, getBySlug } from "./site.js";
+import { renderLeaderboard, renderLegalPage, renderPlayerProfile, renderPasswordGate } from "./render.js";
+import { verifyBoardPassword, issueBoardPasswordToken, boardPasswordSetCookieHeader } from "./board-password.js";
 import { PAGES } from "./pages.js";
 import { bumpStat } from "./stats.js";
 import { createQueueProducer } from "../../../shared/queue-producer.js";
@@ -212,12 +213,31 @@ async function handleRequest(request, env, ctx, meta) {
           // Serve the leaderboard as if the path were /<slug>
           // Rewrite the URL path internally
           url.pathname = "/" + customSlug;
+          // Password-unlock submission for custom-domain private boards
+          if (method === "POST" && path === "/password") {
+            const site = await getBySlug(env, customSlug);
+            if (!site || !site.published || !site.password_hash) {
+              return new Response(notFoundPage(customSlug, nonce), { status: 404, headers: HTML_N });
+            }
+            const form = await request.formData().catch(() => null);
+            const password = form ? String(form.get("password") || "") : "";
+            if (!await verifyBoardPassword(password, site)) {
+              return new Response(renderPasswordGate(site, { nonce, isCustomDomain: true }, "Incorrect password."), { headers: { ...HTML_N, "cache-control": "no-store" } });
+            }
+            const token = await issueBoardPasswordToken(site);
+            const cookie = boardPasswordSetCookieHeader(site, token, { isCustomDomain: true });
+            return new Response(null, { status: 302, headers: { "location": "/", "set-cookie": cookie } });
+          }
+
           // Only serve GET requests on custom domains (no dashboard/API)
           if (method === "GET" && path.startsWith("/logo/")) {
             return serveLogo(request, path);
           }
           if (method === "GET" && (path === "/" || path === "")) {
-            const r = await getPublicSite(env, customSlug);
+            const r = await getPublicSite(env, customSlug, request);
+            if (r && r.requiresPassword) {
+              return new Response(renderPasswordGate(r, { nonce, isCustomDomain: true }), { headers: { ...HTML_N, "cache-control": "no-store" } });
+            }
             if (!r || r.suspended) return new Response(notFoundPage(customSlug, nonce), { status: 404, headers: HTML_N });
             const paid = r.plan === "pro" || r.plan === "agency";
             return new Response(
@@ -234,7 +254,10 @@ async function handleRequest(request, env, ctx, meta) {
             });
           }
           if (method === "GET" && LEGAL_PAGES.has(path.slice(1))) {
-            const r = await getPublicSite(env, customSlug);
+            const r = await getPublicSite(env, customSlug, request);
+            if (r && r.requiresPassword) {
+              return new Response(renderPasswordGate(r, { nonce, isCustomDomain: true }), { headers: { ...HTML_N, "cache-control": "no-store" } });
+            }
             if (!r || r.suspended) return new Response(notFoundPage(customSlug, nonce), { status: 404, headers: HTML_N });
             const paid = r.plan === "pro" || r.plan === "agency";
             const page = path.slice(1);
@@ -247,7 +270,10 @@ async function handleRequest(request, env, ctx, meta) {
             );
           }
           if (method === "GET" && path.startsWith("/player/")) {
-            const r = await getPublicSite(env, customSlug);
+            const r = await getPublicSite(env, customSlug, request);
+            if (r && r.requiresPassword) {
+              return new Response(renderPasswordGate(r, { nonce, isCustomDomain: true }), { headers: { ...HTML_N, "cache-control": "no-store" } });
+            }
             if (!r || r.suspended) return new Response(notFoundPage(customSlug, nonce), { status: 404, headers: HTML_N });
             const playerName = path.slice(8).split("/")[0];
             const profile = findProfilePlayer(r.data, playerName);
@@ -541,8 +567,8 @@ async function handleRequest(request, env, ctx, meta) {
         if (slug === "demo") {
           return Response.redirect(demoLeaderboardData().brand.ctaUrl, 302);
         }
-        const r = await getPublicSite(env, slug);
-        if (!r || r.suspended) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
+        const r = await getPublicSite(env, slug, request);
+        if (!r || r.suspended || r.requiresPassword) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
         if (r.id) enqueueBump(env, ctx, r.id, "clicks");
         const dest = r.data?.brand?.ctaUrl;
         // E2E-008: Only redirect to the CTA URL if it's a valid https:// URL.
@@ -564,8 +590,8 @@ async function handleRequest(request, env, ctx, meta) {
           const overlayHtml = PAGES.overlay(demoLeaderboardData(), { slug: "demo", nonce });
           return new Response(overlayHtml, { headers: { ...HTML_N, "cache-control": "no-store" } });
         }
-        const r = await getPublicSite(env, slug);
-        if (!r || r.suspended) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
+        const r = await getPublicSite(env, slug, request);
+        if (!r || r.suspended || r.requiresPassword) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
         const paid = r.plan !== "free";
         if (!paid) {
           // Upsell page for free users
@@ -589,7 +615,10 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
         try { slug = decodeURIComponent(path.slice(1).split("/")[0]).toLowerCase(); } catch { return new Response(notFoundPage("", nonce), { status: 404, headers: HTML_N }); }
         if (RESERVED.has(slug)) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
         const page = path.split("/").pop();
-        const r = await getPublicSite(env, slug);
+        const r = await getPublicSite(env, slug, request);
+        if (r && r.requiresPassword) {
+          return new Response(renderPasswordGate(r, { nonce, isCustomDomain: false }), { headers: { ...HTML_N, "cache-control": "no-store" } });
+        }
         if (!r || r.suspended) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
         const paid = r.plan !== "free";
         return new Response(
@@ -606,7 +635,10 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
         let slug;
         try { slug = decodeURIComponent(path.slice(1).split("/")[0]).toLowerCase(); } catch { return new Response(notFoundPage("", nonce), { status: 404, headers: HTML_N }); }
         if (RESERVED.has(slug)) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
-        const r = await getPublicSite(env, slug);
+        const r = await getPublicSite(env, slug, request);
+        if (r && r.requiresPassword) {
+          return new Response(renderPasswordGate(r, { nonce, isCustomDomain: false }), { headers: { ...HTML_N, "cache-control": "no-store" } });
+        }
         if (!r || r.suspended) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
         const playerName = path.split("/").slice(2).join("/");
         const profile = findProfilePlayer(r.data, playerName);
@@ -622,6 +654,25 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
         );
       }
 
+      // --- password unlock submission for public boards ---
+      if (method === "POST" && /^\/[^/]+\/password$/.test(path)) {
+        let slug;
+        try { slug = decodeURIComponent(path.slice(1).split("/")[0]).toLowerCase(); } catch { return new Response(notFoundPage("", nonce), { status: 404, headers: HTML_N }); }
+        if (RESERVED.has(slug)) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
+        const site = await getBySlug(env, slug);
+        if (!site || !site.published || !site.password_hash) {
+          return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
+        }
+        const form = await request.formData().catch(() => null);
+        const password = form ? String(form.get("password") || "") : "";
+        if (!await verifyBoardPassword(password, site)) {
+          return new Response(renderPasswordGate(site, { nonce, isCustomDomain: false }, "Incorrect password."), { headers: { ...HTML_N, "cache-control": "no-store" } });
+        }
+        const token = await issueBoardPasswordToken(site);
+        const cookie = boardPasswordSetCookieHeader(site, token, { isCustomDomain: false });
+        return new Response(null, { status: 302, headers: { "location": `/${slug}`, "set-cookie": cookie } });
+      }
+
       // --- public leaderboard at /<slug> ---
       if (method === "GET" && path.length > 1 && !path.includes(".")) {
         let slug;
@@ -630,7 +681,10 @@ a{color:#c8ff00;text-decoration:none;font-weight:600}</style></head><body>
         // /<slug>/overlay is handled above; anything else is a 404.
         if (path !== `/${slug}` && path !== `/${slug}/`) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
         if (RESERVED.has(slug)) return new Response(notFoundPage(slug, nonce), { status: 404, headers: HTML_N });
-        const r = await getPublicSite(env, slug);
+        const r = await getPublicSite(env, slug, request);
+        if (r && r.requiresPassword) {
+          return new Response(renderPasswordGate(r, { nonce, isCustomDomain: false }), { headers: { ...HTML_N, "cache-control": "no-store" } });
+        }
         if (!r) {
           // Check if site exists but is unpublished — return 404 with noindex
           // BUG-002 FIX: sites table has no 'suspended' column; join users to get status.

@@ -62,6 +62,13 @@ async function init() {
   if (p.customDomain && p.domainStatus) renderDomainStatus(p.domainStatus, "");
   const pubToggle = $("pubToggle");
   if (pubToggle) pubToggle.checked = p.published !== false;
+  const pwEnabled = $("f_password_enabled");
+  const pwInput = $("f_password");
+  if (pwEnabled) {
+    pwEnabled.checked = !!p.passwordProtected;
+    if (pwInput) pwInput.disabled = !pwEnabled.checked;
+    pwEnabled.addEventListener("change", () => { if (pwInput) pwInput.disabled = !pwEnabled.checked; });
+  }
   $("a_label").placeholder = new Date().toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   $("liveLink").textContent = location.host + "/" + state.SLUG;
   $("liveLink").href = "/" + state.SLUG;
