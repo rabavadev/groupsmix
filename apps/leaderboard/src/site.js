@@ -819,11 +819,11 @@ export async function saveSite(env, user, payload, siteId, request = null) {
           valueRows.push(`(${row.join(",")})`);
           const wagered = Number(p.wagered) || 0;
           const prize = Number(p.prize) || 0;
-          const score = Number(p.score) || wagered;
-          const hands = Number(p.hands) || 0;
-          const netProfit = Number(p.netProfit) || (prize - wagered);
-          const winRate = Number(p.winRate) || 0;
-          const change = Number(p.change) || 0;
+          const score = Number.isNaN(Number(p.score)) ? wagered : Number(p.score);
+          const hands = Number.isNaN(Number(p.hands)) ? 0 : Number(p.hands);
+          const netProfit = Number.isNaN(Number(p.netProfit)) ? (prize - wagered) : Number(p.netProfit);
+          const winRate = Number.isNaN(Number(p.winRate)) ? 0 : Number(p.winRate);
+          const change = Number.isNaN(Number(p.change)) ? 0 : Number(p.change);
           params.push(
             crypto.randomUUID(), site.id, String(p.name).slice(0, 80), normalizePlayerName(p.name),
             wagered, prize, i, 1, score, hands, netProfit, winRate, change

@@ -154,11 +154,24 @@ export function renderPlan() {
 }
 
 export function collect() {
-  const players = [...$("rows").children].map((tr) => ({
-    name: tr.querySelector(".p-name").value.trim(),
-    wagered: parseFloat(tr.querySelector(".p-wager").value) || 0,
-    prize: parseFloat(tr.querySelector(".p-prize").value) || 0,
-  })).filter((p) => p.name);
+  const players = [...$("rows").children].map((tr) => {
+    const p = {
+      name: tr.querySelector(".p-name").value.trim(),
+      wagered: parseFloat(tr.querySelector(".p-wager").value) || 0,
+      prize: parseFloat(tr.querySelector(".p-prize").value) || 0,
+    };
+    const score = tr.querySelector(".p-score").value.trim();
+    const hands = tr.querySelector(".p-hands").value.trim();
+    const netProfit = tr.querySelector(".p-net-profit").value.trim();
+    const winRate = tr.querySelector(".p-win-rate").value.trim();
+    const change = tr.querySelector(".p-change").value.trim();
+    if (score) p.score = parseFloat(score);
+    if (hands) p.hands = parseFloat(hands);
+    if (netProfit) p.netProfit = parseFloat(netProfit);
+    if (winRate) p.winRate = parseFloat(winRate);
+    if (change) p.change = parseFloat(change);
+    return p;
+  }).filter((p) => p.name);
   const brandName = $("f_name").value.trim();
   const out = {
     name: brandName,

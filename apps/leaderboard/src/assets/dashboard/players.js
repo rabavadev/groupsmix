@@ -2,9 +2,18 @@
 import { $, esc, logError } from "./utils.js";
 import { state } from "./state.js";
 
-export function playerRow(p = { name: "", wagered: "", prize: "" }) {
+export function playerRow(p = { name: "", wagered: "", prize: "", score: "", hands: "", netProfit: "", winRate: "", change: "" }) {
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td class="rank"></td><td><input class="p-name" placeholder="Player name" value="${esc(p.name)}"></td><td class="num"><input class="p-wager" inputmode="decimal" placeholder="0" value="${esc(p.wagered)}"></td><td class="num"><input class="p-prize" inputmode="decimal" placeholder="0" value="${esc(p.prize)}"></td><td class="act"><button class="row-x" title="Remove" aria-label="Remove player" type="button">×</button></td>`;
+  tr.innerHTML = `<td class="rank"></td>
+    <td><input class="p-name" placeholder="Player name" value="${esc(p.name)}"></td>
+    <td class="num"><input class="p-wager" inputmode="decimal" placeholder="0" value="${esc(p.wagered)}"></td>
+    <td class="num"><input class="p-prize" inputmode="decimal" placeholder="0" value="${esc(p.prize)}"></td>
+    <td class="num"><input class="p-score" inputmode="decimal" placeholder="0" value="${esc(p.score)}"></td>
+    <td class="num"><input class="p-hands" inputmode="decimal" placeholder="0" value="${esc(p.hands)}"></td>
+    <td class="num"><input class="p-net-profit" inputmode="decimal" placeholder="0" value="${esc(p.netProfit)}"></td>
+    <td class="num"><input class="p-win-rate" inputmode="decimal" placeholder="0" value="${esc(p.winRate)}"></td>
+    <td class="num"><input class="p-change" inputmode="decimal" placeholder="0" value="${esc(p.change)}"></td>
+    <td class="act"><button class="row-x" title="Remove" aria-label="Remove player" type="button">×</button></td>`;
   tr.querySelector(".row-x").addEventListener("click", () => { tr.remove(); renumber(); toggleEmpty(); });
   return tr;
 }
@@ -60,6 +69,14 @@ export function parseImportAmount(s) {
   return n;
 }
 
+function parseImportNumber(s) {
+  const raw = String(s || "").replace(/[$,\s]/g, "");
+  if (raw === "") return undefined;
+  const n = parseFloat(raw);
+  if (Number.isNaN(n) || !Number.isFinite(n)) return undefined;
+  return n;
+}
+
 export function parseImportText(text, source = "text") {
   const lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && !l.startsWith("//"));
   if (!lines.length) return { rows: [], errors: ["No data found."], source };
@@ -83,7 +100,18 @@ export function parseImportText(text, source = "text") {
     if (wagered === null) { errors.push(`Row ${idx + 1}: invalid wagered for "${name}"`); return; }
     const prize = parseImportAmount(parts[2]);
     if (prize === null) { errors.push(`Row ${idx + 1}: invalid prize for "${name}"`); return; }
-    rows.push({ name, wagered, prize });
+    const row = { name, wagered, prize };
+    const score = parseImportNumber(parts[3]);
+    const hands = parseImportNumber(parts[4]);
+    const netProfit = parseImportNumber(parts[5]);
+    const winRate = parseImportNumber(parts[6]);
+    const change = parseImportNumber(parts[7]);
+    if (score !== undefined) row.score = score;
+    if (hands !== undefined) row.hands = hands;
+    if (netProfit !== undefined) row.netProfit = netProfit;
+    if (winRate !== undefined) row.winRate = winRate;
+    if (change !== undefined) row.change = change;
+    rows.push(row);
   });
   return { rows, errors, source };
 }
@@ -119,11 +147,24 @@ $("importApply").addEventListener("click", () => {
     return;
   }
   const replace = $("importReplace").checked;
-  const existing = replace ? [] : [...$("rows").children].map((tr) => ({
-    name: tr.querySelector(".p-name").value.trim(),
-    wagered: parseFloat(tr.querySelector(".p-wager").value) || 0,
-    prize: parseFloat(tr.querySelector(".p-prize").value) || 0,
-  })).filter((p) => p.name);
+  const existing = replace ? [] : [...$("rows").children].map((tr) => {
+    const p = {
+      name: tr.querySelector(".p-name").value.trim(),
+      wagered: parseFloat(tr.querySelector(".p-wager").value) || 0,
+      prize: parseFloat(tr.querySelector(".p-prize").value) || 0,
+    };
+    const score = tr.querySelector(".p-score").value.trim();
+    const hands = tr.querySelector(".p-hands").value.trim();
+    const netProfit = tr.querySelector(".p-net-profit").value.trim();
+    const winRate = tr.querySelector(".p-win-rate").value.trim();
+    const change = tr.querySelector(".p-change").value.trim();
+    if (score) p.score = parseFloat(score);
+    if (hands) p.hands = parseFloat(hands);
+    if (netProfit) p.netProfit = parseFloat(netProfit);
+    if (winRate) p.winRate = parseFloat(winRate);
+    if (change) p.change = parseFloat(change);
+    return p;
+  }).filter((p) => p.name);
   const limit = state.ME?.limits?.players || 9999;
   const remaining = Math.max(0, limit - existing.length);
   const parsed = result.rows.slice(0, remaining);
@@ -146,9 +187,9 @@ $("csvFileInput")?.addEventListener("change", () => {
   const reader = new FileReader();
   reader.onload = () => {
     const result = parseImportText(reader.result, "csv");
-    if (!result.rows.length) { $("status").textContent = "No players found in that CSV. Expected columns: name, wagered, prize"; return; }
+    if (!result.rows.length) { $("status").textContent = "No players found. Expected: name, wagered, prize and optional score, hands, net profit, win rate, change."; return; }
     $("importPanel").hidden = false;
-    $("importText").value = result.rows.map((p) => `${p.name}\t${p.wagered}\t${p.prize}`).join("\n");
+    $("importText").value = result.rows.map((p) => [p.name, p.wagered, p.prize, p.score ?? "", p.hands ?? "", p.netProfit ?? "", p.winRate ?? "", p.change ?? ""].join("\t")).join("\n");
     $("importText").dispatchEvent(new Event("input"));
     $("status").textContent = `CSV loaded: ${result.rows.length} valid player${result.rows.length === 1 ? "" : "s"}${result.errors.length ? `, ${result.errors.length} problem${result.errors.length === 1 ? "" : "s"}` : ""}. Review and click "Add to table".`;
   };
