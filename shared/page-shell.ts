@@ -54,6 +54,15 @@ ${styles}
 <a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <!--GM_NAV-->
 <main class="${mainClass}" id="main-content">${opts.content}</main>
+<footer class="gm-shell-footer">
+  <div class="gm-shell-inner">
+    <a class="gm-brand" href="/dashboard"><span class="gm-brand-mark">YR</span><span class="gm-brand-word">YourRank</span></a>
+    <nav class="gm-shell-footer-links" aria-label="Legal">
+      <a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a><a href="/responsible">Responsible Play</a>
+    </nav>
+    <span class="gm-shell-footer-copy">© ${new Date().getFullYear()} YourRank</span>
+  </div>
+</footer>
 ${scripts}
 </body></html>`;
 }

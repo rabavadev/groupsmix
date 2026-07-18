@@ -62,3 +62,15 @@ html{color-scheme:dark light}
 @media (prefers-color-scheme: light){
   :root{--gm-bg:#ffffff;--gm-panel:#f7f7f9;--gm-line:#e4e5ea;--gm-line-2:#d8dae0;--gm-ink:#111114;--gm-ink-soft:#4e4f57;--gm-ink-mute:#6b6c75;--gm-accent:#7fb300;--gm-accent-ink:#0b0b0c}
 }
+
+/* Dashboard footer */
+.gm-shell-footer{border-top:1px solid var(--gm-line);margin-top:40px;padding:18px 0;background:var(--gm-bg)}
+.gm-shell-footer .gm-shell-inner{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:22px}
+.gm-shell-footer-links{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+.gm-shell-footer-links a{font-family:var(--gm-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gm-ink-soft);text-decoration:none}
+.gm-shell-footer-links a:hover{color:var(--gm-ink)}
+.gm-shell-footer-copy{font-family:var(--gm-mono);font-size:11px;color:var(--gm-ink-mute);white-space:nowrap}
+@media(max-width:680px){
+  .gm-shell-footer .gm-shell-inner{grid-template-columns:1fr;gap:10px;text-align:center}
+  .gm-shell-footer-links{justify-content:center}
+}
