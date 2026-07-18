@@ -1,4 +1,58 @@
 // Shared legal page shell helper
+// NOTE: update COMPANY below with the real operating entity details before going live.
+const COMPANY = {
+  name: "",          // e.g. "YourRank Ltd"
+  country: "",       // e.g. "United Kingdom"
+  number: "",        // e.g. "Company number 12345678"
+  email: "contact@yourrank.site",
+};
+
+function companyLine() {
+  const parts = [
+    COMPANY.name,
+    COMPANY.country ? `registered in ${COMPANY.country}` : "",
+    COMPANY.number,
+  ].filter(Boolean);
+  return parts.length ? `<p class="legal-company">${parts.join(" · ")}</p>` : "";
+}
+
+function platformHeader() {
+  return `<header class="topbar"><a class="brand" href="/">Your<b>Rank</b></a>
+<div class="topbar-right"><a href="/#how">How it works</a><a href="/pricing">Pricing</a><a href="/login" class="btn btn--sm btn--ghost">Sign in</a><a href="/signup" class="btn btn--sm btn--accent">Create free page</a></div></header>`;
+}
+
+function platformFooter(pagePath) {
+  const active = (p) => p === pagePath ? " aria-current=" : "";
+  return `<footer class="ftr ftr--platform">
+<div class="ftr-top">
+  <div class="ftr-brand">
+    <a class="brand" href="/">Your<b>Rank</b></a>
+    <p>Leaderboards for streamers & communities</p>
+  </div>
+  <div class="ftr-cols">
+    <div class="ftr-col">
+      <b>Product</b>
+      <a href="/#how">How it works</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/docs">API Docs</a>
+      <a href="/contact">Contact</a>
+    </div>
+    <div class="ftr-col">
+      <b>Legal</b>
+      <a href="/terms"${active("terms")}>Terms of Service</a>
+      <a href="/privacy"${active("privacy")}>Privacy Policy</a>
+      <a href="/cookies"${active("cookies")}>Cookie Policy</a>
+      <a href="/refund"${active("refund")}>Refund Policy</a>
+      <a href="/responsible"${active("responsible")}>Responsible Play</a>
+    </div>
+  </div>
+</div>
+${companyLine()}
+<p class="ftr-copy">© ${new Date().getFullYear()} YourRank · <a href="mailto:${COMPANY.email}">${COMPANY.email}</a></p>
+<p class="ftr-fine">18+ · For entertainment purposes only. Play responsibly.</p>
+</footer>`;
+}
+
 export const legal = (title, updated, body, pagePath, desc) => `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${title} · YourRank</title>
@@ -7,9 +61,9 @@ export const legal = (title, updated, body, pagePath, desc) => `<!DOCTYPE html><
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
 <a href="#main-content" class="sr-only skip-link">Skip to content</a>
-<header class="topbar"><a class="brand" href="/">Your<b>Rank</b></a>
-<div class="topbar-right"><a href="/login" class="btn btn--sm btn--ghost">Sign in</a></div></header>
+${platformHeader()}
 <main class="legal" id="main-content"><h1>${title}</h1><p class="legal-updated">Last updated: ${updated}</p>
 ${body}
-<p class="legal-foot"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/responsible">Responsible play</a> · <a href="/">Home</a></p>
-</main></body></html>`;
+</main>
+${platformFooter(pagePath)}
+</body></html>`;
