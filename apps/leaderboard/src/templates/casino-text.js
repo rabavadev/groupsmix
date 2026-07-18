@@ -107,5 +107,21 @@ export const CASINO_TEXT_DEFAULTS = {
     "col_status": "Status",
     "col_score": "Score",
     "load_more": "Load More Players"
+  },
+  "highRollers": {
+    "the_ultimate_ranking": "THE ULTIMATE RANKING",
+    "real_time_rankings": "Real-time rankings of the biggest winners, hottest streaks, and most consistent players across the casino floor.",
+    "full_leaderboard": "FULL LEADERBOARD",
+    "search_placeholder": "Search player...",
+    "total_winnings": "Total winnings",
+    "prize_pool": "Prize Pool",
+    "hot_streak": "Hot Streak",
+    "active_players": "Active Players",
+    "rank": "Rank",
+    "player": "Player",
+    "win_rate": "Win Rate",
+    "biggest_win": "Biggest Win",
+    "streak": "Streak",
+    "trend": "Trend"
   }
 };

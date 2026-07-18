@@ -12,8 +12,9 @@ import {
   composeUnderwater,
   composeVip,
   composeWestern,
-  CASINO_FULL_CSS,
+  CASINO_FULL_CSS as BASE_CASINO_CSS,
 } from "./casino-full.js";
+import { composeHighRollers, HIGH_ROLLERS_CSS } from "./casino-high-rollers.js";
 import { CASINO_TEXT_DEFAULTS } from "./casino-text.js";
 
 const PRESETS = {
@@ -72,6 +73,11 @@ const PRESETS = {
     { id: "void", name: "Void", accentA: "#8B5CF6", accentB: "#020617" },
     { id: "ember", name: "Ember", accentA: "#F59E0B", accentB: "#020617" },
   ],
+  highRollers: [
+    { id: "gold", name: "Gold", accentA: "#c9a84c", accentB: "#8b5cf6" },
+    { id: "midnight", name: "Midnight", accentA: "#5b8def", accentB: "#080b14" },
+    { id: "ruby", name: "Ruby", accentA: "#ef4444", accentB: "#0a0f1a" },
+  ],
 };
 
 const FRAME_COLORS = {
@@ -86,6 +92,7 @@ const FRAME_COLORS = {
   pro: { bg: "#0D1A0F", text: "#E5E5E5", accent: "#22C55E", muted: "#6B7280", hover: "#FFFFFF" },
   leaderboardV2: { bg: "#FAF7F2", text: "#000000", accent: "#C41E3A", muted: "rgba(0,0,0,0.6)", hover: "#000000" },
   leaderboard: { bg: "#020617", text: "#F8FAFC", accent: "#38bdf8", muted: "#94A3B8", hover: "#FFFFFF" },
+  highRollers: { bg: "#080b14", text: "#f0f0f5", accent: "#c9a84c", muted: "rgba(240,240,245,0.65)", hover: "#ffffff" },
 };
 
 export function frameCss(tpl, font = "Inter") {
@@ -129,7 +136,10 @@ const METAS = {
   pro: { name: "Casino Pro", description: "Poker-style data table with hands, win-rate bars, and net-profit deltas." },
   leaderboardV2: { name: "Editorial Standings", description: "Magazine-style light leaderboard with serif headlines and score bars." },
   leaderboard: { name: "Cyber Standings", description: "Dark shadcn podium and list with animated cards and glow effects." },
+  highRollers: { name: "High Rollers", description: "Luxury dark casino leaderboard with hero, stats cards, podium and full standings." },
 };
+
+const CASINO_FULL_CSS = { ...BASE_CASINO_CSS, highRollers: HIGH_ROLLERS_CSS };
 
 export const CASINO_TEMPLATES = Object.fromEntries(
   Object.keys(METAS).map((id) => [
@@ -157,6 +167,7 @@ export const CASINO_COMPOSERS = {
   pro: composePro,
   leaderboardV2: composeLeaderboardV2,
   leaderboard: composeLeaderboard,
+  highRollers: composeHighRollers,
 };
 
 export const CASINO_FULL = new Set(Object.keys(CASINO_COMPOSERS));
