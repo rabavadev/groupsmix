@@ -13,6 +13,13 @@ const safeUrl = (u) => {
 };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+const LOGO_WIDTHS = [64, 128, 256, 512];
+
+function logoSrcSet(baseUrl) {
+  if (!baseUrl) return "";
+  const sep = baseUrl.includes("?") ? "&" : "?";
+  return LOGO_WIDTHS.map((w) => `${esc(baseUrl)}${sep}w=${w} ${w}w`).join(", ");
+}
 
 const shareCss = `
 .share-sec{padding:24px 4vw;max-width:var(--wrap,1140px);margin:0 auto;text-align:center;border-top:1px solid var(--line,rgba(150,120,220,.3))}
@@ -339,8 +346,9 @@ body[data-preview] .top3{margin-bottom:14px}
       }).join("")}</div></nav>`
     : "";
   const logo = opts.logoUrl ? esc(opts.logoUrl) : null;
-  const navLogo = logo ? `<img class="nav-logo" src="${logo}" alt="" />` : "";
-  const heroLogo = logo ? `<img class="hero-logo" src="${logo}" alt="${esc(b.name)} logo" />` : "";
+  const logoSet = logoSrcSet(opts.logoUrl);
+  const navLogo = logo ? `<img class="nav-logo" src="${logo}" srcset="${logoSet}" sizes="64px" alt="" />` : "";
+  const heroLogo = logo ? `<img class="hero-logo" src="${logo}" srcset="${logoSet}" sizes="(max-width: 640px) 120px, 200px" alt="${esc(b.name)} logo" />` : "";
   const isCustomDomain = !!opts.isCustomDomain;
   const home = String(opts.homeUrl || "https://yourrank.site").replace(/\/$/, "");
   const pageUrl = isCustomDomain ? home : `${home}/${esc(opts.slug || "")}`;
@@ -491,7 +499,8 @@ export function renderLegalPage(data, page, opts) {
   const tpl = br.template || "classic";
   const fullPage = CASINO_FULL.has(tpl);
   const logo = opts.logoUrl ? esc(opts.logoUrl) : null;
-  const navLogo = logo ? `<img class="nav-logo" src="${logo}" alt="" />` : "";
+  const logoSet = logoSrcSet(opts.logoUrl);
+  const navLogo = logo ? `<img class="nav-logo" src="${logo}" srcset="${logoSet}" sizes="64px" alt="" />` : "";
   const isCustomDomain = !!opts.isCustomDomain;
   const homeHref = isCustomDomain ? "/" : `/${esc(opts.slug || "")}`;
   const legalHref = (p) => isCustomDomain ? `/${p}` : `/${esc(opts.slug || "")}/${p}`;
@@ -547,7 +556,8 @@ export function renderPlayerProfile(data, player, history, opts) {
   const tpl = br.template || "classic";
   const fullPage = CASINO_FULL.has(tpl);
   const logo = opts.logoUrl ? esc(opts.logoUrl) : null;
-  const navLogo = logo ? `<img class="nav-logo" src="${logo}" alt="" />` : "";
+  const logoSet = logoSrcSet(opts.logoUrl);
+  const navLogo = logo ? `<img class="nav-logo" src="${logo}" srcset="${logoSet}" sizes="64px" alt="" />` : "";
   const homeHref = opts.isCustomDomain ? "/" : `/${esc(opts.slug || "")}`;
   const profileHref = (name) => opts.isCustomDomain ? `/player/${encodeURIComponent(name)}` : `/${esc(opts.slug || "")}/player/${encodeURIComponent(name)}`;
   const backHref = playerBackHref(opts);
