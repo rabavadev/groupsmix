@@ -76,7 +76,9 @@ export const dashboardPage = leaderboardPageHtml({
 <div class="card"><h2>Finish setup</h2><p class="card-sub">A few steps to a page worth sharing.</p><div class="lb-steps" id="ov_steps">
 <div class="lb-step" id="ov_step_brand"><span class="lb-step-n">Step 1</span><span class="lb-step-t">Brand &amp; prize</span><span class="lb-step-d">Set your name, code and prize in <button class="lb-linkbtn" type="button" data-jump="board">Prize &amp; players</button>.</span></div>
 <div class="lb-step" id="ov_step_players"><span class="lb-step-n">Step 2</span><span class="lb-step-t">Add players</span><span class="lb-step-d">Add or import your ranked list.</span></div>
-<div class="lb-step" id="ov_step_share"><span class="lb-step-n">Step 3</span><span class="lb-step-t">Share your link</span><span class="lb-step-d">Drop your page URL in your stream panels and Discord.</span></div>
+<div class="lb-step" id="ov_step_bot"><span class="lb-step-n">Step 3</span><span class="lb-step-t">Connect the bot</span><span class="lb-step-d"><a class="lb-linkbtn" href="/dashboard/bot/setup">Connect your Telegram bot</a> so viewers can subscribe and get alerts.</span></div>
+<div class="lb-step" id="ov_step_share"><span class="lb-step-n">Step 4</span><span class="lb-step-t">Share your leaderboard link</span><span class="lb-step-d">Publish your page, then drop your URL in stream panels and Discord.</span></div>
+<div class="lb-step" id="ov_step_postback"><span class="lb-step-n">Step 5</span><span class="lb-step-t">Add postback tracking</span><span class="lb-step-d"><a class="lb-linkbtn" href="/dashboard/attribution">Set up casino postbacks</a> to see which viewers convert into depositors.</span></div>
 </div></div>
 
 </section>

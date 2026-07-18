@@ -543,6 +543,7 @@ table.ref-table td{padding:8px 8px;border-bottom:1px solid var(--line);color:var
 .lb-step-t{font-weight:600;font-size:14px}
 .lb-step-t::before{content:"\25CB  ";color:var(--ink-mute)}
 .lb-step.is-done .lb-step-t::before{content:"\2713  ";color:var(--ok)}
+.lb-step.is-locked .lb-step-t::before{content:"\1F512  ";color:var(--ink-mute)}
 .lb-step-d{font-size:12px;color:var(--ink-soft)}
 /* Compact new-board form and publish toggle live in the sidebar */
 .lb-board-form{padding:12px;border-top:1px solid var(--line);background:var(--panel-2)}

@@ -32,6 +32,7 @@ async function init() {
   state.BOARDS = p.boards || [];
   state.TEMPLATE_CATALOG = Array.isArray(p.templates) ? p.templates : [];
   state.SITE_UPDATED_AT = p.updatedAt || null;
+  state.ONBOARDING = p.onboarding || {};
 
   renderBoardSwitcher();
   renderSidebarBoardSwitcher();
