@@ -462,7 +462,7 @@ ${fullPage ? "" : `<div class="field" aria-hidden="true"></div><div class="water
 <nav class="nav-links" aria-label="Page sections">${hasPartner ? `<a href="#partner">Partner</a>` : ""}<a href="#board">Leaderboard</a>${socials.length ? `<a href="#socials">Socials</a>` : ""}</nav></header>`}
 ${boardTabs}
 <main id="top">
-${composeMain(tpl, buildParts({ b, esc, heroLogo, hasCasino, casino, period, pool, hasCta, ctaHref, hasPartner, hasCode, code, blurb, whyStats, socials, prizes: data.prizes, currency: data.brand?.currency, hidePrizeAmounts: data.brand?.hidePrizeAmounts }), textOverrides)}</main>
+${composeMain(tpl, buildParts({ b, esc, heroLogo, hasCasino, casino, period, pool, hasCta, ctaHref, hasPartner, hasCode, code, blurb, whyStats, socials, prizes: data.prizes, currency: data.brand?.currency, hidePrizeAmounts: data.brand?.hidePrizeAmounts, players: data.players }), textOverrides)}</main>
 ${shareHtml}
 ${fullPageFooter}
 ${fullPage ? "" : `<footer class="ftr"><div class="ftr-id"><span class="ftr-name" data-brand-name>${esc(b.name)}</span><span class="ftr-tag" data-tagline>${esc(b.tagline)}</span></div>
