@@ -8,6 +8,14 @@ import { loadStats, renderArchives, renderBranding, renderDomain, renderDomainSt
 import { renderOverviewSummary, wireOverviewQuickActions } from "./dashboard/overview.js";
 import { renderReferrals } from "./dashboard/referrals.js";
 
+function toast(msg) {
+  const el = $("status");
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+  setTimeout(() => { if (el.textContent === msg) el.hidden = true; }, 3000);
+}
+
 async function init() {
   let me;
   try { me = await (await fetch("/api/auth/me")).json(); } catch (err) { logError("auth/me", err); me = null; }
@@ -85,6 +93,7 @@ async function init() {
   renderOverviewSummary();
   wireOverviewQuickActions();
   renderReferrals();
+  renderApiKey();
 
   const markDirty = () => { state._dirty = true; const sb = $("savebar"); if (sb) sb.hidden = false; };
   $("dash").addEventListener("input", markDirty);
@@ -93,6 +102,38 @@ async function init() {
   if (urlParams.get("upgraded")) {
     $("status").textContent = "Payment received — Pro activates once the network confirms (usually minutes).";
   }
+}
+
+function renderApiKey() {
+  const keyInput = $("f_api_key");
+  const copyBtn = $("apiKeyCopy");
+  const example = $("f_api_example");
+  if (!keyInput) return;
+  if (state.ME?.apiKeyPrefix) {
+    keyInput.value = state.ME.apiKeyPrefix + "…";
+    keyInput.dataset.hasKey = "true";
+  }
+  if (example && state.SLUG) {
+    example.value = `POST https://${location.host}/api/v1/sites/${state.SLUG}/players\nAuthorization: Bearer YOUR_API_KEY\nContent-Type: application/json\n\n{"name":"Dragon7","wagered":245000}`;
+  }
+  $("apiKeyGen")?.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/user/api-key", { method: "POST", credentials: "include" });
+      const d = await res.json();
+      if (!d.ok) return toast(d.error || "Could not generate key");
+      keyInput.value = d.key;
+      keyInput.dataset.hasKey = "true";
+      copyBtn.disabled = false;
+      state.ME.apiKeyPrefix = d.prefix;
+      toast("API key generated — copy it now, it will not be shown again.");
+    } catch (e) {
+      toast("Network error");
+    }
+  });
+  copyBtn?.addEventListener("click", async () => {
+    if (!keyInput.value) return;
+    try { await navigator.clipboard.writeText(keyInput.value); toast("Copied"); } catch { toast("Copy failed"); }
+  });
 }
 
 init();

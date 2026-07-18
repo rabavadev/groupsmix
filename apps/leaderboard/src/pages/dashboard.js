@@ -199,6 +199,22 @@ export const dashboardPage = leaderboardPageHtml({
 <div id="domainStatus" class="hint mt-8 min-h-18" role="status" aria-live="polite"></div>
 </div>
 <div class="empty" id="domainLock" hidden>Custom domains are a Pro feature. <a href="#" id="domainUpgrade">Upgrade to unlock it</a>.</div></div>
+<div class="card" id="apiKeyCard"><h2>API access</h2><p class="card-sub">Update players automatically from your own backend or Google Sheets script.</p>
+<div class="field"><label for="f_api_key">Your API key</label>
+<div class="d-flex gap-8 items-center flex-wrap">
+<input id="f_api_key" type="text" class="flex-1" readonly placeholder="No key — generate one to use the API" />
+<button class="btn btn--sm btn--accent" id="apiKeyGen" type="button">Generate / Regenerate</button>
+<button class="btn btn--sm" id="apiKeyCopy" type="button" disabled>📋 Copy</button>
+</div>
+<span class="hint" id="apiKeyHint">The full key is shown once after generation. Save it somewhere safe.</span></div>
+<div class="field"><label for="f_api_example">cURL example</label>
+<textarea id="f_api_example" rows="5" readonly>POST https://yourrank.site/api/v1/sites/{slug}/players
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{"name":"Dragon7","wagered":245000}</textarea>
+<span class="hint">Send a single player object or an array. <code>name</code> and <code>wagered</code> are required; <code>prize, score, hands, netProfit, winRate, change</code> are optional.</span></div>
+</div>
 </section>
 <section class="lb-page" data-page="notifications">
 <div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Notifications</h1><p class="lb-psub">Discord and Telegram alerts for your leaderboard</p></div></div>
