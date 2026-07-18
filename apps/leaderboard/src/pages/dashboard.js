@@ -53,29 +53,30 @@ export const dashboardPage = leaderboardPageHtml({
 <button class="lb-nav" type="button" data-nav="integrations"><span class="lb-nav-ic" aria-hidden="true">🔌</span>Overlay &amp; domain</button>
 <button class="lb-nav" type="button" data-nav="notifications"><span class="lb-nav-ic" aria-hidden="true">🔔</span>Notifications</button>
 <button class="lb-nav" type="button" data-nav="manage"><span class="lb-nav-ic" aria-hidden="true">⚙</span>Periods &amp; plan</button>
-<div class="lb-side-foot"><span class="label">Editing</span><p class="live-link"><a id="liveLink" href="#" target="_blank">…</a></p><span class="label" id="planBadge">FREE PLAN</span></div>
+<div class="lb-side-foot"><a class="btn btn--sm btn--accent lb-live-btn" id="liveLink" href="#" target="_blank">View live board ↗</a><span class="label" id="planBadge">FREE PLAN</span></div>
 </aside>
 <div class="lb-main">
 <section class="lb-page is-on" data-page="overview">
-<div class="lb-phead"><button class="lb-menu" id="lbMenu" type="button" aria-label="Show sections" aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Overview</h1><p class="lb-psub">Your leaderboard at a glance</p></div></div>
+<div class="lb-phead"><button class="lb-menu" id="lbMenu" type="button" aria-label="Show sections" aria-expanded="false" aria-controls="lbSide">☰</button><div class="lb-phead-text"><h1 tabindex="-1">Overview</h1><p class="lb-psub">Your leaderboard at a glance</p><div class="lb-board-name" id="overviewBoardName">…</div></div><div class="lb-phead-actions"><a class="btn btn--sm btn--accent" id="overviewViewLive" href="#" target="_blank">View live board ↗</a><button class="btn btn--sm" id="overviewCopyLink" type="button">Copy link</button></div></div>
 <div class="card card--danger" id="draftBanner" hidden><h2>Finish setup</h2><p class="card-sub">You started the setup wizard but didn't finish <b id="draftName">this board</b>. Complete it now or mark it done.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm btn--accent" id="draftResume" href="/setup">Resume setup →</a><button class="btn btn--sm btn--ghost" id="draftDone" type="button">Mark as done</button></div></div>
-<div class="lb-qa" aria-label="Quick actions">
+<div class="stat-tiles">
+<div class="stat-tile"><span class="stat-num" id="ov_board">–</span><span class="stat-lbl">Board</span></div>
+<div class="stat-tile"><span class="stat-num" id="ov_prize">–</span><span class="stat-lbl">Prize pool</span></div>
+<div class="stat-tile"><span class="stat-num" id="ov_players">–</span><span class="stat-lbl">Players</span></div>
+<div class="stat-tile"><span class="stat-num" id="ov_views7">–</span><span class="stat-lbl">Views · 7d</span></div>
+<div class="stat-tile"><span class="stat-num" id="ov_resets">–</span><span class="stat-lbl">Resets in</span></div>
+</div>
+<div class="lb-qa" aria-label="Quick actions" id="ovQuickActions">
 <button type="button" data-jump="board"><span class="lb-qa-t">Add players</span><span class="lb-qa-d">Type them in or paste from a spreadsheet</span></button>
 <button type="button" data-jump="board"><span class="lb-qa-t">Set the prize</span><span class="lb-qa-d">Prize pool, casino and your code</span></button>
 <button type="button" data-jump="design"><span class="lb-qa-t">Pick a design</span><span class="lb-qa-d">One click publishes it</span></button>
 <button type="button" id="ov_copyLink"><span class="lb-qa-t">Copy your page link</span><span class="lb-qa-d">Share it anywhere</span></button>
 <a class="lb-qa" href="/demo" target="_blank"><span class="lb-qa-t">View demo</span><span class="lb-qa-d">See a live example board</span></a>
 </div>
-<div class="card"><h2>Your leaderboard works without Telegram</h2><p class="card-sub">The web page is the core channel. A Telegram bot is optional and just gives viewers another way to interact.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm" href="/dashboard/bot/setup">Connect a bot (optional)</a><a class="btn btn--sm btn--ghost" href="/demo" target="_blank">View demo</a></div></div>
-<div class="stat-tiles">
-<div class="stat-tile"><span class="stat-num" id="ov_pool">–</span><span class="stat-lbl">Prize pool</span></div>
-<div class="stat-tile"><span class="stat-num" id="ov_players">–</span><span class="stat-lbl">Players</span></div>
-<div class="stat-tile"><span class="stat-num" id="ov_views7">–</span><span class="stat-lbl">Views · 7d</span></div>
-<div class="stat-tile"><span class="stat-num" id="ov_resets">–</span><span class="stat-lbl">Resets in</span></div>
-</div>
+<div class="card" id="ovTelegramCard"><h2>Your leaderboard works without Telegram</h2><p class="card-sub">The web page is the core channel. A Telegram bot is optional and just gives viewers another way to interact.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm btn--accent" href="/dashboard/bot/setup">Connect a bot (optional)</a><a class="btn btn--sm btn--ghost" href="/demo" target="_blank">View demo</a></div></div>
 <div class="card"><div class="lb-cardhd"><h2>Daily activity · 14 days</h2><a href="/dashboard/analytics" class="lb-cardlink">Full analytics →</a></div><div class="stat-chart"><div class="stat-bars" id="ov_bars" title="Daily activity, last 14 days"></div><div class="stat-chart-lbl"><span id="ov_barsFrom"></span><span>today</span></div></div><p class="hint" id="ov_barsEmpty" hidden>No activity yet — share your page link to get it moving.</p><div class="stat-legend"><span class="stat-legend-item views">Views</span><span class="stat-legend-item copies">Copies</span><span class="stat-legend-item clicks">Clicks</span></div></div>
 <div class="card"><div class="lb-cardhd"><h2>Top players</h2><button class="lb-cardlink" type="button" data-jump="board">Manage all →</button></div><div class="lb-toplist" id="ov_top"></div><div class="empty" id="ov_topEmpty" hidden>No players yet. <button class="lb-linkbtn" type="button" data-jump="board">Add your first one →</button></div></div>
-<div class="card"><h2>Finish setup</h2><p class="card-sub">A few steps to a page worth sharing.</p><div class="lb-steps" id="ov_steps">
+<div class="card" id="ovSetupSteps"><h2>Finish setup</h2><p class="card-sub">A few steps to a page worth sharing.</p><div class="lb-steps" id="ov_steps">
 <div class="lb-step" id="ov_step_brand"><span class="lb-step-n">Step 1</span><span class="lb-step-t">Brand &amp; prize</span><span class="lb-step-d">Set your name, code and prize in <button class="lb-linkbtn" type="button" data-jump="board">Prize &amp; players</button>.</span></div>
 <div class="lb-step" id="ov_step_players"><span class="lb-step-n">Step 2</span><span class="lb-step-t">Add players</span><span class="lb-step-d">Add or import your ranked list.</span></div>
 <div class="lb-step" id="ov_step_bot"><span class="lb-step-n">Step 3</span><span class="lb-step-t">Connect the bot <span class="pill pill--muted">Optional</span></span><span class="lb-step-d"><a class="lb-linkbtn" href="/dashboard/bot/setup">Connect your Telegram bot</a> so viewers can subscribe and get alerts.</span></div>

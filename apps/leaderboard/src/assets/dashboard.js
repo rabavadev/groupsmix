@@ -77,7 +77,8 @@ async function init() {
   if (p.customDomain !== undefined) $("f_domain").value = p.customDomain || "";
   if (p.customDomain && p.domainStatus) renderDomainStatus(p.domainStatus, "");
   const pubToggle = $("pubToggle");
-  if (pubToggle) pubToggle.checked = p.published !== false;
+  state.PUBLISHED = p.published !== false;
+  if (pubToggle) pubToggle.checked = state.PUBLISHED;
   const arToggle = $("f_auto_reset");
   const arClear = $("f_auto_reset_clear");
   if (arToggle) {
@@ -96,8 +97,11 @@ async function init() {
     pwEnabled.addEventListener("change", () => { if (pwInput) pwInput.disabled = !pwEnabled.checked; });
   }
   $("a_label").placeholder = new Date().toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-  $("liveLink").textContent = location.host + "/" + state.SLUG;
-  $("liveLink").href = "/" + state.SLUG;
+  const liveUrl = "/" + state.SLUG;
+  const liveLink = $("liveLink");
+  if (liveLink) { liveLink.href = liveUrl; liveLink.title = location.host + liveUrl; }
+  const overviewViewLive = $("overviewViewLive");
+  if (overviewViewLive) overviewViewLive.href = liveUrl;
   const embedCode = `<iframe src="https://${location.host}/${state.SLUG}/embed" width="100%" height="640" frameborder="0" loading="lazy" title="${esc(state.SLUG)} leaderboard"></iframe>`;
   const embedTextarea = $("embedCode");
   if (embedTextarea) embedTextarea.value = embedCode;

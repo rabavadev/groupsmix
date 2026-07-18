@@ -24,12 +24,13 @@ export interface NavLink {
   label: string;
   href: string;
   match: string[];
+  top?: boolean;
 }
 
 export const NAV_LINKS: NavLink[] = [
-  { key: "leaderboard", label: "Leaderboard", href: "/dashboard",           match: ["/dashboard"] },
-  { key: "bot",         label: "Bot",         href: "/bot/dashboard",       match: ["/bot/dashboard", "/bot/dash"] },
-  { key: "analytics",   label: "Analytics",   href: "/dashboard/analytics", match: ["/dashboard/analytics"] },
+  { key: "leaderboard", label: "Leaderboard", href: "/dashboard",           match: ["/dashboard"], top: true },
+  { key: "bot",         label: "Bot",         href: "/bot/dashboard",       match: ["/bot/dashboard", "/bot/dash"], top: true },
+  { key: "analytics",   label: "Analytics",   href: "/dashboard/analytics", match: ["/dashboard/analytics"], top: true },
   { key: "attribution", label: "Attribution", href: "/dashboard/attribution", match: ["/dashboard/attribution"] },
   { key: "billing",     label: "Billing",     href: "/dashboard/billing",   match: ["/dashboard/billing"] },
   { key: "support",     label: "Support",     href: "/dashboard/support",   match: ["/dashboard/support"] },
@@ -74,7 +75,8 @@ export function shellNavHtml(
   const returnTo = encodeURIComponent(opts.activePath || "/dashboard");
   const helpQuery = `area=${area}&amp;return=${returnTo}`;
 
-  const tabs = NAV_LINKS.map((l) => {
+  const topLinks = NAV_LINKS.filter((l) => l.top);
+  const tabs = topLinks.map((l) => {
     const isActive = l.key === active;
     return `<a class="gm-tab${isActive ? " gm-tab--active" : ""}"` +
       `${isActive ? ' aria-current="page"' : ""} href="${l.href}">${l.label}</a>`;
@@ -90,11 +92,21 @@ export function shellNavHtml(
       <nav class="gm-tabs" aria-label="Dashboard">${tabs}</nav>
     </div>
     <div class="gm-who">
-      <a class="gm-help-link" href="/contact?type=feedback&amp;${helpQuery}">Feedback</a>
-      <a class="gm-help-link gm-help-link--support" href="/dashboard/support">Support</a>
-      <span class="gm-who-name">${name}</span>
-      ${badge}
-      <form method="POST" action="${esc(opts.logoutAction || "/logout")}" class="gm-logout-form"><button class="gm-logout" type="submit">Logout</button></form>
+      <details class="gm-profile">
+        <summary class="gm-profile-trigger" aria-haspopup="true" aria-label="Account menu">
+          <span class="gm-who-name">${name}</span>
+          ${badge}
+          <span class="gm-profile-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="gm-profile-menu">
+          <a class="gm-profile-link" href="/dashboard/billing">Billing</a>
+          <a class="gm-profile-link" href="/dashboard/attribution">Attribution</a>
+          <a class="gm-profile-link" href="/dashboard/security">Security</a>
+          <a class="gm-profile-link" href="/dashboard/support">Support</a>
+          <a class="gm-profile-link gm-profile-link--accent" href="/contact?type=feedback&amp;${helpQuery}">Feedback</a>
+          <form method="POST" action="${esc(opts.logoutAction || "/logout")}" class="gm-logout-form"><button class="gm-logout" type="submit">Logout</button></form>
+        </div>
+      </details>
     </div>
   </div>
 </header>`;
@@ -133,28 +145,33 @@ export const SHELL_NAV_CSS = `
 .gm-tab--active{color:var(--gm-ink);border-bottom-color:var(--gm-accent);}
 .gm-who{display:flex;align-items:center;gap:12px;flex:0 0 auto;min-width:0;}
 .gm-who-name{font-family:var(--gm-sans);font-size:13px;color:var(--gm-ink-soft);
-  max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .gm-badge{font-family:var(--gm-mono);font-size:10px;letter-spacing:.12em;
   text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid var(--gm-line-2);}
 .gm-badge--free{color:var(--gm-ink-mute);}
 .gm-badge--paid{color:var(--gm-accent);border-color:#3a4218;}
+.gm-profile{position:relative;min-width:0;}
+.gm-profile > summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;}
+.gm-profile > summary::-webkit-details-marker{display:none;}
+.gm-profile-trigger{color:var(--gm-ink);}
+.gm-profile-chevron{color:var(--gm-ink-mute);font-size:10px;transition:transform .15s;}
+.gm-profile[open] .gm-profile-chevron{transform:rotate(180deg);}
+.gm-profile-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:var(--gm-panel);border:1px solid var(--gm-line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:2px;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:100;}
+.gm-profile-link{font-family:var(--gm-sans);font-size:13px;color:var(--gm-ink-soft);text-decoration:none;padding:8px 10px;border-radius:7px;white-space:nowrap;}
+.gm-profile-link:hover{color:var(--gm-ink);background:var(--gm-line);}
+.gm-profile-link--accent{color:var(--gm-accent);}
+.gm-profile .gm-logout-form{padding:6px 10px;}
+.gm-profile .gm-logout{width:100%;}
 .gm-logout{font-family:var(--gm-mono);font-size:11px;letter-spacing:.06em;
   text-transform:uppercase;color:var(--gm-ink-soft);text-decoration:none;
-  padding:6px 10px;border:1px solid var(--gm-line-2);border-radius:7px;transition:color .15s,border-color .15s;}
+  padding:6px 10px;border:1px solid var(--gm-line-2);border-radius:7px;transition:color .15s,border-color .15s;background:transparent;cursor:pointer;}
 .gm-logout:hover{color:var(--gm-ink);border-color:var(--gm-line-2);}
 .gm-shell-main{max-width:1040px;margin:0 auto;padding:22px 18px 60px;}
-.gm-help-link{font-family:var(--gm-mono);font-size:10px;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--gm-ink-soft);text-decoration:none;padding:6px 9px;
-  border:1px solid var(--gm-line-2);border-radius:7px;white-space:nowrap;}
-.gm-help-link:hover{color:var(--gm-ink);border-color:var(--gm-ink-mute);}
-.gm-help-link--support{color:var(--gm-accent-ink);background:var(--gm-accent);border-color:var(--gm-accent);}
-.gm-help-link--support:hover{color:var(--gm-accent-ink);border-color:var(--gm-accent);}
 @media(max-width:680px){
     .gm-shell-inner{gap:12px;padding:0 12px;}
     .gm-brand-word{display:none;}
     .gm-tab{padding:18px 9px;font-size:11px;letter-spacing:.05em;}
-    .gm-who-name{display:none;}
-    .gm-who .gm-help-link:not(.gm-help-link--support){display:none;}
+    .gm-profile-menu{right:0;left:auto;min-width:180px;}
     .gm-tabs-wrap::after{opacity:1;}
     .gm-tabs{padding-right:24px;}
   }
