@@ -80,15 +80,28 @@ table.pricing tr td:last-child,table.pricing tr th:last-child{text-align:right}.
 .lead input,.lead textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;color:var(--ink);font-family:var(--sans);font-size:14px}
 .lead input:focus,.lead textarea:focus{border-color:var(--accent)}.lead input:focus-visible,.lead textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.lead .status{grid-column:1/-1;font-size:14px;color:var(--ink-mute);min-height:20px}
 @media(max-width:640px){.lead{grid-template-columns:1fr}}
-footer{border-top:1px solid var(--line);padding:32px 0;color:var(--ink-mute);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+/* --- footer --- */
+.ftr{border-top:1px solid var(--line);padding:48px 0 32px;color:var(--ink-mute);font-size:13px}
+.ftr--platform{text-align:left}
+.ftr-top{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;margin-bottom:24px}
+.ftr-brand .brand{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.ftr-brand .brand b{color:var(--accent)}
+.ftr-brand p{color:var(--ink-soft);font-size:13px;margin:6px 0 0;max-width:26ch}
+.ftr-cols{display:flex;gap:60px;flex-wrap:wrap}
+.ftr-col{display:flex;flex-direction:column;gap:8px}
+.ftr-col b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-bottom:2px}
+.ftr-col a{color:var(--ink-soft);text-decoration:none}
+.ftr-col a:hover{color:var(--accent)}
+.ftr-copy{color:var(--ink-soft);margin:0 0 6px}
+.ftr-copy a{color:var(--accent)}
+.ftr-fine{font-size:12px;color:var(--ink-mute);margin:0}
+@media(max-width:640px){.ftr-top{flex-direction:column;gap:28px}.ftr-cols{gap:40px}}
 
 /* --- UX-002: lifetime pricing card & CTA cleanup --- */
 .price-card--lifetime{border:2px solid #c8ff00;position:relative}
 .price-badge--lifetime{background:#c8ff00;color:#000;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700}
 .cta-wrap{text-align:center;margin:32px 0}
 .btn--cta-lg{font-size:18px;padding:16px 36px}
-.footer-wrap{display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:12px}
-
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
 
 /* SEC-713: noscript fallback — replaces inline style="" attributes */

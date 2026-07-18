@@ -84,9 +84,16 @@ export const landingPage = `<!DOCTYPE html>
 <ul class="trust-line trust-line--center"><li>Free forever</li><li>7-day Pro trial</li><li>No card</li></ul></div></section>
 </main>
 <div class="mobile-cta"><a href="/signup" class="btn btn--accent">Create your free page</a></div>
-<footer><div class="wrap footer-wrap">
-<span>© <span id="yr"></span> YourRank</span>
-<span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund">Refunds</a> · <a href="/cookies">Cookies</a> · <a href="/responsible">Responsible play</a></span>
-<span>18+ · For entertainment purposes only. Play responsibly.</span></div></footer>
+<footer class="ftr ftr--platform"><div class="wrap">
+<div class="ftr-top">
+  <div class="ftr-brand"><a class="brand" href="/">Your<b>Rank</b></a><p>Leaderboards for streamers & communities</p></div>
+  <div class="ftr-cols">
+    <div class="ftr-col"><b>Product</b><a href="/#how">How it works</a><a href="/pricing">Pricing</a><a href="/docs">API Docs</a><a href="/contact">Contact</a></div>
+    <div class="ftr-col"><b>Legal</b><a href="/terms">Terms of Service</a><a href="/privacy">Privacy Policy</a><a href="/cookies">Cookie Policy</a><a href="/refund">Refund Policy</a><a href="/responsible">Responsible Play</a></div>
+  </div>
+</div>
+<p class="ftr-copy">© <span id="yr"></span> YourRank · <a href="mailto:contact@yourrank.site">contact@yourrank.site</a></p>
+<p class="ftr-fine">18+ · For entertainment purposes only. Play responsibly.</p>
+</div></footer>
 <script src="/assets/landing.js?v=3"></script>
 </body></html>`;
