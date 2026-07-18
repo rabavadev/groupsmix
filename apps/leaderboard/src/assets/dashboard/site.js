@@ -4,6 +4,14 @@ import { state } from "./state.js";
 import { renderBoardSwitcher, renderBoardsPage, renderSidebarBoardSwitcher } from "./boards.js";
 import { renderPlayers, renumber, toggleEmpty } from "./players.js";
 
+const FONT_FAMILIES = [
+  { key: "Inter", label: "Inter — Default" },
+  { key: "Oswald", label: "Oswald — Bold & Sporty" },
+  { key: "Playfair Display", label: "Playfair Display — Premium & Elegant" },
+  { key: "Rajdhani", label: "Rajdhani — Techy & Esports" },
+  { key: "Bebas Neue", label: "Bebas Neue — Impact & Hype" },
+];
+
 export const DEFAULT_SECTIONS = {
   hero: true,
   top3: true,
@@ -20,10 +28,15 @@ export const DEFAULT_SECTIONS = {
 
 const PLAN_ORDER = ["free", "starter", "pro", "agency"];
 const LIFETIME_KEY = "lifetime";
+const DEFAULT_PRIZES = { prizePoolLabel: "Prize pool", payoutsLabel: "Payouts", countdownLabel: "", currency: "$", hidePrizeAmounts: false };
 
 function isLifetime() {
   const exp = state.ME?.planExpiresAt;
   return !exp || Number(exp) === 0 || Number(exp) > new Date("2099-01-01T00:00:00Z").getTime();
+}
+function isPro() {
+  const plan = state.ME?.plan;
+  return plan === "pro" || plan === "agency" || plan === "lifetime" || isLifetime();
 }
 
 function isPro() {
@@ -210,8 +223,20 @@ export function collect() {
   if (state.ACTIVE_SITE_ID) out.siteId = state.ACTIVE_SITE_ID;
   if (state.SITE_UPDATED_AT) out.expectedUpdatedAt = state.SITE_UPDATED_AT;
   if (state.ME && state.ME.plan !== "free") {
-    out.branding = { accentA: $("c_a").value, accentB: $("c_b").value };
+    out.branding = { accentA: $("c_a").value, accentB: $("c_b").value, font: $("f_font")?.value || state.CURRENT_BRANDING?.font || "Inter" };
     if (state.LOGO !== undefined) out.branding.logo = state.LOGO;
+  }
+  if (isPro()) {
+    out.branding = {
+      ...(out.branding || {}),
+      prizes: {
+        prizePoolLabel: $("f_prizePoolLabel")?.value.trim() || DEFAULT_PRIZES.prizePoolLabel,
+        payoutsLabel: $("f_payoutsLabel")?.value.trim() || DEFAULT_PRIZES.payoutsLabel,
+        countdownLabel: $("f_countdownLabel")?.value.trim() || "",
+        currency: $("f_currency")?.value.trim() || DEFAULT_PRIZES.currency,
+        hidePrizeAmounts: $("f_hidePrizeAmounts")?.checked || false,
+      },
+    };
   }
   const tplEl = $("f_template");
   if (tplEl) out.branding = { ...(out.branding || {}), template: tplEl.value };
@@ -236,9 +261,10 @@ function currentTemplate() {
   return state.TEMPLATE_CATALOG.find((template) => template.id === state.CURRENT_BRANDING.template) || state.TEMPLATE_CATALOG[0];
 }
 
-function previewUrl(template, accentA, accentB) {
+function previewUrl(template, accentA, accentB, font) {
   const params = new URLSearchParams({ board: state.ACTIVE_SITE_ID, template });
   if (accentA && accentB) { params.set("accentA", accentA); params.set("accentB", accentB); }
+  if (font) params.set("font", font);
   return "/dashboard/preview?" + params.toString();
 }
 
@@ -251,12 +277,13 @@ function renderTemplateGallery() {
     const defaultPreset = template.presets?.[0] || {};
     const accentA = selected && state.CURRENT_BRANDING.accentA ? state.CURRENT_BRANDING.accentA : defaultPreset.accentA;
     const accentB = selected && state.CURRENT_BRANDING.accentB ? state.CURRENT_BRANDING.accentB : defaultPreset.accentB;
+    const font = state.CURRENT_BRANDING.font || "Inter";
     const card = document.createElement("article");
     card.className = "template-card" + (selected ? " is-selected" : "");
     card.dataset.template = template.id;
     card.innerHTML = `<div class="template-preview"><iframe loading="lazy" tabindex="-1" aria-hidden="true" title="${esc(template.name)} preview"></iframe></div><div class="template-meta"><div><b>${esc(template.name)}</b><span>${esc(template.description)}</span></div><button class="btn btn--sm ${selected ? "btn--accent" : "btn--ghost"}" type="button" aria-pressed="${selected}">${selected ? "Applied" : "Apply"}</button></div>`;
     const iframe = card.querySelector("iframe");
-    iframe.src = previewUrl(template.id, accentA, accentB);
+    iframe.src = previewUrl(template.id, accentA, accentB, font);
     const apply = () => applyTemplate(template);
     card.querySelector("button").addEventListener("click", apply);
     card.querySelector(".template-preview").addEventListener("click", apply);
@@ -296,19 +323,22 @@ function updateThemeSelection() {
   const tpl = $("f_template"); if (tpl) tpl.value = state.CURRENT_BRANDING.template;
   if (state.CURRENT_BRANDING.accentA) $("c_a").value = state.CURRENT_BRANDING.accentA;
   if (state.CURRENT_BRANDING.accentB) $("c_b").value = state.CURRENT_BRANDING.accentB;
+  const font = $("f_font"); if (font) font.value = state.CURRENT_BRANDING.font || "Inter";
   renderTemplateGallery();
   renderColorPresets();
   updateDesignPreview();
 }
 
-export async function saveTheme(template, accentA, accentB, label) {
+export async function saveTheme(template, accentA, accentB, label, font = null) {
   if (state.THEME_SAVING) return;
   state.THEME_SAVING = true;
   const status = $("templateStatus");
   if (status) status.textContent = "Applying…";
-  document.querySelectorAll(".template-card button,.preset-btn,#applyCustomColors,#colorsReset").forEach((button) => { button.disabled = true; });
+  document.querySelectorAll(".template-card button,.preset-btn,#applyCustomColors,#colorsReset,#f_font").forEach((button) => { button.disabled = true; });
   const body = { siteId: state.ACTIVE_SITE_ID, template };
+  const selectedFont = font || $("f_font")?.value || state.CURRENT_BRANDING?.font || "Inter";
   if (state.ME.plan !== "free" && accentA && accentB) { body.accentA = accentA; body.accentB = accentB; }
+  if (state.ME.plan !== "free" && FONT_FAMILIES.some((f) => f.key === selectedFont)) { body.font = selectedFont; }
   try {
     const res = await fetch("/api/site/theme", {
       method: "POST",
@@ -321,7 +351,7 @@ export async function saveTheme(template, accentA, accentB, label) {
       if (status) status.textContent = data.error || "Could not apply that design.";
       return;
     }
-    state.CURRENT_BRANDING = { ...state.CURRENT_BRANDING, ...data.branding, template };
+    state.CURRENT_BRANDING = { ...state.CURRENT_BRANDING, ...data.branding, template, font: selectedFont };
     if (state.ME.plan !== "free" && accentA && accentB) {
       state.CURRENT_BRANDING.accentA = accentA;
       state.CURRENT_BRANDING.accentB = accentB;
@@ -338,7 +368,7 @@ export async function saveTheme(template, accentA, accentB, label) {
     if (status) status.textContent = "Network error. Try again.";
   } finally {
     state.THEME_SAVING = false;
-    document.querySelectorAll(".template-card button,.preset-btn,#applyCustomColors,#colorsReset").forEach((button) => { button.disabled = false; });
+    document.querySelectorAll(".template-card button,.preset-btn,#applyCustomColors,#colorsReset,#f_font").forEach((button) => { button.disabled = false; });
   }
 }
 
@@ -352,12 +382,29 @@ export function renderBranding(br) {
     template: br.template || "classic",
     accentA: br.accentA || null,
     accentB: br.accentB || null,
+    font: br.font || "Inter",
   };
   const paid = state.ME.plan !== "free";
   $("brandBody").hidden = !paid;
   $("brandLock").hidden = paid;
   updateThemeSelection();
   if (br.hasLogo) { $("logoPreview").src = "/logo/" + state.SLUG + "?t=" + Date.now(); $("logoPreview").hidden = false; $("logoClear").hidden = false; }
+}
+
+export function renderPrizes(prizes = {}) {
+  const p = { ...DEFAULT_PRIZES, ...prizes };
+  const body = $("prizesBody"), lock = $("prizesLock");
+  if (body) body.hidden = !isPro();
+  if (lock) lock.hidden = isPro();
+  if (!isPro()) {
+    lock?.addEventListener("click", (e) => { if (e.target.id === "prizesUpgrade") { e.preventDefault(); checkout("pro", e.target); } });
+    return;
+  }
+  $("f_prizePoolLabel").value = p.prizePoolLabel || "";
+  $("f_payoutsLabel").value = p.payoutsLabel || "";
+  $("f_countdownLabel").value = p.countdownLabel || "";
+  $("f_currency").value = p.currency || "$";
+  $("f_hidePrizeAmounts").checked = !!p.hidePrizeAmounts;
 }
 
 $("logoPick").setAttribute("aria-label", "Upload logo");
@@ -397,6 +444,7 @@ $("logoFile").addEventListener("change", () => {
 });
 $("applyCustomColors").addEventListener("click", () => saveTheme(state.CURRENT_BRANDING.template, $("c_a").value, $("c_b").value, "Custom colors"));
 $("colorsReset").addEventListener("click", () => { const preset = currentTemplate()?.presets?.[0]; if (preset) saveTheme(state.CURRENT_BRANDING.template, preset.accentA, preset.accentB, preset.name); });
+$("f_font")?.addEventListener("change", () => saveTheme(state.CURRENT_BRANDING.template, $("c_a")?.value, $("c_b")?.value, "Font"));
 $("brandUpgrade").addEventListener("click", (e) => { e.preventDefault(); checkout("pro", e.target); });
 
 export function renderNotifications(n) {
