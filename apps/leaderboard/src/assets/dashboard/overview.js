@@ -2,26 +2,41 @@
 import { $, esc, fmtMoney, currentPlayers, resetsIn, logError } from "./utils.js";
 import { state } from "./state.js";
 
+async function copyLiveLink(triggerLabel, url) {
+  try {
+    await navigator.clipboard.writeText(url);
+    const prev = triggerLabel?.textContent;
+    if (triggerLabel) triggerLabel.textContent = "Copied!";
+    setTimeout(() => { if (triggerLabel) triggerLabel.textContent = prev; }, 1500);
+  } catch (err) { logError("copy-live-link", err); }
+}
+
 export function wireOverviewQuickActions() {
-  const btn = $("ov_copyLink");
-  if (!btn || btn._wired) return;
-  btn._wired = true;
-  const label = btn.querySelector(".lb-qa-t");
-  btn.addEventListener("click", async () => {
-    const url = location.origin + "/" + state.SLUG;
-    try { await navigator.clipboard.writeText(url); if (label) label.textContent = "Copied!"; }
-    catch (err) { logError("copy-live-link", err); if (label) label.textContent = "Copy failed"; }
-    setTimeout(() => { if (label) label.textContent = "Copy your page link"; }, 1500);
-  });
+  const qaBtn = $("ov_copyLink");
+  if (qaBtn && !qaBtn._wired) {
+    qaBtn._wired = true;
+    const label = qaBtn.querySelector(".lb-qa-t");
+    qaBtn.addEventListener("click", () => copyLiveLink(label, location.origin + "/" + state.SLUG));
+  }
+  const headerBtn = $("overviewCopyLink");
+  if (headerBtn && !headerBtn._wired) {
+    headerBtn._wired = true;
+    const label = headerBtn.childNodes[0];
+    headerBtn.addEventListener("click", () => copyLiveLink(label, location.origin + "/" + state.SLUG));
+  }
 }
 
 export function renderOverviewSummary() {
-  if (!$("ov_pool")) return;
+  if (!$("ov_prize")) return;
   const players = currentPlayers();
-  $("ov_pool").textContent = ($("f_name")?.value.trim()) || "—";
+  const boardName = $("f_name")?.value.trim() || "—";
+  $("ov_board").textContent = boardName;
+  $("ov_prize").textContent = $("f_pool")?.value.trim() || "—";
   const cap = state.ME && state.ME.limits.players < 999 ? " / " + state.ME.limits.players : "";
   $("ov_players").textContent = players.length + cap;
   $("ov_resets").textContent = resetsIn();
+  const boardNameEl = $("overviewBoardName");
+  if (boardNameEl) boardNameEl.textContent = boardName === "—" ? "" : boardName;
   const top = $("ov_top");
   const topEmpty = $("ov_topEmpty");
   if (top) {
@@ -37,4 +52,12 @@ export function renderOverviewSummary() {
   $("ov_step_bot")?.classList.toggle("is-done", o.botConnected);
   $("ov_step_postback")?.classList.toggle("is-done", o.postback);
   $("ov_step_postback")?.classList.toggle("is-locked", o.isFree);
+
+  const setupComplete = !!(o.brand && o.players && (o.shared || state.PUBLISHED));
+  const qa = $("ovQuickActions");
+  const telegram = $("ovTelegramCard");
+  const steps = $("ovSetupSteps");
+  if (qa) qa.hidden = setupComplete;
+  if (telegram) telegram.hidden = setupComplete;
+  if (steps) steps.hidden = setupComplete;
 }

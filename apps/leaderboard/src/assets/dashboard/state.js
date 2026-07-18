@@ -8,6 +8,7 @@ export const state = {
   BOARDS: [],
   TEMPLATE_CATALOG: [],
   CURRENT_BRANDING: { template: "classic", accentA: null, accentB: null },
+  PUBLISHED: false,
   THEME_SAVING: false,
   LOGO: undefined, // undefined = unchanged, null = remove, string = new data URI
   _dirty: false,
