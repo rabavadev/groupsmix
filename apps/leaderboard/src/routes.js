@@ -29,6 +29,7 @@ import { handleListTickets, handleGetTicket, handleCreateTicket } from "./handle
 import { handleCspReport } from "./handlers/csp-report.js";
 import { handleLog } from "./handlers/log.js";
 import { handleScores } from "./handlers/scores.js";
+import { handleApiV1Players, handleApiKey } from "./handlers/api-v1.js";
 import { handleApiDocs, handleOpenApiJson } from "./handlers/docs.js";
 import { handleCheckout, handleCheckoutLifetime, handleIpn, handleCancel } from "./billing.js";
 import {
@@ -90,7 +91,10 @@ export const ROUTES = [
   { path: "/api/track/copy", method: "POST", handler: withHandler(handleTrackCopy) },
   { path: "/api/track/scroll", method: "POST", handler: withHandler(handleTrackScroll) },
   { path: "/api/scores", method: "POST", handler: withHandler(handleScores) },
-  
+  { path: "/api/v1/sites/:slug/players", method: "POST", handler: withHandler(handleApiV1Players) },
+  { path: "/api/user/api-key", method: "GET", handler: withHandler(handleApiKey) },
+  { path: "/api/user/api-key", method: "POST", handler: withHandler(handleApiKey) },
+
   // Public API routes (CSRF-exempt)
   { path: "/api/docs", method: "GET", handler: withHandler(handleApiDocs) },
   { path: "/api/openapi.json", method: "GET", handler: withHandler(handleOpenApiJson) },

@@ -206,6 +206,7 @@ export async function handleMe(request, env) {
       boards,
       features,
       referralCode: user.referral_code || null,
+      apiKeyPrefix: user.api_key_prefix || null,
     } });
   } catch (e) {
     console.error("handleMe error:", String(e?.message || e), String(e?.stack || ""));

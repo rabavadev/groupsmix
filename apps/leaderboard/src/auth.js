@@ -1,5 +1,6 @@
 // Auth helpers for the Worker.
 import { one, exec } from "../../../shared/db.js";
+import { hashToken } from "../../../shared/crypto.js";
 import { rateLimit as kvRateLimit } from "../../../shared/ratelimit.js";
 // SHARED cross-Worker session: same cookie (yr_session) + same Postgres
 // sessions table as the bot Worker. See ../../../shared/session.ts
@@ -120,7 +121,7 @@ const loadUser = (env, uid) =>
               status, is_admin,
               telegram_user_id, telegram_username,
               (EXTRACT(EPOCH FROM created_at) * 1000)::double precision AS created_at,
-              referral_code
+              referral_code, api_key_prefix
          FROM users WHERE id=$1`,
       [uid]
     );
@@ -200,4 +201,34 @@ export async function handleAccountDelete(request, env) {
     console.error("account delete failed:", String(e?.message || e));
     return bad("Account deletion failed. Please try again.", 500);
   }
+}
+
+// Personal API key helpers for the bulk V1 player update endpoint.
+const API_KEY_PREFIX_LEN = 16;
+function newApiKey() {
+  const random = bytesToHex(crypto.getRandomValues(new Uint8Array(24)));
+  return `yr_live_${random}`;
+}
+
+export async function generateApiKey(userId) {
+  const key = newApiKey();
+  const prefix = key.slice(0, API_KEY_PREFIX_LEN);
+  const hash = await hashToken(key);
+  await exec("UPDATE users SET api_key_hash=$1, api_key_prefix=$2, updated_at=now() WHERE id=$3", [hash, prefix, userId]);
+  return { key, prefix };
+}
+
+export async function verifyApiKey(token) {
+  if (!token || typeof token !== "string" || !token.startsWith("yr_")) return null;
+  const prefix = token.slice(0, API_KEY_PREFIX_LEN);
+  const user = await one(
+    `SELECT id, plan, (EXTRACT(EPOCH FROM plan_expires_at) * 1000)::double precision AS plan_expires_at, status, api_key_hash
+       FROM users
+      WHERE api_key_prefix=$1`,
+    [prefix]
+  );
+  if (!user || !user.api_key_hash) return null;
+  const hash = await hashToken(token);
+  if (!safeEqual(hash, user.api_key_hash)) return null;
+  return user;
 }
