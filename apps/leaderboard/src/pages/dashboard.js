@@ -41,22 +41,20 @@ export const dashboardPage = leaderboardPageHtml({
 </div>
 </div>
 <button class="lb-side-close" type="button" aria-label="Close navigation" data-close-side>×</button>
-<span class="lb-side-grp">Manage</span>
-<button class="lb-nav is-on" type="button" data-nav="overview" aria-current="page"><span class="lb-nav-ic" aria-hidden="true">◱</span>Overview</button>
-<button class="lb-nav" type="button" data-nav="boards"><span class="lb-nav-ic" aria-hidden="true">☰</span>Boards</button>
-<button class="lb-nav" type="button" data-nav="board"><span class="lb-nav-ic" aria-hidden="true">🏆</span>Prize &amp; players</button>
-<button class="lb-nav" type="button" data-nav="design"><span class="lb-nav-ic" aria-hidden="true">🎨</span>Design</button>
+<span class="lb-side-grp">Edit</span>
+<button class="lb-nav is-on" type="button" data-nav="board" aria-current="page"><span class="lb-nav-ic" aria-hidden="true">🏆</span>Editor</button>
+<button class="lb-nav" type="button" data-nav="overview"><span class="lb-nav-ic" aria-hidden="true">◱</span>Overview</button>
+<button class="lb-nav lb-nav--boards" type="button" data-nav="boards" hidden><span class="lb-nav-ic" aria-hidden="true">☰</span>Boards</button>
 <span class="lb-side-grp">Grow</span>
 <button class="lb-nav" type="button" data-nav="growth"><span class="lb-nav-ic" aria-hidden="true">📈</span>Analytics</button>
 <button class="lb-nav" type="button" data-nav="referrals"><span class="lb-nav-ic" aria-hidden="true">🎁</span>Referrals</button>
 <span class="lb-side-grp">Advanced</span>
-<button class="lb-nav" type="button" data-nav="integrations"><span class="lb-nav-ic" aria-hidden="true">🔌</span>Overlay &amp; domain</button>
-<button class="lb-nav" type="button" data-nav="notifications"><span class="lb-nav-ic" aria-hidden="true">🔔</span>Notifications</button>
+<button class="lb-nav" type="button" data-nav="integrations"><span class="lb-nav-ic" aria-hidden="true">🔌</span>Integrations</button>
 <button class="lb-nav" type="button" data-nav="manage"><span class="lb-nav-ic" aria-hidden="true">⚙</span>Periods &amp; plan</button>
 <div class="lb-side-foot"><a class="btn btn--sm btn--accent lb-live-btn" id="liveLink" href="#" target="_blank">View live board ↗</a><span class="label" id="planBadge">FREE PLAN</span></div>
 </aside>
 <div class="lb-main">
-<section class="lb-page is-on" data-page="overview">
+<section class="lb-page" data-page="overview">
 <div class="lb-phead"><button class="lb-menu" id="lbMenu" type="button" aria-label="Show sections" aria-expanded="false" aria-controls="lbSide">☰</button><div class="lb-phead-text"><h1 tabindex="-1">Overview</h1><p class="lb-psub">Your leaderboard at a glance</p></div><div class="lb-phead-actions"><button class="btn btn--sm" id="overviewCopyLink" type="button">Copy link</button></div></div>
 <div class="card card--danger" id="draftBanner" hidden><h2>Finish setup</h2><p class="card-sub">You started the setup wizard but didn't finish <b id="draftName">this board</b>. Complete it now or mark it done.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm btn--accent" id="draftResume" href="/setup">Resume setup →</a><button class="btn btn--sm btn--ghost" id="draftDone" type="button">Mark as done</button></div></div>
 <div class="stat-tiles">
@@ -69,7 +67,7 @@ export const dashboardPage = leaderboardPageHtml({
 <div class="lb-qa" aria-label="Quick actions" id="ovQuickActions">
 <button type="button" data-jump="board"><span class="lb-qa-t">Add players</span><span class="lb-qa-d">Type them in or paste from a spreadsheet</span></button>
 <button type="button" data-jump="board"><span class="lb-qa-t">Set the prize</span><span class="lb-qa-d">Prize pool, casino and your code</span></button>
-<button type="button" data-jump="design"><span class="lb-qa-t">Pick a design</span><span class="lb-qa-d">One click publishes it</span></button>
+<button type="button" data-jump="board"><span class="lb-qa-t">Pick a design</span><span class="lb-qa-d">One click publishes it</span></button>
 <button type="button" id="ov_copyLink"><span class="lb-qa-t">Copy your page link</span><span class="lb-qa-d">Share it anywhere</span></button>
 <a class="lb-qa" href="/demo" target="_blank"><span class="lb-qa-t">View demo</span><span class="lb-qa-d">See a live example board</span></a>
 </div>
@@ -125,8 +123,10 @@ export const dashboardPage = leaderboardPageHtml({
 <p class="status" id="refStatus" role="status" aria-live="polite"></p>
 </div>
 </section>
-<section class="lb-page" data-page="board">
-<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Prize &amp; players</h1><p class="lb-psub">The daily job — headline details and your ranked list</p></div></div>
+<section class="lb-page is-on" data-page="board">
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div class="lb-phead-text"><h1 tabindex="-1">Editor</h1><p class="lb-psub">Edit your board and watch it update live</p></div><div class="lb-phead-actions"><button class="btn btn--sm" id="editorCopyLink" type="button">Copy link</button><a class="btn btn--sm btn--accent" id="editorLiveLink" href="#" target="_blank">View live ↗</a></div></div>
+<div class="design-grid">
+<div class="design-controls">
 <div class="card"><h2>Brand &amp; prize</h2><p class="card-sub">The headline details on your page.</p><div class="grid2">
 <div class="field"><label for="f_name">Display name</label><input id="f_name" /></div>
 <div class="field"><label for="f_tagline">Tagline</label><input id="f_tagline" placeholder="Casino streamer & Stake partner" /></div>
@@ -165,12 +165,7 @@ export const dashboardPage = leaderboardPageHtml({
 <p class="hint mt-8" id="gsheetStatus"></p>
 </div></div>
 <div class="card" id="playerFieldsCard"><h2>Player columns</h2><p class="card-sub">Choose which extra columns show on the dashboard player table and on supported public templates.</p><div class="section-list" id="playerFieldsList"></div></div>
-</section>
-<section class="lb-page" data-page="design">
-<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Design</h1><p class="lb-psub">How your public page looks</p></div></div>
-<div class="design-grid">
-<div class="design-controls">
-<div class="card" id="templateCard"><h2>Page template</h2><p class="card-sub">Pick a design; the preview uses your real players.</p>
+<div class="card" id="templateCard"><h2>Page design</h2><p class="card-sub">Pick a design; the preview on the right uses your real players.</p>
 <input type="hidden" id="f_template" value="classic" />
 <div class="template-grid" id="templateGallery" aria-label="Page templates"></div>
 <p class="hint template-status" id="templateStatus" role="status" aria-live="polite"></p></div>
@@ -231,7 +226,7 @@ export const dashboardPage = leaderboardPageHtml({
 </div>
 </section>
 <section class="lb-page" data-page="integrations">
-<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Overlay &amp; domain</h1><p class="lb-psub">Extras for your stream and site — overlay and your own domain</p></div></div>
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Integrations</h1><p class="lb-psub">Overlay, custom domain and alerts — set these once</p></div></div>
 <div class="card" id="overlayCard"><h2>OBS Stream Overlay <span class="pill pill--info ml-6">PRO</span></h2><p class="card-sub">Add a live leaderboard overlay to your stream. It auto-updates every 15 seconds with smooth rank animations.</p>
 <div id="overlayBody">
 <div class="field"><label>Overlay URL</label>
@@ -255,9 +250,6 @@ export const dashboardPage = leaderboardPageHtml({
 <div id="domainStatus" class="hint mt-8 min-h-18" role="status" aria-live="polite"></div>
 </div>
 <div class="empty" id="domainLock" hidden>Custom domains are a Pro feature. <a href="#" id="domainUpgrade">Upgrade to unlock it</a>.</div></div>
-</section>
-<section class="lb-page" data-page="notifications">
-<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Notifications</h1><p class="lb-psub">Discord and Telegram alerts for your leaderboard</p></div></div>
 <div class="card" id="notifyCard"><h2>Notifications <span class="pill pill--info ml-6">PRO</span></h2><p class="card-sub">Optional alerts when your leaderboard resets or a player breaks into the top 3. Discord and Telegram supported — the leaderboard itself works without either.</p>
 <div id="notifyBody">
 <div class="field"><label>Events that trigger notifications</label>

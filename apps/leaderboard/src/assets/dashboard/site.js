@@ -793,6 +793,8 @@ $("save").addEventListener("click", async () => {
       renderBoardSwitcher();
       renderSidebarBoardSwitcher();
       renderBoardsPage();
+      // Close the 2-click loop: refresh the live preview so the edit shows immediately.
+      updateDesignPreview();
     } else status.textContent = d.error || "Save failed.";
   } catch (err) { logError("save", err); status.textContent = "Network error."; }
   btn.disabled = false; btn.textContent = "Save changes";

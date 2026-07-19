@@ -90,6 +90,8 @@ async function init() {
     stage.style.setProperty("--preview-scale", String(scale));
     frame.style.height = frameHeight + "px";
   }
+  // Expose so shell.js can re-fit the preview when navigating into the Editor.
+  state.fitDesignPreview = fitDesignPreview;
   const iframe = $("designPreview");
   if (iframe) iframe.addEventListener("load", fitDesignPreview);
   document.querySelectorAll(".preview-tab").forEach((btn) => {
@@ -105,8 +107,8 @@ async function init() {
     });
   });
   window.addEventListener("resize", fitDesignPreview);
-  const designNav = document.querySelector('[data-nav="design"]');
-  if (designNav) designNav.addEventListener("click", () => setTimeout(fitDesignPreview, 0));
+  const editorNav = document.querySelector('[data-nav="board"]');
+  if (editorNav) editorNav.addEventListener("click", () => setTimeout(fitDesignPreview, 0));
   if (p.customDomain !== undefined) $("f_domain").value = p.customDomain || "";
   if (p.customDomain && p.domainStatus) renderDomainStatus(p.domainStatus, "");
   const pubToggle = $("pubToggle");
@@ -133,6 +135,19 @@ async function init() {
   const liveUrl = "/" + state.SLUG;
   const liveLink = $("liveLink");
   if (liveLink) { liveLink.href = liveUrl; liveLink.title = location.host + liveUrl; }
+  const editorLiveLink = $("editorLiveLink");
+  if (editorLiveLink) { editorLiveLink.href = liveUrl; editorLiveLink.title = location.host + liveUrl; }
+  const editorCopyLink = $("editorCopyLink");
+  if (editorCopyLink && !editorCopyLink._wired) {
+    editorCopyLink._wired = true;
+    editorCopyLink.addEventListener("click", () => {
+      navigator.clipboard.writeText(location.origin + "/" + state.SLUG).then(() => {
+        const prev = editorCopyLink.textContent;
+        editorCopyLink.textContent = "Copied!";
+        setTimeout(() => { editorCopyLink.textContent = prev; }, 1500);
+      }).catch(() => {});
+    });
+  }
   const embedCode = `<iframe src="https://${location.host}/${state.SLUG}/embed" width="100%" height="640" frameborder="0" loading="lazy" title="${esc(state.SLUG)} leaderboard"></iframe>`;
   const embedTextarea = $("embedCode");
   if (embedTextarea) embedTextarea.value = embedCode;
@@ -146,9 +161,15 @@ async function init() {
   $("loading").hidden = true;
   $("dash").hidden = false;
   setupShell();
+  // Boards nav is redundant for solo streamers — the sidebar board switcher covers it.
+  const boardsNav = document.querySelector(".lb-nav--boards");
+  if (boardsNav) boardsNav.hidden = state.BOARDS.length < 2;
+  // Smart landing: returning, set-up users go straight to the Editor (the daily job).
+  // Brand-new boards still land on Overview so the setup checklist is front and center.
   const initialNav = new URLSearchParams(location.search).get("nav");
-  if (initialNav && document.querySelector(`section[data-page="${initialNav}"]`)) navTo(initialNav);
-  if (document.querySelector('section[data-page="design"].is-on')) fitDesignPreview();
+  const landing = initialNav || (isBoardSetup(p) ? "board" : "overview");
+  if (document.querySelector(`section[data-page="${landing}"]`)) navTo(landing);
+  if (document.querySelector('section[data-page="board"].is-on')) fitDesignPreview();
   renderOverviewSummary();
   wireOverviewQuickActions();
   renderReferrals();

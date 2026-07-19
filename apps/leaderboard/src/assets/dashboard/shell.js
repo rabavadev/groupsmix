@@ -1,5 +1,6 @@
 // Dashboard shell: sidebar navigation and mobile drawer.
 import { $ } from "./utils.js";
+import { state } from "./state.js";
 import { renderOverviewSummary } from "./overview.js";
 
 export function setAriaCurrentNav(page) {
@@ -15,6 +16,8 @@ export function navTo(page) {
   document.querySelectorAll(".lb-page").forEach((p) => p.classList.toggle("is-on", p.dataset.page === page));
   closeDrawer();
   if (page === "overview") renderOverviewSummary();
+  // Re-fit the live preview whenever the Editor becomes visible (it can't measure while hidden).
+  if (page === "board" && typeof state.fitDesignPreview === "function") setTimeout(state.fitDesignPreview, 0);
   const heading = document.querySelector(".lb-page.is-on .lb-phead h1");
   if (heading) heading.focus({ preventScroll: true });
   const main = document.querySelector(".lb-main");
