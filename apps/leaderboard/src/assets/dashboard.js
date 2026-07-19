@@ -252,9 +252,8 @@ function renderDraftBanner(p) {
       } catch (e) { $("status").textContent = "Network error"; doneBtn.disabled = false; }
     };
   }
-  }
 }
-
+  
 function wireStreamerHud() {
   const form = document.getElementById("hudQuickAdd");
   const addBtn = document.getElementById("hudAddBtn");
