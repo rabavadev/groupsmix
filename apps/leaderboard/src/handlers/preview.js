@@ -21,6 +21,7 @@ export async function handleDashboardPreview(request, env, nonce) {
   const accentA = url.searchParams.get("accentA");
   const accentB = url.searchParams.get("accentB");
   const font = url.searchParams.get("font");
+  const device = url.searchParams.get("device") === "mobile" ? "mobile" : "desktop";
   const branding = { ...site.data.branding, template };
   if (plan !== "free" && HEX.test(accentA || "") && HEX.test(accentB || "")) {
     branding.accentA = accentA;
@@ -36,6 +37,7 @@ export async function handleDashboardPreview(request, env, nonce) {
     slug: "",
     nonce,
     preview: true,
+    previewDevice: device,
     logoUrl: plan !== "free" && site.data.branding?.hasLogo ? `/logo/${site.slug}` : null,
   });
   return new Response(html, {

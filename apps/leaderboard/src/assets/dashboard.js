@@ -4,7 +4,7 @@ import { state } from "./dashboard/state.js";
 import { navTo, setupShell } from "./dashboard/shell.js";
 import { renderBoardSwitcher, renderSidebarBoardSwitcher, renderBoardsPage } from "./dashboard/boards.js";
 import { renderPlayers } from "./dashboard/players.js";
-import { loadStats, renderArchives, renderBranding, renderDomain, renderDomainStatus, renderLegal, renderNotifications, renderOverlay, renderPlan, renderPlayerFields, renderPrizes, renderSections, renderSocials, renderTemplateText } from "./dashboard/site.js";
+import { loadStats, renderArchives, renderBranding, renderDomain, renderDomainStatus, renderLegal, renderNotifications, renderOverlay, renderPlan, renderPlayerFields, renderPrizes, renderSections, renderSocials, renderTemplateText, updateDesignPreview } from "./dashboard/site.js";
 import { renderOverviewSummary, wireOverviewQuickActions } from "./dashboard/overview.js";
 import { renderReferrals } from "./dashboard/referrals.js";
 
@@ -67,12 +67,13 @@ async function init() {
   if (proAccordion) proAccordion.open = state.ME.plan !== "free";
   function fitDesignPreview() {
     const iframe = $("designPreview");
-    const wrap = iframe?.parentElement;
-    if (!iframe || !wrap) return;
-    const active = document.querySelector(".preview-device.is-active");
-    const width = parseInt(active?.dataset.width || "1100", 10) || 1100;
-    const maxWidth = wrap.clientWidth;
-    const maxHeight = Math.min(900, Math.floor(window.innerHeight * 0.75));
+    const stage = $("previewStage");
+    const frame = $("previewFrame");
+    if (!iframe || !stage || !frame) return;
+    const active = document.querySelector(".preview-tab.is-active");
+    const deviceWidth = parseInt(active?.dataset.width || "1100", 10) || 1100;
+    const cw = frame.clientWidth;
+    if (!cw) return;
     const doc = iframe.contentDocument;
     let contentHeight = 680;
     if (doc && doc.readyState === "complete" && doc.documentElement) {
@@ -80,18 +81,26 @@ async function init() {
       const body = doc.body;
       contentHeight = Math.max(680, html.scrollHeight, body ? body.scrollHeight : 0, html.offsetHeight, body ? body.offsetHeight : 0);
     }
-    const scale = Math.min(1, maxWidth / width, maxHeight / contentHeight);
-    iframe.style.width = width + "px";
-    iframe.style.height = contentHeight + "px";
-    wrap.style.setProperty("--preview-scale", String(scale));
-    wrap.style.height = Math.ceil(contentHeight * scale) + "px";
+    const scale = cw / deviceWidth;
+    const scaledHeight = contentHeight * scale;
+    const maxHeight = Math.min(720, Math.floor(window.innerHeight * 0.75));
+    const frameHeight = Math.min(scaledHeight, maxHeight);
+    stage.style.width = deviceWidth + "px";
+    stage.style.height = contentHeight + "px";
+    stage.style.setProperty("--preview-scale", String(scale));
+    frame.style.height = frameHeight + "px";
   }
   const iframe = $("designPreview");
   if (iframe) iframe.addEventListener("load", fitDesignPreview);
-  document.querySelectorAll(".preview-device").forEach((btn) => {
+  document.querySelectorAll(".preview-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".preview-device").forEach((b) => b.classList.remove("is-active"));
+      document.querySelectorAll(".preview-tab").forEach((b) => {
+        b.classList.remove("is-active");
+        b.setAttribute("aria-selected", "false");
+      });
       btn.classList.add("is-active");
+      btn.setAttribute("aria-selected", "true");
+      updateDesignPreview();
       fitDesignPreview();
     });
   });
