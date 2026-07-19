@@ -252,7 +252,6 @@ function renderDraftBanner(p) {
       } catch (e) { $("status").textContent = "Network error"; doneBtn.disabled = false; }
     };
   }
-  }
 }
 
 function wireStreamerHud() {
