@@ -267,10 +267,11 @@ function currentTemplate() {
   return state.TEMPLATE_CATALOG.find((template) => template.id === state.CURRENT_BRANDING.template) || state.TEMPLATE_CATALOG[0];
 }
 
-function previewUrl(template, accentA, accentB, font) {
+function previewUrl(template, accentA, accentB, font, device = "desktop") {
   const params = new URLSearchParams({ board: state.ACTIVE_SITE_ID, template });
   if (accentA && accentB) { params.set("accentA", accentA); params.set("accentB", accentB); }
   if (font) params.set("font", font);
+  if (device) params.set("device", device);
   return "/dashboard/preview?" + params.toString();
 }
 
@@ -289,7 +290,7 @@ function renderTemplateGallery() {
     card.dataset.template = template.id;
     card.innerHTML = `<div class="template-preview"><iframe loading="lazy" tabindex="-1" aria-hidden="true" title="${esc(template.name)} preview"></iframe></div><div class="template-meta"><div><b>${esc(template.name)}</b><span>${esc(template.description)}</span></div><button class="btn btn--sm ${selected ? "btn--accent" : ""}" type="button" aria-pressed="${selected}">${selected ? "Applied" : "Apply"}</button></div>`;
     const iframe = card.querySelector("iframe");
-    iframe.src = previewUrl(template.id, accentA, accentB, font);
+    iframe.src = previewUrl(template.id, accentA, accentB, font, "desktop");
     const apply = () => applyTemplate(template);
     card.querySelector("button").addEventListener("click", apply);
     card.querySelector(".template-preview").addEventListener("click", apply);
@@ -316,13 +317,15 @@ function renderColorPresets() {
   });
 }
 
-function updateDesignPreview() {
+export function updateDesignPreview() {
   const iframe = $("designPreview");
   if (!iframe || !state.ACTIVE_SITE_ID) return;
   const tpl = state.CURRENT_BRANDING.template || currentTemplate()?.id || "classic";
   const accentA = state.CURRENT_BRANDING.accentA || "";
   const accentB = state.CURRENT_BRANDING.accentB || "";
-  iframe.src = previewUrl(tpl, accentA, accentB);
+  const active = document.querySelector(".preview-tab.is-active");
+  const device = active?.dataset.device || "desktop";
+  iframe.src = previewUrl(tpl, accentA, accentB, null, device);
 }
 
 function updateThemeSelection() {

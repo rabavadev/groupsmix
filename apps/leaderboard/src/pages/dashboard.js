@@ -220,9 +220,13 @@ export const dashboardPage = leaderboardPageHtml({
 <div class="socials-editor" id="socialsList"></div></div>
 </div>
 <div class="design-preview">
-<div class="card"><h2>Live preview</h2><p class="card-sub">Your public page updates as you edit.</p>
-<div class="preview-devices"><button class="btn btn--xs preview-device is-active" data-width="1100" type="button">🖥 Desktop</button><button class="btn btn--xs preview-device" data-width="390" type="button">📱 Mobile</button></div>
-<div class="preview-frame-wrap"><iframe id="designPreview" src="" loading="eager" title="Live preview"></iframe></div></div>
+<div class="card">
+<div class="preview-header">
+<div class="preview-header-text"><h2>Live preview</h2><p class="preview-sub">Your public page updates as you edit.</p></div>
+<div class="preview-tabs" role="tablist" aria-label="Preview device"><button class="preview-tab is-active" data-width="1100" data-device="desktop" type="button" role="tab" aria-selected="true">Desktop</button><button class="preview-tab" data-width="390" data-device="mobile" type="button" role="tab" aria-selected="false">Mobile</button></div>
+</div>
+<div class="preview-frame" id="previewFrame"><div class="preview-stage" id="previewStage"><iframe id="designPreview" src="" loading="eager" title="Live preview"></iframe></div></div>
+</div>
 </div>
 </div>
 </section>
