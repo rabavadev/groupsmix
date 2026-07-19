@@ -94,8 +94,7 @@ export function shellNavHtml(
     <div class="gm-who">
       <details class="gm-profile">
         <summary class="gm-profile-trigger" aria-haspopup="true" aria-label="Account menu">
-          <span class="gm-who-name">${name}</span>
-          ${badge}
+          <span class="gm-who-id"><span class="gm-who-name">${name}</span>${badge}</span>
           <span class="gm-profile-chevron" aria-hidden="true">▾</span>
         </summary>
         <div class="gm-profile-menu">
@@ -124,7 +123,7 @@ export const SHELL_NAV_CSS = `
 }
 .gm-shell-nav{position:sticky;top:0;z-index:50;background:var(--gm-bg);
   border-bottom:1px solid var(--gm-line);}
-.gm-brand{display:flex;align-items:center;gap:9px;text-decoration:none;flex:0 0 auto;}
+.gm-brand{display:flex;align-items:center;gap:9px;text-decoration:none;flex:0 0 auto;padding:20px 0 0 24px;}
 .gm-brand-mark{font-family:var(--gm-mono);font-weight:700;font-size:13px;
   letter-spacing:.02em;color:var(--gm-accent-ink);background:var(--gm-accent);
   width:26px;height:26px;display:grid;place-items:center;border-radius:6px;}
@@ -144,8 +143,10 @@ export const SHELL_NAV_CSS = `
 .gm-tab:hover{color:var(--gm-ink-soft);}
 .gm-tab--active{color:var(--gm-ink);border-bottom-color:var(--gm-accent);}
 .gm-who{display:flex;align-items:center;gap:12px;flex:0 0 auto;min-width:0;}
-.gm-who-name{font-family:var(--gm-sans);font-size:13px;color:var(--gm-ink-soft);
+.gm-who-id{display:flex;align-items:center;gap:8px;min-width:0;}
+.gm-who-name{font-family:var(--gm-sans);font-size:13px;color:var(--gm-ink-soft);min-width:0;
   max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gm-who-id .gm-badge{flex:0 0 auto;}
 .gm-badge{font-family:var(--gm-mono);font-size:10px;letter-spacing:.12em;
   text-transform:uppercase;padding:4px 8px;border-radius:99px;border:1px solid var(--gm-line-2);display:inline-flex;align-items:center;line-height:1;vertical-align:middle;}
 .gm-badge--free{color:var(--gm-ink-mute);}
