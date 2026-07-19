@@ -72,6 +72,29 @@ jobs:
             echo "--- $f ---"
             bun test "$f" || exit 1
           done
+      - name: Syntax-check client assets
+        working-directory: apps/leaderboard
+        run: |
+          # build.js inlines assets as STRINGS, so a browser-side syntax error
+          # (e.g. a stray brace) ships to prod tagged "deployed/success" — that
+          # is exactly how PR #234 broke the dashboard. Parse every client JS
+          # file with Bun.Transpiler (parse-only, never executes top-level code,
+          # so browser globals like `document` don't false-positive) and fail
+          # the deploy on any syntax error.
+          bun -e '
+            const t = new Bun.Transpiler({ loader: "js" });
+            const fs = require("fs");
+            const { execSync } = require("child_process");
+            let fail = 0;
+            const files = execSync("find src/assets -type f -name \"*.js\"")
+              .toString().trim().split("\n").filter(Boolean);
+            for (const f of files) {
+              try { t.transformSync(fs.readFileSync(f, "utf8")); }
+              catch (e) { console.log(`::error::Syntax error in ${f}\n` + e.message.split("\n").slice(0,4).join("\n")); fail++; }
+            }
+            if (fail > 0) { console.log(`::error::${fail} client asset(s) failed syntax check — deploy aborted.`); process.exit(1); }
+            console.log(`OK: all ${files.length} client assets parse cleanly`);
+          '
       - name: Check test coverage threshold
         working-directory: apps/leaderboard
         run: |
