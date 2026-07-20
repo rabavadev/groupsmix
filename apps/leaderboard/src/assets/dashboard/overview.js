@@ -59,7 +59,10 @@ export function renderOverviewSummary() {
   const qa = $("ovQuickActions");
   const telegram = $("ovTelegramCard");
   const steps = $("ovSetupSteps");
+  // Only one "finish setup" surface at a time: if the resume-wizard draft banner
+  // is showing, keep the granular checklist hidden so we don't nag twice.
+  const draftBannerActive = !$("draftBanner")?.hidden;
   if (qa) qa.hidden = setupComplete;
   if (telegram) telegram.hidden = setupComplete;
-  if (steps) steps.hidden = setupComplete;
+  if (steps) steps.hidden = setupComplete || draftBannerActive;
 }

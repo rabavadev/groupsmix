@@ -335,6 +335,31 @@ function _renderVibeFilters(templates) {
   });
 }
 
+// Lazily boot template-preview iframes only when their card scrolls into view.
+// The gallery can hold ~25 templates; booting every iframe at once (even with
+// loading="lazy", which is unreliable for in-page galleries) causes real jank.
+let _previewObserver = null;
+function _lazyPreviewObserver() {
+  if (_previewObserver || typeof IntersectionObserver === "undefined") return _previewObserver;
+  _previewObserver = new IntersectionObserver((entries, obs) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const iframe = entry.target;
+      if (iframe.dataset.preview && !iframe.src) iframe.src = iframe.dataset.preview;
+      obs.unobserve(iframe);
+    }
+  }, { rootMargin: "300px 0px" });
+  return _previewObserver;
+}
+
+function _observePreview(iframe, url) {
+  iframe.dataset.preview = url;
+  const obs = _lazyPreviewObserver();
+  // No IntersectionObserver support → load immediately so previews still show.
+  if (!obs) { iframe.src = url; return; }
+  obs.observe(iframe);
+}
+
 function _buildCard(template, featured = false) {
   const selected = template.id === state.CURRENT_BRANDING.template;
   const defaultPreset = template.presets?.[0] || {};
@@ -384,7 +409,7 @@ ${presetsHtml}
 </div>`;
 
   const iframe = card.querySelector("iframe");
-  iframe.src = previewUrl(template.id, accentA, accentB, font, "desktop");
+  _observePreview(iframe, previewUrl(template.id, accentA, accentB, font, "desktop"));
 
   // Apply on preview click or button click
   const applyDefault = () => applyTemplate(template);

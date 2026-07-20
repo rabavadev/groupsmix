@@ -185,40 +185,70 @@ function parseImportNumber(s) {
   return n;
 }
 
+// Accepted header aliases → canonical field. Lets people paste a sheet with
+// columns in ANY order (or extra columns) without silently corrupting data.
+const HEADER_ALIASES = {
+  name: "name", player: "name", username: "name", user: "name", handle: "name",
+  wagered: "wagered", wager: "wagered", wagers: "wagered", "total wagered": "wagered", volume: "wagered", bet: "wagered", "bet amount": "wagered",
+  prize: "prize", reward: "prize", payout: "prize", winnings: "prize",
+  score: "score", points: "score", pts: "score",
+  hands: "hands", rounds: "hands", games: "hands",
+  netprofit: "netProfit", "net profit": "netProfit", net: "netProfit", profit: "netProfit", pnl: "netProfit",
+  winrate: "winRate", "win rate": "winRate", "win %": "winRate", winpct: "winRate",
+  change: "change", delta: "change", movement: "change",
+};
+// Positional order used when there is no recognizable header row.
+const POSITIONAL = ["name", "wagered", "prize", "score", "hands", "netProfit", "winRate", "change"];
+const NUMERIC_FIELDS = ["score", "hands", "netProfit", "winRate", "change"];
+
+function normalizeHeader(h) {
+  return String(h || "").trim().toLowerCase().replace(/^"+|"+$/g, "").replace(/\s+/g, " ");
+}
+
 export function parseImportText(text, source = "text") {
   const lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && !l.startsWith("//"));
   if (!lines.length) return { rows: [], errors: ["No data found."], source };
   const first = lines[0];
   const sep = first.includes("\t") ? /\t/ : first.includes(",") ? /,/ : first.includes(";") ? /;/ : /\t|,|;/;
-  const headerParts = first.split(sep).map((s) => s.trim().toLowerCase().replace(/^"+|"+$/g, ""));
-  const hasHeader = ["name", "player", "username"].includes(headerParts[0]);
+  const headerParts = first.split(sep).map(normalizeHeader);
+
+  // A row counts as a header if its first cell is a name alias AND at least one
+  // other cell maps to a known field — then we bind columns by name, not order.
+  const mapped = headerParts.map((h) => HEADER_ALIASES[h]);
+  const hasHeader = mapped[0] === "name" && mapped.slice(1).some((m) => m);
+
+  let colOf;
+  if (hasHeader) {
+    colOf = {};
+    mapped.forEach((field, i) => { if (field && colOf[field] === undefined) colOf[field] = i; });
+  } else {
+    colOf = {};
+    POSITIONAL.forEach((field, i) => { colOf[field] = i; });
+  }
+
   const dataLines = hasHeader ? lines.slice(1) : lines;
   const rows = [];
   const errors = [];
   const seen = new Set();
+  const cell = (parts, field) => (colOf[field] === undefined ? "" : parts[colOf[field]]);
   dataLines.forEach((line, idx) => {
     const parts = line.split(sep).map((s) => s.trim().replace(/^"+|"+$/g, ""));
-    if (!parts[0]) return;
-    const name = sanitizeImportName(parts[0]);
+    const rawName = cell(parts, "name");
+    if (!rawName) return;
+    const name = sanitizeImportName(rawName);
     if (!name) { errors.push(`Row ${idx + 1}: missing name`); return; }
     const key = name.toLowerCase();
     if (seen.has(key)) { errors.push(`Row ${idx + 1}: duplicate "${name}"`); return; }
     seen.add(key);
-    const wagered = parseImportAmount(parts[1]);
+    const wagered = parseImportAmount(cell(parts, "wagered"));
     if (wagered === null) { errors.push(`Row ${idx + 1}: invalid wagered for "${name}"`); return; }
-    const prize = parseImportAmount(parts[2]);
+    const prize = parseImportAmount(cell(parts, "prize"));
     if (prize === null) { errors.push(`Row ${idx + 1}: invalid prize for "${name}"`); return; }
     const row = { name, wagered, prize };
-    const score = parseImportNumber(parts[3]);
-    const hands = parseImportNumber(parts[4]);
-    const netProfit = parseImportNumber(parts[5]);
-    const winRate = parseImportNumber(parts[6]);
-    const change = parseImportNumber(parts[7]);
-    if (score !== undefined) row.score = score;
-    if (hands !== undefined) row.hands = hands;
-    if (netProfit !== undefined) row.netProfit = netProfit;
-    if (winRate !== undefined) row.winRate = winRate;
-    if (change !== undefined) row.change = change;
+    for (const field of NUMERIC_FIELDS) {
+      const v = parseImportNumber(cell(parts, field));
+      if (v !== undefined) row[field] = v;
+    }
     rows.push(row);
   });
   return { rows, errors, source };

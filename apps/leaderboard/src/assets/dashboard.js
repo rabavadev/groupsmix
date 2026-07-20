@@ -235,8 +235,12 @@ function renderDraftBanner(p) {
   if (!banner) return;
   const activeId = p.siteId || state.ACTIVE_SITE_ID;
   const active = (p.boards || []).find((b) => b.id === activeId && b.isDraft);
+  const steps = $("ovSetupSteps");
   if (!active || isBoardSetup(p)) { banner.hidden = true; return; }
   banner.hidden = false;
+  // Only ever show ONE "finish setup" surface. While the resume-wizard banner is
+  // up, suppress the granular checklist so the user isn't nagged twice.
+  if (steps) steps.hidden = true;
   $("draftName").textContent = active.name || active.slug || "this board";
   $("draftResume").href = `/setup?resume=${encodeURIComponent(active.slug)}`;
   const doneBtn = $("draftDone");

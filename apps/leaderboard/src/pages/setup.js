@@ -13,7 +13,7 @@ export const setupPage = leaderboardPageHtml({
   scripts: [`<script nonce="__NONCE__">window.__TEMPLATE_CATALOG__=${TEMPLATES_JSON};</script><script src="/assets/setup-wizard.js?v=4"></script>`],
   content: `<div class="setup-wrap">
 <h1>Set up your leaderboard</h1>
-<p class="sub">Five quick steps and you're live. <a href="/demo" target="_blank">See a live demo first →</a></p>
+<p class="sub">Three quick steps and you're live. <a href="/demo" target="_blank">See a live demo first →</a></p>
 <div class="steps-ind" id="stepsInd"></div>
 
 <div class="wiz-step active" id="step1">
@@ -44,39 +44,32 @@ export const setupPage = leaderboardPageHtml({
 *****y, 98000
 *****k, 61250"></textarea>
 <div class="d-flex gap-10 items-center flex-wrap"><span class="hint" id="wiz_pcount">0 players detected</span><button class="btn btn--sm btn--ghost" id="wiz_sample" type="button">Load sample players</button></div></div>
-<div class="btns-row"><button class="btn" id="wiz3back" type="button">← Back</button><button class="btn btn--ghost" id="wiz3skip" type="button">Skip, add later</button><button class="btn btn--accent" id="wiz3next" type="button">Next →</button></div>
+<div class="btns-row"><button class="btn" id="wiz3back" type="button">← Back</button><button class="btn btn--ghost" id="wiz3skip" type="button">Skip, add later</button><button class="btn btn--accent" id="wiz3next" type="button">Publish my page →</button></div>
 </div>
 
 <div class="wiz-step" id="step4">
-<h2 class="setup-complete-title">Choose a template</h2>
-<p class="setup-complete-sub">Pick the look for your leaderboard. Your players stay the same.</p>
-<div class="template-grid" id="wiz_templates"></div>
-<div class="btns-row"><button class="btn" id="wiz4back" type="button">← Back</button><button class="btn btn--accent" id="wiz4next" type="button" disabled>Next →</button></div>
-</div>
-
-<div class="wiz-step" id="step5">
-<h2 class="setup-complete-title">Your page is ready! 🎉</h2>
+<h2 class="setup-complete-title">Your page is live</h2>
 <p class="setup-complete-sub">Share this link with your community:</p>
 <div class="share-box">
 <span class="url" id="wiz_finalUrl">yourrank.site/…</span>
 <div class="d-flex gap-10 justify-center flex-wrap">
-<button class="btn btn--accent" id="wiz_copy" type="button">📋 Copy link</button>
+<button class="btn btn--accent ic-btn" id="wiz_copy" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy link</button>
 <a class="btn" id="wiz_view" href="#" target="_blank">View live page →</a>
 </div>
 </div>
-<p class="hint" style="text-align:center;margin-top:22px;margin-bottom:10px">In your dashboard you can also:</p>
+<p class="hint" style="text-align:center;margin-top:22px;margin-bottom:10px">Next, in your dashboard you can:</p>
 <div class="d-flex gap-10 flex-wrap" style="justify-content:center;margin-bottom:18px">
-<div class="card" style="flex:1;min-width:130px;max-width:170px;padding:14px 12px;text-align:center">
-<div style="font-size:22px;margin-bottom:6px">🎨</div><b style="font-size:13px;display:block;margin-bottom:3px">Change design</b><span class="hint" style="font-size:12px">Templates, colors &amp; fonts</span>
+<div class="card" style="flex:1;min-width:140px;max-width:190px;padding:14px 12px;text-align:center">
+<div class="setup-nextic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></div><b style="font-size:13px;display:block;margin-bottom:3px">Auto-update it</b><span class="hint" style="font-size:12px">Connect casino postbacks</span>
 </div>
-<div class="card" style="flex:1;min-width:130px;max-width:170px;padding:14px 12px;text-align:center">
-<div style="font-size:22px;margin-bottom:6px">👥</div><b style="font-size:13px;display:block;margin-bottom:3px">Add more players</b><span class="hint" style="font-size:12px">Paste or import your list</span>
+<div class="card" style="flex:1;min-width:140px;max-width:190px;padding:14px 12px;text-align:center">
+<div class="setup-nextic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg></div><b style="font-size:13px;display:block;margin-bottom:3px">Change the design</b><span class="hint" style="font-size:12px">Templates, colors &amp; fonts</span>
 </div>
-<div class="card" style="flex:1;min-width:130px;max-width:170px;padding:14px 12px;text-align:center">
-<div style="font-size:22px;margin-bottom:6px">📺</div><b style="font-size:13px;display:block;margin-bottom:3px">OBS stream overlay</b><span class="hint" style="font-size:12px">Live leaderboard on stream</span>
+<div class="card" style="flex:1;min-width:140px;max-width:190px;padding:14px 12px;text-align:center">
+<div class="setup-nextic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><path d="m10 9 5 3-5 3z"/></svg></div><b style="font-size:13px;display:block;margin-bottom:3px">OBS stream overlay</b><span class="hint" style="font-size:12px">Live leaderboard on stream</span>
 </div>
 </div>
-<div class="btns-row"><button class="btn" id="wiz5back" type="button">← Back</button><button class="btn btn--accent" id="wiz_finish" type="button">Go to dashboard →</button></div>
+<div class="btns-row"><button class="btn" id="wiz4back" type="button">← Back</button><button class="btn btn--accent" id="wiz_finish" type="button">Go to dashboard →</button></div>
 </div>
 
 <div class="err" id="wiz_err" role="alert" aria-live="assertive"></div>
