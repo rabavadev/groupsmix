@@ -28,12 +28,28 @@ export function logError(context, err, extra = {}) {
   } catch {}
 }
 
+// Fill a <input type="datetime-local"> with the wall-clock time in the user's
+// OWN timezone. fromLocalInput() parses the field back as local time, so both
+// sides must agree — using UTC getters here (as before) shifted the countdown
+// by the user's offset on every save.
 export function toLocalInput(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d)) return "";
   const p = (n) => String(n).padStart(2, "0");
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// The user's timezone abbreviation (e.g. "GMT+2", "EDT") for labelling the
+// countdown field so nobody has to think in UTC.
+export function localTzLabel() {
+  try {
+    const parts = new Intl.DateTimeFormat(undefined, { timeZoneName: "short" }).formatToParts(new Date());
+    const tz = parts.find((p) => p.type === "timeZoneName");
+    return tz ? tz.value : "";
+  } catch {
+    return "";
+  }
 }
 
 export function fromLocalInput(v) {

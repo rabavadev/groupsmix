@@ -3,9 +3,12 @@
 const slugify=(s)=>String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
 const $=id=>document.getElementById(id);
 const origin=location.origin;
-const TOTAL=5;
-let step=1, slug="", siteId="", selectedTemplate="";
+const TOTAL=3;
+let step=1, slug="", siteId="";
 const TEMPLATES=Array.isArray(window.__TEMPLATE_CATALOG__)?window.__TEMPLATE_CATALOG__:[];
+// Opinionated default: apply a strong template automatically so the page looks
+// designed from minute one. Styling lives in the Editor, not the onboarding flow.
+const DEFAULT_TEMPLATE=(TEMPLATES[0]&&TEMPLATES[0].id)||"";
 
 // Step indicators
 const ind=$("stepsInd");
@@ -49,43 +52,6 @@ function parsePlayers(){
   return out;
 }
 
-function previewUrl(template, accentA, accentB, font){
-  const params=new URLSearchParams({ board: siteId, template });
-  if(accentA)params.set("accentA", accentA);
-  if(accentB)params.set("accentB", accentB);
-  if(font)params.set("font", font);
-  return "/dashboard/preview?"+params.toString();
-}
-
-function renderTemplates(){
-  const gallery=$("wiz_templates");
-  if(!gallery||!TEMPLATES.length||!siteId)return;
-  if(!selectedTemplate)selectedTemplate=TEMPLATES[0].id;
-  gallery.innerHTML="";
-  TEMPLATES.forEach((tpl)=>{
-    const isSelected=tpl.id===selectedTemplate;
-    const preset=(tpl.presets&&tpl.presets[0])||{};
-    const card=document.createElement("article");
-    card.className="template-card"+(isSelected?" is-selected":"");
-    card.dataset.template=tpl.id;
-    card.innerHTML=`<div class="template-preview"><iframe loading="lazy" tabindex="-1" aria-hidden="true" title="${esc(tpl.name)} preview"></iframe></div>
-      <div class="template-meta"><div><b>${esc(tpl.name)}</b><span>${esc(tpl.description||"")}</span></div>
-      <button class="btn btn--sm ${isSelected?"btn--accent":"btn--ghost"}" type="button" aria-pressed="${isSelected}">${isSelected?"Applied":"Apply"}</button></div>`;
-    const iframe=card.querySelector("iframe");
-    iframe.src=previewUrl(tpl.id, preset.accentA, preset.accentB, "Inter");
-    const select=()=>{
-      selectedTemplate=tpl.id;
-      renderTemplates();
-      const next=$("wiz4next"); if(next)next.disabled=false;
-    };
-    card.addEventListener("click", select);
-    card.querySelector("button").addEventListener("click", (e)=>{ e.stopPropagation(); select(); });
-    gallery.appendChild(card);
-  });
-}
-
-function esc(s){return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
-
 // Nav buttons
 $("wiz1next").onclick=()=>{if(!slugify(nameIn.value)&&!slugIn.value.trim()){$("wiz_err").textContent="Enter your name or a custom URL.";return;}if(!slugIn.value.trim()){slugIn.value=slugify(nameIn.value);}slug=slugify(slugIn.value);if(!slug){$("wiz_err").textContent="Invalid URL — letters, numbers, dashes only.";return;}$("wiz_err").textContent="";showStep(2);};
 $("wiz2next").onclick=()=>{if(!$("wiz_casino").value.trim()){$("wiz_err").textContent="Enter a casino name.";return;}$("wiz_err").textContent="";showStep(3);};
@@ -112,10 +78,18 @@ wiz3next.onclick=async()=>{
     if(!res.ok||!data.ok){$("wiz_err").textContent=data.error||"Failed to save your page. Try again.";wiz3next.disabled=false;wiz3next.textContent=prev;return;}
     if(data.slug)slug=data.slug;
     if(data.siteId)siteId=data.siteId;
+    // Auto-apply the opinionated default template so the page looks designed
+    // immediately. This is best-effort — never block going live on it.
+    if(DEFAULT_TEMPLATE){
+      try{
+        const tbody={template:DEFAULT_TEMPLATE};
+        if(siteId)tbody.siteId=siteId;
+        await fetch("/api/site/theme",{method:"POST",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(tbody)});
+      }catch(e){/* non-fatal: user can pick a design later in the Editor */}
+    }
     $("wiz_finalUrl").textContent="yourrank.site/"+slug;
     $("wiz_view").href=origin+"/"+slug;
     wiz3next.disabled=false;wiz3next.textContent=prev;
-    renderTemplates();
     showStep(4);
   }catch(e){$("wiz_err").textContent="Network error. Try again.";wiz3next.disabled=false;wiz3next.textContent=prev;}
 };
@@ -125,34 +99,12 @@ if(wiz3skip){wiz3skip.onclick=()=>{pta.value="";countPlayers();wiz3next.click();
 
 $("wiz4back").onclick=()=>{$("wiz_err").textContent="";showStep(3);};
 
-const wiz4next=$("wiz4next");
-if(wiz4next){
-  wiz4next.onclick=async()=>{
-    $("wiz_err").textContent="";
-    wiz4next.disabled=true;
-    const prev=wiz4next.textContent;
-    wiz4next.textContent="Applying…";
-    try{
-      const body={ template: selectedTemplate };
-      if(siteId)body.siteId=siteId;
-      const res=await fetch("/api/site/theme",{method:"POST",headers:{"content-type":"application/json","x-csrf-token":getCsrf()},body:JSON.stringify(body)});
-      const data=await res.json().catch(()=>({}));
-      if(!res.ok||!data.ok){$("wiz_err").textContent=data.error||"Could not apply template. Try again.";wiz4next.disabled=false;wiz4next.textContent=prev;return;}
-      $("wiz_finalUrl").textContent="yourrank.site/"+slug;
-      $("wiz_view").href=origin+"/"+slug;
-      wiz4next.disabled=false;wiz4next.textContent=prev;
-      showStep(5);
-    }catch(e){$("wiz_err").textContent="Network error. Try again.";wiz4next.disabled=false;wiz4next.textContent=prev;}
-  };
-}
-
-$("wiz5back").onclick=()=>{$("wiz_err").textContent="";showStep(4);};
-
 // Copy link
 const copyBtn=$("wiz_copy");
 if(copyBtn){
   copyBtn.onclick=async()=>{
-    try{await navigator.clipboard.writeText("https://yourrank.site/"+slug);copyBtn.textContent="Copied!";setTimeout(()=>copyBtn.textContent="\ud83d\udccb Copy link",1500);}catch{copyBtn.textContent="Copy failed";setTimeout(()=>copyBtn.textContent="\ud83d\udccb Copy link",1500);}
+    const reset=()=>{copyBtn.textContent="Copy link";};
+    try{await navigator.clipboard.writeText("https://yourrank.site/"+slug);copyBtn.textContent="Copied!";setTimeout(reset,1500);}catch{copyBtn.textContent="Copy failed";setTimeout(reset,1500);}
   };
 }
 
@@ -199,8 +151,6 @@ async function loadResume(){
     }
     slug=slugify(sSlug);
     siteId=d.siteId||d.data?.siteId||"";
-    selectedTemplate=s.branding?.template||"";
-    renderTemplates();
   }catch(e){}
 }
 loadResume();
