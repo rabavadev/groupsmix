@@ -22,10 +22,8 @@ export const signupPage = `<!DOCTYPE html><html lang="en"><head>
   <span class="field-err" id="password-err" data-field-err="password" role="alert" aria-live="polite"></span>
   <ul class="pw-reqs" id="pwReqs" aria-label="Password requirements">
     <li data-req="len" class="pw-req">At least 8 characters</li>
-    <li data-req="case" class="pw-req">Uppercase and lowercase letters</li>
-    <li data-req="num" class="pw-req">One number</li>
-    <li data-req="special" class="pw-req">One special character</li>
-  </ul></div>
+  </ul>
+  <span class="hint" id="pw-hint">That's the only rule. Longer passphrases are stronger — the meter above is just a guide.</span></div>
   <div class="err" id="err" role="alert" aria-live="assertive"></div><button class="btn btn--accent w-full" type="submit" id="submit">Create account</button></form>
 <p class="foot">Already have one? <a href="/login">Sign in</a></p></div></main></div>
 <script src="/assets/auth.js?v=2"></script></body></html>`;

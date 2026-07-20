@@ -1,5 +1,5 @@
 // Dashboard entry point. Coordinates data loading and initial render across modules.
-import { $, esc, getCsrf, logError, toLocalInput } from "./dashboard/utils.js";
+import { $, esc, getCsrf, localTzLabel, logError, toLocalInput } from "./dashboard/utils.js";
 import { state } from "./dashboard/state.js";
 import { navTo, setupShell } from "./dashboard/shell.js";
 import { renderBoardSwitcher, renderSidebarBoardSwitcher, renderBoardsPage } from "./dashboard/boards.js";
@@ -50,6 +50,8 @@ async function init() {
   $("f_pool").value = b.prizePool || "";
   $("f_period").value = b.period || "Monthly";
   $("f_ends").value = toLocalInput(d.endsAt);
+  const endsHint = $("f_ends_hint");
+  if (endsHint) { const tz = localTzLabel(); endsHint.textContent = `When the leaderboard resets, in your local time${tz ? ` (${tz})` : ""}. Powers the live timer.`; }
   $("f_blurb").value = d.partner?.blurb || "";
   renderPlayers(d.players || []);
   renderPlayerFields();

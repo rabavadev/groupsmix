@@ -41,16 +41,18 @@ export const dashboardPage = leaderboardPageHtml({
 </div>
 </div>
 <button class="lb-side-close" type="button" aria-label="Close navigation" data-close-side>×</button>
-<span class="lb-side-grp">Edit</span>
-<button class="lb-nav is-on" type="button" data-nav="board" aria-current="page"><span class="lb-nav-ic" aria-hidden="true">🏆</span>Editor</button>
-<button class="lb-nav" type="button" data-nav="overview"><span class="lb-nav-ic" aria-hidden="true">◱</span>Overview</button>
-<button class="lb-nav lb-nav--boards" type="button" data-nav="boards" hidden><span class="lb-nav-ic" aria-hidden="true">☰</span>Boards</button>
+<span class="lb-side-grp">Board</span>
+<button class="lb-nav is-on" type="button" data-nav="board" aria-current="page"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span>Editor</button>
+<button class="lb-nav" type="button" data-nav="overview"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>Overview</button>
+<button class="lb-nav lb-nav--boards" type="button" data-nav="boards" hidden><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>Boards</button>
+<span class="lb-side-grp">Automate</span>
+<a class="lb-nav lb-nav--link" href="/dashboard/attribution"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></span>Postbacks</a>
+<button class="lb-nav" type="button" data-nav="integrations"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6"/><path d="M12 2v8"/><path d="m8 6 4 4 4-4"/><path d="M2 12h5"/><path d="M17 12h5"/></svg></span>Integrations</button>
 <span class="lb-side-grp">Grow</span>
-<button class="lb-nav" type="button" data-nav="growth"><span class="lb-nav-ic" aria-hidden="true">📈</span>Analytics</button>
-<button class="lb-nav" type="button" data-nav="referrals"><span class="lb-nav-ic" aria-hidden="true">🎁</span>Referrals</button>
-<span class="lb-side-grp">Advanced</span>
-<button class="lb-nav" type="button" data-nav="integrations"><span class="lb-nav-ic" aria-hidden="true">🔌</span>Integrations</button>
-<button class="lb-nav" type="button" data-nav="manage"><span class="lb-nav-ic" aria-hidden="true">⚙</span>Periods &amp; plan</button>
+<button class="lb-nav" type="button" data-nav="growth"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span>Analytics</button>
+<button class="lb-nav" type="button" data-nav="referrals"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="7" rx="1"/><path d="M12 22V7"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M7.5 7a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg></span>Referrals</button>
+<span class="lb-side-grp">Plan</span>
+<button class="lb-nav" type="button" data-nav="manage"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>Plan &amp; billing</button>
 <div class="lb-side-foot"><a class="btn btn--sm btn--accent lb-live-btn" id="liveLink" href="#" target="_blank">View live board ↗</a><span class="label" id="planBadge">FREE PLAN</span></div>
 </aside>
 <div class="lb-main">
@@ -128,12 +130,12 @@ export const dashboardPage = leaderboardPageHtml({
 <div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div class="lb-phead-text"><h1 tabindex="-1">Editor</h1><p class="lb-psub">Edit your board and watch it update live</p></div><div class="lb-phead-actions"><button class="btn btn--sm" id="editorCopyLink" type="button">Copy link</button><a class="btn btn--sm btn--accent" id="editorLiveLink" href="#" target="_blank">View live ↗</a></div></div>
 <div class="streamer-hud card" style="margin-bottom:18px;display:flex;gap:12px;align-items:center;padding:12px;flex-wrap:wrap">
   <form id="hudQuickAdd" style="display:flex;gap:8px;flex:1;min-width:300px;align-items:center">
-    <b style="font-size:13px;white-space:nowrap;margin-right:4px">⚡ Quick Add</b>
+    <b style="font-size:13px;white-space:nowrap;margin-right:4px;display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>Quick Add</b>
     <input id="hudName" class="field" style="flex:2;margin:0" placeholder="Player name (e.g. Steve)" required />
     <input id="hudAmount" class="field" style="flex:1;margin:0" type="text" inputmode="decimal" placeholder="+$500" required />
     <button type="submit" class="btn btn--sm btn--accent" id="hudAddBtn">Update</button>
   </form>
-  <button class="btn btn--sm" id="hudCopyObs" type="button" style="white-space:nowrap;border-color:var(--accent);color:var(--accent)">📋 Copy OBS Link</button>
+  <button class="btn btn--sm ic-btn" id="hudCopyObs" type="button" style="white-space:nowrap;border-color:var(--accent);color:var(--accent)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy OBS Link</button>
 </div>
 <div class="editor-tabs" id="editorTabs" role="tablist" aria-label="Editor sections">
 <button class="editor-tab is-active" type="button" role="tab" aria-selected="true" data-egroup="data">General &amp; data</button>
@@ -150,7 +152,7 @@ export const dashboardPage = leaderboardPageHtml({
 <div class="field"><label for="f_cta">Referral link</label><input id="f_cta" placeholder="https://stake.com/?c=BTZ" /></div>
 <div class="field"><label for="f_pool">Prize pool</label><input id="f_pool" placeholder="$3,500" /></div>
 <div class="field"><label for="f_period">Period</label><select id="f_period"><option>Weekly</option><option selected>Monthly</option><option>Season</option></select></div>
-<div class="field"><label for="f_ends">Countdown ends (UTC)</label><input id="f_ends" type="datetime-local" /><span class="hint">When the leaderboard resets. Powers the live timer.</span></div>
+<div class="field"><label for="f_ends">Countdown ends</label><input id="f_ends" type="datetime-local" /><span class="hint" id="f_ends_hint">When the leaderboard resets, in your local time. Powers the live timer.</span></div>
 <div class="field" style="grid-column:1/-1"><label class="chk"><input type="checkbox" id="f_auto_reset" /> Auto-reset when countdown ends</label><select id="f_auto_reset_clear" disabled style="margin-top:8px"><option value="wagers">Reset wagers to 0</option><option value="players">Clear all players</option><option value="none">Keep board as-is</option></select><span class="hint">Archives the finished period and extends the end date by one period automatically.</span></div>
 <div class="field" style="grid-column:1/-1"><label class="chk"><input type="checkbox" id="f_password_enabled" /> Password-protect this board</label><input id="f_password" type="password" placeholder="Leave blank to keep current password" disabled style="margin-top:8px" /><span class="hint">Visitors must enter this password before seeing the leaderboard or using the public API.</span></div></div>
 <div class="field"><label for="f_blurb">Partner blurb</label><textarea id="f_blurb" rows="2" placeholder="Short pitch about the casino and your code."></textarea></div></div>
@@ -164,7 +166,7 @@ export const dashboardPage = leaderboardPageHtml({
 </div>
 <div class="players-wrap"><table class="players"><thead><tr><th class="sel"><input type="checkbox" id="selectAll" title="Select all" aria-label="Select all players" /></th><th class="rank">#</th><th>Player</th><th class="ta-r sortable sort-desc" id="wagerHeader">Wagered <span class="sort-ind" aria-hidden="true">↓</span></th><th class="ta-r">Prize</th><th class="ta-r col-score" hidden>Score</th><th class="ta-r col-hands" hidden>Hands</th><th class="ta-r col-net" hidden>Net profit</th><th class="ta-r col-win" hidden>Win rate</th><th class="ta-r col-change" hidden>Change</th><th class="col-menu"><div class="dropdown" id="colDropdown"><button class="btn btn--xs btn--ghost" id="colDropdownBtn" type="button">Columns ▾</button><div class="dropdown-menu" id="colMenu" hidden><label class="dropdown-item"><input type="checkbox" data-col="score" /> Score</label><label class="dropdown-item"><input type="checkbox" data-col="hands" /> Hands</label><label class="dropdown-item"><input type="checkbox" data-col="netProfit" /> Net profit</label><label class="dropdown-item"><input type="checkbox" data-col="winRate" /> Win rate</label><label class="dropdown-item"><input type="checkbox" data-col="change" /> Change</label></div></div></th></tr></thead><tbody id="rows"></tbody><tfoot id="quickAdd"><tr><td></td><td></td><td><input id="qa_name" class="p-name" placeholder="New player" /></td><td class="num"><input id="qa_wager" inputmode="decimal" placeholder="0" /></td><td class="num"><input id="qa_prize" inputmode="decimal" placeholder="0" /></td><td hidden></td><td hidden></td><td hidden></td><td hidden></td><td hidden></td><td class="act"><button class="btn btn--sm" id="qa_add" type="button">+ Add</button></td></tr></tfoot></table></div>
 <div id="playersEmpty" class="empty" hidden>No players yet. Add your first one.</div>
-<div class="mt-14 d-flex gap-8 flex-wrap items-center"><button class="btn btn--sm" id="addRow">+ Add player</button><div class="dropdown"><button class="btn btn--sm" id="importMenuBtn" type="button">Import ▾</button><div class="dropdown-menu" id="importMenu" hidden><button class="dropdown-item" id="importPasteBtn" type="button">Paste from spreadsheet</button><button class="dropdown-item" id="csvImportBtn" type="button">Import CSV file</button><button class="dropdown-item" id="gsheetBtn" type="button">Import from Google Sheets</button><div class="dropdown-divider"></div><button class="dropdown-item" id="csvTemplateBtn" type="button">Download template</button></div></div><button class="btn btn--sm btn--ghost" id="csvExportBtn" type="button">📤 Export CSV</button><input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" hidden /><span id="limitMsg" class="hint ml-auto c-muted" role="status" aria-live="polite"></span></div>
+<div class="mt-14 d-flex gap-8 flex-wrap items-center"><button class="btn btn--sm" id="addRow">+ Add player</button><div class="dropdown"><button class="btn btn--sm" id="importMenuBtn" type="button">Import ▾</button><div class="dropdown-menu" id="importMenu" hidden><button class="dropdown-item" id="importPasteBtn" type="button">Paste from spreadsheet</button><button class="dropdown-item" id="csvImportBtn" type="button">Import CSV file</button><button class="dropdown-item" id="gsheetBtn" type="button">Import from Google Sheets</button><div class="dropdown-divider"></div><button class="dropdown-item" id="csvTemplateBtn" type="button">Download template</button></div></div><button class="btn btn--sm btn--ghost ic-btn" id="csvExportBtn" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>Export CSV</button><input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" hidden /><span id="limitMsg" class="hint ml-auto c-muted" role="status" aria-live="polite"></span></div>
 <div class="import" id="importPanel" hidden>
 <p class="hint mb-8">One player per line: <span class="mono">name, wagered, prize, score, hands, net profit, win rate, change</span> — commas or tabs. Extra columns are optional. Copying straight out of Excel or Google Sheets works.</p>
 <textarea id="importText" rows="6" spellcheck="false" placeholder="*****ess&#9;152000&#9;1500&#10;*****y&#9;98000&#9;700&#10;*****k&#9;61250"></textarea>
@@ -254,7 +256,7 @@ export const dashboardPage = leaderboardPageHtml({
 <div class="field"><label>Overlay URL</label>
 <div class="d-flex gap-8 items-center flex-wrap">
 <code id="overlayUrl" class="overlay-url"></code>
-<button class="btn btn--sm btn--accent" id="overlayCopy" type="button">📋 Copy</button>
+<button class="btn btn--sm btn--accent ic-btn" id="overlayCopy" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
 </div>
 <span class="hint">Add this as a <b>Browser Source</b> in OBS. Set width to <b>320px</b>, height auto. Check "Shutdown source when not visible" off for live updates.</span></div>
 <div class="mt-14 d-flex gap-8 flex-wrap">
@@ -276,14 +278,14 @@ export const dashboardPage = leaderboardPageHtml({
 <div id="notifyBody">
 <div class="field"><label>Events that trigger notifications</label>
 <div class="d-flex gap-8 flex-wrap mb-4">
-<span class="pill pill--muted">🔄 Leaderboard reset</span>
-<span class="pill pill--muted">🏆 Player enters top 3</span>
+<span class="pill pill--muted ic-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Leaderboard reset</span>
+<span class="pill pill--muted ic-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Player enters top 3</span>
 </div></div>
 <div class="field"><label for="f_webhook">Discord webhook URL</label>
 <input id="f_webhook" placeholder="https://discord.com/api/webhooks/..." />
 <span class="hint">Create a webhook in your Discord server settings → Integrations → Webhooks. Paste the URL here.</span></div>
 <div class="d-flex gap-8 items-center flex-wrap mt-n8 mb-16">
-<button class="btn btn--sm" id="testDiscord" type="button">📨 Test Discord</button>
+<button class="btn btn--sm ic-btn" id="testDiscord" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>Test Discord</button>
 <span class="hint" id="testDiscordStatus" role="status" aria-live="polite"></span>
 </div>
 <div class="field"><label for="f_tgChatId">Telegram chat/group ID</label>
@@ -291,14 +293,14 @@ export const dashboardPage = leaderboardPageHtml({
 <span class="hint">The chat or group ID where notifications should be sent. Use <code>/start</code> in your bot chat or add the bot to a group to get the ID.</span></div>
 <div class="d-flex gap-8 items-center flex-wrap mt-n8 mb-16">
 <label class="hint chk"><input type="checkbox" id="f_tgNotify" /> Enable Telegram notifications</label>
-<button class="btn btn--sm" id="testTelegram" type="button">📨 Test Telegram</button>
+<button class="btn btn--sm ic-btn" id="testTelegram" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>Test Telegram</button>
 <span class="hint" id="testTelegramStatus" role="status" aria-live="polite"></span>
 </div>
 </div>
 <div class="empty" id="notifyLock" hidden>Notifications are a Pro feature. <a href="#" id="notifyUpgrade">Upgrade to unlock them</a>.</div></div>
 </section>
 <section class="lb-page" data-page="manage">
-<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Periods &amp; plan</h1><p class="lb-psub">Close out a period and manage your plan</p></div></div>
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Plan &amp; billing</h1><p class="lb-psub">Manage your plan, billing and period close-outs</p></div></div>
 <div class="card" id="archiveCard"><h2>Past winners</h2><p class="card-sub">When a period ends, close it out: the current board is saved and shown on your page under "Past Winners". Saves your unsaved edits first.</p>
 <div class="arch-form">
 <div class="field field-flex"><label for="a_label">Label</label><input id="a_label" placeholder="July 2026" /></div>
