@@ -12,7 +12,7 @@ export const QUEST_CSS = `
   --line-2:rgba(24,32,54,.18);
   --ink:#151a2e;
   --ink-soft:#4b5568;
-  --ink-mute:#8a92a6;
+  --ink-mute:#818a9f;
   --cy:#2f6bff;
   --bl:#00b3a4;
   --grad-name:linear-gradient(100deg,#2f6bff,#00b3a4);

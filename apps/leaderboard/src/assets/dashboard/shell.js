@@ -7,7 +7,8 @@ export function setAriaCurrentNav(page) {
   document.querySelectorAll(".lb-nav").forEach((n) => {
     const active = n.dataset.nav === page;
     n.classList.toggle("is-on", active);
-    n.setAttribute("aria-current", active ? "page" : "false");
+    if (active) n.setAttribute("aria-current", "page");
+    else n.removeAttribute("aria-current");
   });
 }
 
@@ -25,20 +26,55 @@ export function navTo(page) {
 }
 
 export function openDrawer() {
-  $("lbSide")?.classList.add("is-open");
+  const side = $("lbSide");
+  if (side) {
+    side.classList.add("is-open");
+    side.setAttribute("aria-modal", "true");
+  }
   document.querySelector(".lb-backdrop")?.classList.add("is-open");
   document.querySelectorAll(".lb-menu").forEach((b) => b.setAttribute("aria-expanded", "true"));
-  const firstNav = $("lbSide")?.querySelector(".lb-nav");
+  // Inert the background so Tab can't reach content behind the drawer.
+  document.querySelectorAll("main:not(.lb-side), header, footer").forEach((el) => {
+    if (el !== side) el.inert = true;
+  });
+  const firstNav = side?.querySelector(".lb-nav");
   if (firstNav) setTimeout(() => firstNav.focus(), 0);
+  // Focus trap: cycle Tab within the drawer.
+  document.addEventListener("keydown", _drawerFocusTrap);
 }
 
 export function closeDrawer(focusMenu = true) {
-  $("lbSide")?.classList.remove("is-open");
+  const side = $("lbSide");
+  if (side) {
+    side.classList.remove("is-open");
+    side.setAttribute("aria-modal", "false");
+  }
   document.querySelector(".lb-backdrop")?.classList.remove("is-open");
   document.querySelectorAll(".lb-menu").forEach((b) => b.setAttribute("aria-expanded", "false"));
+  // Remove inert from background.
+  document.querySelectorAll("[inert]").forEach((el) => { el.inert = false; });
+  document.removeEventListener("keydown", _drawerFocusTrap);
   if (focusMenu) {
     const menu = document.querySelector(".lb-page.is-on .lb-menu") || document.querySelector(".lb-menu");
     if (menu) setTimeout(() => menu.focus(), 0);
+  }
+}
+
+// Focus trap handler — keeps Tab within the drawer while it's open.
+function _drawerFocusTrap(e) {
+  if (e.key !== "Tab") return;
+  const side = $("lbSide");
+  if (!side || !side.classList.contains("is-open")) return;
+  const focusable = side.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
   }
 }
 

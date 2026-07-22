@@ -31,8 +31,8 @@ export async function handleCspReport(request, _env) {
       ts: new Date().toISOString(),
     }));
 
-    return json({ ok: true }, 204);
+    return new Response(null, { status: 204 });
   } catch {
-    return json({ ok: true }, 204);
+    return new Response(null, { status: 204 });
   }
 }

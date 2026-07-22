@@ -15,7 +15,7 @@ export const dashboardPage = leaderboardPageHtml({
 <div id="dash" hidden>
 <div class="toast" id="status" role="status" aria-live="polite"></div>
 <div class="lb-shell">
-<aside class="lb-side" id="lbSide" aria-label="Dashboard sections">
+<aside class="lb-side" id="lbSide" aria-label="Dashboard sections" role="dialog" aria-modal="false">
 <div class="lb-side-head">
 <div class="lb-side-board">
 <span class="label" id="activeBoardLabel">Active board</span>
@@ -53,13 +53,13 @@ export const dashboardPage = leaderboardPageHtml({
 <button class="lb-nav" type="button" data-nav="referrals"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="7" rx="1"/><path d="M12 22V7"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M7.5 7a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg></span>Referrals</button>
 <span class="lb-side-grp">Plan</span>
 <button class="lb-nav" type="button" data-nav="manage"><span class="lb-nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>Plan &amp; billing</button>
-<div class="lb-side-foot"><a class="btn btn--sm btn--accent lb-live-btn" id="liveLink" href="#" target="_blank">View live board ↗</a><span class="label" id="planBadge">FREE PLAN</span></div>
+<div class="lb-side-foot"><a class="btn btn--sm btn--accent lb-live-btn" id="liveLink" href="#" target="_blank" rel="noopener noreferrer">View live board ↗</a><span class="label" id="planBadge">FREE PLAN</span></div>
 </aside>
 <div class="lb-main">
 
 <section class="lb-page" data-page="overview">
 <div class="lb-phead"><button class="lb-menu" id="lbMenu" type="button" aria-label="Show sections" aria-expanded="false" aria-controls="lbSide">☰</button><div class="lb-phead-text"><h1 tabindex="-1">Overview</h1><p class="lb-psub">Your leaderboard at a glance</p></div><div class="lb-phead-actions"><button class="btn btn--sm" id="overviewCopyLink" type="button">Copy link</button></div></div>
-<div class="card card--danger" id="draftBanner" hidden><h2>Pick up where you left off</h2><p class="card-sub">You started the setup wizard for <b id="draftName">this board</b> but didn't finish. Jump back into the guided flow, or switch to editing it here.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm btn--accent" id="draftResume" href="/setup">Resume wizard →</a><button class="btn btn--sm btn--ghost" id="draftDone" type="button">Edit here instead</button></div></div>
+<div class="card card--danger" id="draftBanner" hidden><h2>Pick up where you left off</h2><p class="card-sub">You started the setup wizard for <b id="draftName">this board</b> but didn't finish. Jump back into the guided flow, or switch to editing it here.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm btn--accent" id="draftResume" href="/dashboard/setup">Resume wizard →</a><button class="btn btn--sm btn--ghost" id="draftDone" type="button">Edit here instead</button></div></div>
 <div class="stat-tiles">
 <div class="stat-tile"><span class="stat-num" id="ov_board">–</span><span class="stat-lbl">Board</span></div>
 <div class="stat-tile"><span class="stat-num" id="ov_prize">–</span><span class="stat-lbl">Prize pool</span></div>
@@ -72,9 +72,9 @@ export const dashboardPage = leaderboardPageHtml({
 <button type="button" data-jump="board"><span class="lb-qa-t">Set the prize</span><span class="lb-qa-d">Prize pool, casino and your code</span></button>
 <button type="button" data-jump="board"><span class="lb-qa-t">Pick a design</span><span class="lb-qa-d">One click publishes it</span></button>
 <button type="button" id="ov_copyLink"><span class="lb-qa-t">Copy your page link</span><span class="lb-qa-d">Share it anywhere</span></button>
-<a class="lb-qa" href="/demo" target="_blank"><span class="lb-qa-t">View demo</span><span class="lb-qa-d">See a live example board</span></a>
+<a class="lb-qa" href="/demo" target="_blank" rel="noopener noreferrer"><span class="lb-qa-t">View demo</span><span class="lb-qa-d">See a live example board</span></a>
 </div>
-<div class="card" id="ovTelegramCard"><h2>Your leaderboard works without Telegram</h2><p class="card-sub">The web page is the core channel. A Telegram bot is optional and just gives viewers another way to interact.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm btn--accent" href="/dashboard/bot/setup">Connect a bot (optional)</a><a class="btn btn--sm btn--ghost" href="/demo" target="_blank">View demo</a></div></div>
+<div class="card" id="ovTelegramCard"><h2>Your leaderboard works without Telegram</h2><p class="card-sub">The web page is the core channel. A Telegram bot is optional and just gives viewers another way to interact.</p><div class="d-flex gap-10 flex-wrap"><a class="btn btn--sm btn--accent" href="/dashboard/bot/setup">Connect a bot (optional)</a><a class="btn btn--sm btn--ghost" href="/demo" target="_blank" rel="noopener noreferrer">View demo</a></div></div>
 <div class="card"><div class="lb-cardhd"><h2>Daily activity · 14 days</h2><a href="/dashboard/analytics" class="lb-cardlink">Full analytics →</a></div><div class="stat-chart"><div class="stat-bars" id="ov_bars" title="Daily activity, last 14 days"></div><div class="stat-chart-lbl"><span id="ov_barsFrom"></span><span>today</span></div></div><p class="hint" id="ov_barsEmpty" hidden>No activity yet — share your page link to get it moving.</p><div class="stat-legend"><span class="stat-legend-item views">Views</span><span class="stat-legend-item copies">Copies</span><span class="stat-legend-item clicks">Clicks</span></div></div>
 <div class="card"><div class="lb-cardhd"><h2>Top players</h2><button class="lb-cardlink" type="button" data-jump="board">Manage all →</button></div><div class="lb-toplist" id="ov_top"></div><div class="empty" id="ov_topEmpty" hidden>No players yet. <button class="lb-linkbtn" type="button" data-jump="board">Add your first one →</button></div></div>
 <div class="card" id="ovSetupSteps"><h2>Finish setup</h2><p class="card-sub">A few steps to a page worth sharing.</p><div class="lb-steps" id="ov_steps">
@@ -110,7 +110,7 @@ export const dashboardPage = leaderboardPageHtml({
 <p class="hint" id="statsEmpty" hidden>No views yet — share your page link in your stream panels and Discord to get it moving.</p></div>
 <div class="card"><h2>Embed widget</h2><p class="card-sub">Copy this one-line iframe into your site, OBS browser source, or any stream panel. It auto-refreshes every 60 seconds.</p>
 <div class="field"><textarea id="embedCode" rows="3" readonly style="font-family:var(--mono);font-size:13px"></textarea></div>
-<div class="d-flex gap-8"><button class="btn btn--sm" id="copyEmbed" type="button">Copy code</button><a class="btn btn--sm btn--ghost" id="embedPreview" href="#" target="_blank">Preview</a></div></div>
+<div class="d-flex gap-8"><button class="btn btn--sm" id="copyEmbed" type="button">Copy code</button><a class="btn btn--sm btn--ghost" id="embedPreview" href="#" target="_blank" rel="noopener noreferrer">Preview</a></div></div>
 </section>
 <section class="lb-page" data-page="referrals">
 <div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div><h1 tabindex="-1">Referrals</h1><p class="lb-psub">Invite other streamers, earn free Pro time</p></div></div>
@@ -127,7 +127,7 @@ export const dashboardPage = leaderboardPageHtml({
 </div>
 </section>
 <section class="lb-page is-on" data-page="board">
-<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div class="lb-phead-text"><h1 tabindex="-1">Editor</h1><p class="lb-psub">Edit your board and watch it update live</p></div><div class="lb-phead-actions"><button class="btn btn--sm" id="editorCopyLink" type="button">Copy link</button><a class="btn btn--sm btn--accent" id="editorLiveLink" href="#" target="_blank">View live ↗</a></div></div>
+<div class="lb-phead"><button class="lb-menu" type="button" aria-label="Show sections" data-menu aria-expanded="false" aria-controls="lbSide">☰</button><div class="lb-phead-text"><h1 tabindex="-1">Editor</h1><p class="lb-psub">Edit your board and watch it update live</p></div><div class="lb-phead-actions"><button class="btn btn--sm" id="editorCopyLink" type="button">Copy link</button><a class="btn btn--sm btn--accent" id="editorLiveLink" href="#" target="_blank" rel="noopener noreferrer">View live ↗</a></div></div>
 <div class="streamer-hud card" style="margin-bottom:18px;display:flex;gap:12px;align-items:center;padding:12px;flex-wrap:wrap">
   <form id="hudQuickAdd" style="display:flex;gap:8px;flex:1;min-width:300px;align-items:center">
     <b style="font-size:13px;white-space:nowrap;margin-right:4px;display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>Quick Add</b>
@@ -260,7 +260,7 @@ export const dashboardPage = leaderboardPageHtml({
 </div>
 <span class="hint">Add this as a <b>Browser Source</b> in OBS. Set width to <b>320px</b>, height auto. Check "Shutdown source when not visible" off for live updates.</span></div>
 <div class="mt-14 d-flex gap-8 flex-wrap">
-<a class="btn btn--sm" id="overlayPreview" href="#" target="_blank">Preview overlay →</a>
+<a class="btn btn--sm" id="overlayPreview" href="#" target="_blank" rel="noopener noreferrer">Preview overlay →</a>
 </div>
 </div>
 <div class="empty" id="overlayLock" hidden>OBS Overlay is a Pro feature. <a href="#" id="overlayUpgrade">Upgrade to unlock it</a>.</div></div>

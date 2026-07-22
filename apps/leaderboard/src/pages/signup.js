@@ -7,13 +7,13 @@ export const signupPage = `<!DOCTYPE html><html lang="en"><head>
 <link rel="stylesheet" href="/assets/app.css" /></head><body>
 <a href="#main-content" class="sr-only skip-link">Skip to content</a>
 <div class="auth-wrap"><aside class="auth-side"><div><div class="brand">Your<b>Rank</b></div></div>
-<div><h1>Your leaderboard, live in seconds.</h1><p>One email, one password, and your page is ready. You can rename it once you're in.</p>
+<div><h2>Your leaderboard, live in seconds.</h2><p>One email, one password, and your page is ready. You can rename it once you're in.</p>
 <div class="auth-spec" aria-hidden="true"><div class="auth-spec-h"><span>what happens next</span><span class="dot">3 steps</span></div>
 <div class="auth-spec-row"><span>01</span><span>Create your account</span></div>
 <div class="auth-spec-row"><span>02</span><span>Pick your handle &amp; add players</span></div>
 <div class="auth-spec-row"><span>03</span><span>Share your live page</span></div></div></div>
 <div class="feat"><div>Free to set up · upgrade when you are ready</div></div></aside>
-<main class="auth-main" id="main-content"><div class="auth-card"><a href="/" class="auth-brand-m">Your<b>Rank</b></a><h2>Create account</h2><p class="sub">Free. Takes 30 seconds.</p>
+<main class="auth-main" id="main-content"><div class="auth-card"><a href="/" class="auth-brand-m">Your<b>Rank</b></a><h1>Create account</h1><p class="sub">Free. Takes 30 seconds.</p>
 <div id="planBanner" class="plan-banner" hidden></div>
 <form id="form" method="POST" action="/api/auth/signup" novalidate>
 <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required aria-describedby="email-err email-tip" /><span class="field-err" id="email-err" data-field-err="email" role="alert" aria-live="polite"></span><span class="hint" id="email-tip">Your page URL is auto-generated from your email address; change it anytime in settings.</span></div>
