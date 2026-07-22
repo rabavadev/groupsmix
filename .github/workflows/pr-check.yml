@@ -147,7 +147,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Audit dependencies (moderate+)
-        run: bun audit --audit-level moderate
+        run: bun audit --audit-level moderate --ignore=GHSA-f88m-g3jw-g9cj
+        # sharp <0.35.0 (transitive via wrangler, dev-only) — tracked separately,
+        # fix requires wrangler to bundle sharp >=0.35.0. Not a runtime risk.
 
   migration-dry-run:
     name: Migration Dry-Run
