@@ -108,8 +108,10 @@ function record(file, line, fg, bg, ratio, floor, ctx) {
 
 // ---- Tailwind arbitrary-value pass (casino-full + high-rollers) ----
 const TW_FILES = ["casino-full.js", "casino-high-rollers.js"];
-const reText = /text-\[(#[0-9a-fA-F]{3,6})\]/;
-const reBg = /(?:bg|from|to|via)-\[(#[0-9a-fA-F]{3,6})\]/;
+// Skip selection: prefixed colors (selection:text-[#hex] / selection:bg-[#hex])
+// — they are CSS pseudo-element styles, not normal text/bg pairs.
+const reText = /(?<!selection:)text-\[(#[0-9a-fA-F]{3,6})\]/;
+const reBg = /(?<!selection:)(?:bg|from|to|via)-\[(#[0-9a-fA-F]{3,6})\]/;
 // large-text heuristic: any of these size classes present on the element
 const reLarge = /text-(?:xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)\b|text-\[[3-9]\d?rem\]|text-\[[2-9]\d?px\]/;
 

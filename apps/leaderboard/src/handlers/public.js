@@ -3,6 +3,7 @@ import { getPublicSite } from "../site.js";
 import { getStats } from "../stats.js";
 import { rateLimit, rateLimitHeaders, clientIp, json, bad } from "../auth.js";
 import { one } from "../../../../shared/db.js";
+import { demoLeaderboardData } from "../demo-data.js";
 
 /**
  * Handle GET /api/public/:slug/standings
@@ -13,6 +14,29 @@ export async function handlePublicStandings(request, env, ctx) {
     const slug = ctx.slug;
     const rl = await rateLimit(env, `pub-standings:${clientIp(request)}`, 100, 60);
     if (!rl.ok) return bad("Rate limit exceeded. Try again shortly.", 429, rateLimitHeaders(rl));
+
+    // Demo board has no DB row — serve static demo data.
+    if (slug === "demo") {
+      const d = demoLeaderboardData();
+      const sorted = (d.players || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
+      const players = sorted.map((p, i) => ({ name: p.name, wagered: p.wagered, prize: p.prize, position: i + 1 }));
+      const endsAt = d.endsAt || null;
+      let countdown = null;
+      if (endsAt) {
+        const remaining = Math.max(0, new Date(endsAt).getTime() - Date.now());
+        countdown = { endsAt, remaining };
+      }
+      return json({
+        slug,
+        name: d.brand?.name || slug,
+        casino: d.brand?.casino || "",
+        period: d.brand?.period || "Monthly",
+        prizePool: d.brand?.prizePool || "$0",
+        players,
+        countdown,
+      }, 200, { "cache-control": "public, max-age=30", ...rateLimitHeaders(rl) });
+    }
+
     const r = await getPublicSite(env, slug, request);
     if (r && r.requiresPassword) return bad("Password required.", 401);
     if (!r || r.suspended) return bad("not found", 404);
@@ -49,6 +73,14 @@ export async function handlePublicPlayers(request, env, ctx) {
     const slug = ctx.slug;
     const rl = await rateLimit(env, `pub-players:${clientIp(request)}`, 120, 60);
     if (!rl.ok) return bad("Rate limit exceeded. Try again shortly.", 429, rateLimitHeaders(rl));
+
+    // Demo board has no DB row — serve static demo data.
+    if (slug === "demo") {
+      const d = demoLeaderboardData();
+      const players = (d.players || []).slice().sort((a, b) => b.wagered - a.wagered);
+      return json({ players }, 200, { "cache-control": "public, max-age=10", ...rateLimitHeaders(rl) });
+    }
+
     const r = await getPublicSite(env, slug, request);
     if (r && r.requiresPassword) return bad("Password required.", 401);
     if (!r || r.suspended) return bad("not found", 404);
@@ -150,6 +182,38 @@ export async function handlePublicRank(request, env, ctx) {
         headers: rankHeaders
       });
     }
+
+    // Demo board has no DB row — serve static demo data.
+    if (slug === "demo") {
+      const d = demoLeaderboardData();
+      const sorted = (d.players || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
+      const matchUser = userParam.toLowerCase().replace(/^@/, "").replace(/\s+/g, " ").trim();
+      const normalizeForRank = (n) => String(n || "").toLowerCase().replace(/^\*+/, "").replace(/\s+/g, " ").trim();
+      const idx = sorted.findIndex(p => normalizeForRank(p.name) === matchUser);
+      if (idx === -1) {
+        return new Response(`${userParam} is not on ${d.brand?.name || slug}'s leaderboard yet.`, {
+          headers: { ...rankHeaders, "cache-control": "public, max-age=30" }
+        });
+      }
+      const player = sorted[idx];
+      const rank = idx + 1;
+      const total = sorted.length;
+      const wagered = "$" + Number(player.wagered || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
+      let gap = "";
+      if (rank > 1) {
+        const ahead = sorted[idx - 1];
+        const diff = (ahead.wagered || 0) - (player.wagered || 0);
+        gap = ` ($${Number(diff).toLocaleString("en-US", { maximumFractionDigits: 0 })} behind #${rank - 1})`;
+      }
+      const name = d.brand?.name || slug;
+      const text = rank === 1
+        ? `${player.name} is #1 of ${total} on ${name}'s leaderboard! 🏆 ${wagered} wagered`
+        : `${player.name} is #${rank} of ${total} on ${name}'s leaderboard. ${wagered} wagered${gap}`;
+      return new Response(text, {
+        headers: { ...rankHeaders, "cache-control": "public, max-age=30" }
+      });
+    }
+
     const r = await getPublicSite(env, slug, request);
     if (r && r.requiresPassword) {
       return new Response("Password required.", { status: 401, headers: { "content-type": "text/plain; charset=utf-8" } });
@@ -204,6 +268,12 @@ export async function handlePublicData(request, env, ctx) {
     const slug = ctx.slug;
     const rl = await rateLimit(env, `pub-data:${clientIp(request)}`, 120, 60);
     if (!rl.ok) return bad("Rate limit exceeded. Try again shortly.", 429, rateLimitHeaders(rl));
+
+    // Demo board has no DB row — serve static demo data.
+    if (slug === "demo") {
+      return json(demoLeaderboardData(), 200, { "cache-control": "public, max-age=30", ...rateLimitHeaders(rl) });
+    }
+
     const r = await getPublicSite(env, slug, request);
     if (r && r.requiresPassword) return bad("Password required.", 401);
     return r && !r.suspended ? json(r.data, 200, { "cache-control": "public, max-age=30", ...rateLimitHeaders(rl) }) : bad("not found", 404);
@@ -223,6 +293,19 @@ export async function handlePublicStats(request, env, ctx) {
     const slug = ctx.slug;
     const rl = await rateLimit(env, `pub-stats:${clientIp(request)}`, 60, 60);
     if (!rl.ok) return bad("Rate limit exceeded. Try again shortly.", 429, rateLimitHeaders(rl));
+
+    // Demo board has no DB row — serve static demo data.
+    if (slug === "demo") {
+      const d = demoLeaderboardData();
+      return json({
+        slug,
+        name: d.brand?.name || slug,
+        playerCount: d.players?.length || 0,
+        summary: { last7: {}, last30: {}, today: {} },
+        days: [],
+      }, 200, { "cache-control": "public, max-age=60", ...rateLimitHeaders(rl) });
+    }
+
     const r = await getPublicSite(env, slug, request);
     if (r && r.requiresPassword) return bad("Password required.", 401);
     if (!r || r.suspended) return bad("not found", 404);

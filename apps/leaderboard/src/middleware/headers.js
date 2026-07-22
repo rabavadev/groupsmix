@@ -45,12 +45,17 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&a
 
 // Inject nonce into CSP header for both style-src and script-src.
 // Replaces 'unsafe-inline' with 'nonce-xxx' where present, adds nonce otherwise.
+// Handles script-src with additional origins (e.g. https://telegram.org) by
+// inserting the nonce after 'self' rather than requiring an exact match.
 export function withNonce(headers, nonce) {
   const csp = headers["Content-Security-Policy"];
   if (!nonce || !csp) return headers;
-  const updated = csp
-    .replace(/style-src 'self' 'unsafe-inline'/, `style-src 'self' 'nonce-${nonce}'`)
-    .replace(/script-src 'self'/, `script-src 'self' 'nonce-${nonce}'`);
+  let updated = csp
+    .replace(/style-src 'self' 'unsafe-inline'/, `style-src 'self' 'nonce-${nonce}'`);
+  // Insert nonce after script-src 'self' (handles both bare and multi-origin forms)
+  if (/script-src 'self'(?!.*'nonce-)/.test(updated)) {
+    updated = updated.replace(/script-src 'self'/, `script-src 'self' 'nonce-${nonce}'`);
+  }
   return { ...headers, "Content-Security-Policy": updated };
 }
 

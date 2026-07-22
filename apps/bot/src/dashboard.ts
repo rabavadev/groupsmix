@@ -162,7 +162,13 @@ export function buildDashboard(): Hono<DashEnv> {
     if (session?.rotatedCookie) c.header("Set-Cookie", session.rotatedCookie);
     const loginBotUsername = process.env.LOGIN_BOT_USERNAME ?? "";
     const devLogin = process.env.ALLOW_DEV_LOGIN === "1";
-    if (!uid) return c.html(loginHtml(loginBotUsername, devLogin, c.get("cspNonce")));
+    if (!uid) {
+      // The Telegram Login Widget (telegram-widget.js) uses eval internally,
+      // so the login page needs 'unsafe-eval' in script-src. Authenticated
+      // dashboard pages keep the stricter nonce-only CSP.
+      c.header("Content-Security-Policy", `default-src 'self'; script-src 'self' 'unsafe-eval' 'nonce-${c.get("cspNonce")}' https://telegram.org; style-src 'self' 'nonce-${c.get("cspNonce")}'; img-src 'self' data: https:; connect-src 'self' https://telegram.org; frame-src https://telegram.org https://oauth.telegram.org;`);
+      return c.html(loginHtml(loginBotUsername, devLogin, c.get("cspNonce")));
+    }
     const user = await one<{ display_name: string; email: string; plan: string }>(
       `SELECT display_name, email, plan FROM users WHERE id=$1`,
       [uid]

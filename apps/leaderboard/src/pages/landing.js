@@ -20,7 +20,7 @@ export const landingPage = `<!DOCTYPE html>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"YourRank","url":"https://yourrank.site","description":"Hosted leaderboard pages for streamers and entertainment communities","contactPoint":{"@type":"ContactPoint","contactType":"customer service"}}</script>
 </head><body>
 <noscript><div class="noscript-card">
-<h1>YourRank</h1>
+<p class="noscript-title">YourRank</p>
 <p>Hosted leaderboards for streamers and communities. JavaScript is required for the full experience.</p>
 <a href="/signup">Create your page</a>
 </div></noscript>

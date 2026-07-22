@@ -58,7 +58,7 @@ X-Postback-Signature: hex-signature
   ]
 }</code></pre>
 
-<p>Find your postback key and secret in your dashboard under <b>Prize &amp; players</b> → <b>Postback</b>.</p>
+<p>Find your postback key and secret in your dashboard under <b>Postbacks &amp; Attribution</b>.</p>
 
 <h2>OpenAPI spec</h2>
 <p>Download the machine-readable spec at <a href="/api/openapi.json">/api/openapi.json</a>.</p>

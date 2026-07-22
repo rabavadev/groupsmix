@@ -64,6 +64,7 @@ export const PLAN_META: Record<PlanTier, {
       "OBS overlay widget",
       "Discord webhooks",
       "Telegram notifications",
+      "Signed score API",
       "Priority support",
     ],
     cta: "Go Pro",
