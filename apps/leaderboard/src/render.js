@@ -100,7 +100,7 @@ ${whyStats.length ? `<div class="pcol pcol-why"><span class="pcol-label">Why ${h
   const moneyS = (n) => cur2 + (Number(n) || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
   const moneyShortS = (n) => { const v = Number(n) || 0; if (v >= 1e6) return cur2 + (v / 1e6).toFixed(1) + "M"; if (v >= 1e3) return cur2 + (v / 1e3).toFixed(1) + "K"; return cur2 + v; };
   const moneyPrizeS = (n) => { if (hidePrizes) return "—"; return moneyS(n); };
-  const playerHrefS = (name) => `#`; // placeholder — leaderboard.js replaces with real links on hydration
+  const playerHrefS = "#"; // placeholder — leaderboard.js replaces with real links on hydration
   const top3Srv = sortedPlayers.slice(0, 3).map((pl, i) => {
     const rank = i + 1;
     return `<div class="t3 t3--${rank}"><span class="t3-medal">RANK ${String(rank).padStart(2, "0")}</span><span class="t3-av" aria-hidden="true">${esc(initials(pl.name))}</span><a class="t3-name" href="${playerHrefS}">${esc(pl.name)}</a><div class="t3-wager">${moneyS(pl.wagered)}</div><span class="t3-prize">${pl.prize ? moneyPrizeS(pl.prize) : "—"}</span></div>`;

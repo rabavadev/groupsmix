@@ -53,7 +53,7 @@ export function withNonce(headers, nonce) {
   let updated = csp
     .replace(/style-src 'self' 'unsafe-inline'/, `style-src 'self' 'nonce-${nonce}'`);
   // Insert nonce after script-src 'self' (handles both bare and multi-origin forms)
-  if (/script-src 'self'(?!.*'nonce-)/.test(updated)) {
+  if (/script-src 'self'(?![^;]*'nonce-)/.test(updated)) {
     updated = updated.replace(/script-src 'self'/, `script-src 'self' 'nonce-${nonce}'`);
   }
   return { ...headers, "Content-Security-Policy": updated };
