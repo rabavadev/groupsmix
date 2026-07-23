@@ -579,7 +579,10 @@ async function handleRequest(request, env, ctx, meta) {
       // Pass all /api/ endpoints to Hono router
       if (path.startsWith("/api/")) {
         const apiResponse = await apiApp.fetch(request, { workerContext: { request, env, ctx, meta } }, ctx);
-        if (apiResponse.status !== 404) {
+        // Return the handler's response, INCLUDING a legitimate 404 it produced.
+        // Only fall through to page routing when no API route matched at all,
+        // which the router tags with the x-no-api-route sentinel header.
+        if (!(apiResponse.status === 404 && apiResponse.headers.get("x-no-api-route") === "1")) {
           return apiResponse;
         }
       }

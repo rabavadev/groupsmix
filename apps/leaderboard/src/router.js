@@ -19,11 +19,18 @@ apiApp.use('*', async (c, next) => {
   }
 
   await next();
-  
-  if (c.res && c.res.status !== 404) {
+
+  // Apply public-API CORS to real handler responses (any status, matching the
+  // pre-Hono behavior). The notFound sentinel below is left untouched so
+  // index.js can detect a genuine no-match and fall through to page routing.
+  if (c.res && !c.res.headers.get("x-no-api-route")) {
     c.res = withPublicApiCors(c.res, path);
   }
 });
+
+// Sentinel for "no API route matched" so the caller can tell this apart from a
+// matched handler that legitimately returned 404 (e.g. unknown public slug).
+apiApp.notFound(() => new Response(null, { status: 404, headers: { "x-no-api-route": "1" } }));
 
 for (const route of ROUTES) {
   const method = route.method.toLowerCase();
